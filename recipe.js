@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: v3.2 - 2026-11-19 제품내역 품목코드 오름차순 자동정렬 적용본]
+// [VERSION: v3.3 - 2026-11-19 용어통일(원재료비용·PK입수) 및 판매금액(바로가출고가×PK입수) 자동계산 적용본]
 // 바로가 공장 통합 관리 시스템 - 레시피 전용 모듈 (recipe.js)
 // ============================================================================
 
@@ -310,6 +310,58 @@ function evaluateRecipeBaseTotals(rc, visitedIds = new Set(), lookup = null) {
     return { weightTotalG, fillingWeightG, rawCostTotal, baseYieldQty, itemBreakdown };
 }
 
+// 제품단가 탭(price.js)에서 동일 품목코드(1순위) 또는 품목명(2순위)의 바로가 출고가(1ea) 조회
+function getLinkedProductPriceForRecipe(rc) {
+    if (!rc) return null;
+    const code = String(rc.productCode || '').trim();
+    const name = String(rc.productName || '').trim();
+    const rType = rc.recipeType || 'PRODUCT';
+
+    if (typeof window !== 'undefined' && window.barogaProductPriceBridge && typeof window.barogaProductPriceBridge.findPriceByRecipe === 'function') {
+        const liveHit = window.barogaProductPriceBridge.findPriceByRecipe(code, name, rType);
+        if (liveHit) return liveHit;
+    }
+
+    try {
+        const cachedStr = localStorage.getItem('baroga_product_price_cache_v1');
+        if (cachedStr) {
+            const parsed = JSON.parse(cachedStr);
+            const rows = Array.isArray(parsed.pkCostRows) ? parsed.pkCostRows : [];
+            const dbs = parsed.categoryDbs || {};
+            const dbById = new Map();
+            const dbByName = new Map();
+            Object.values(dbs).forEach(list => {
+                (list || []).forEach(p => {
+                    if (!p) return;
+                    dbById.set(p.id, p);
+                    const nm = String(p.productName || '').trim().replace(/\s+/g, '');
+                    if (nm) dbByName.set(nm, p);
+                });
+            });
+
+            const normRcName = name.replace(/\s+/g, '');
+            let codeHit = null;
+            let nameHit = null;
+
+            rows.forEach(r => {
+                if (!r) return;
+                const normRowName = String(r.productName || '').trim().replace(/\s+/g, '');
+                const dbProd = (r.productId && dbById.get(r.productId)) || dbByName.get(normRowName) || null;
+                const effCode = String((dbProd && dbProd.productCode) || r.productCode || '').trim();
+                const pkEa = dbProd ? (Number(dbProd.pkQuantityEa) || 0) : 0;
+                const relEa = Number(r.releasePriceEa) || 0;
+                if (code && effCode && effCode === code && !codeHit) {
+                    codeHit = { matched: true, matchedBy: 'CODE', productCode: effCode, productName: r.productName || '', releasePriceEa: relEa, pkQuantityEa: pkEa };
+                } else if (rType !== 'SUB' && !effCode && normRcName && normRowName === normRcName && !nameHit) {
+                    nameHit = { matched: true, matchedBy: 'NAME', productCode: effCode, productName: r.productName || '', releasePriceEa: relEa, pkQuantityEa: pkEa };
+                }
+            });
+            return codeHit || nameHit || null;
+        }
+    } catch (e) {}
+    return null;
+}
+
 // 우측 16개 원가·수율 지표 산출
 function calculateRecipeMetrics(rc) {
     const lookup = buildRawCatalogLookupMaps();
@@ -344,11 +396,19 @@ function calculateRecipeMetrics(rc) {
     const productionCost = rawMaterialCost + totalPackCost;
     const unitCost = productQty > 0 ? (productionCost / productQty) : 0;
     const salesCost = unitCost * packQty;
-    const sellingPrice = parseFloat(rc.sellingPrice) || 0;
+
+    // 판매금액 = 제품단가 탭의 [바로가 출고가(1ea)] × [PK입수] 자동 산출
+    const priceLink = getLinkedProductPriceForRecipe(rc);
+    const releasePriceEa = priceLink ? (parseFloat(priceLink.releasePriceEa) || 0) : 0;
+    const sellingPrice = Math.round(releasePriceEa * packQty);
+    rc.sellingPrice = sellingPrice;
+
     const costRatioPct = sellingPrice > 0 ? ((salesCost / sellingPrice) * 100) : 0;
     const marginRatioPct = sellingPrice > 0 ? (100 - costRatioPct) : 0;
 
     return {
+        priceLink,
+        releasePriceEa,
         weightTotalG,
         flourTotalG: weightTotalG,
         productionCost,
@@ -911,6 +971,14 @@ function renderRecipeDetailPanel() {
 
     // [3] 우측 패널: 16항목 요약표 + 제품이미지 + 제빵공정 테이블
     const bp = rc.bakingProcess || {};
+    const pkMismatchHint = (m.priceLink && m.priceLink.pkQuantityEa > 0 && Number(m.priceLink.pkQuantityEa) !== Number(rc.packQty))
+        ? ` (※ 참고: 제품단가 탭 PK입수량은 ${m.priceLink.pkQuantityEa}ea)`
+        : '';
+    const sellPriceTooltip = m.priceLink
+        ? (m.releasePriceEa > 0
+            ? `[제품단가 연동: ${m.priceLink.productName}] 바로가 출고가 ${fmtDec(m.releasePriceEa, 0)}원 × PK입수 ${fmtDec(rc.packQty, 1)} = ${fmtDec(m.sellPrice, 0)}원${pkMismatchHint}`
+            : `[제품단가 연동됨: ${m.priceLink.productName}] 제품단가 탭에 바로가 출고가가 아직 입력되지 않았습니다 (0원).`)
+        : `제품단가 탭에 동일 품목코드(${rc.productCode})가 등록되면 [바로가 출고가 × PK입수]로 자동 계산됩니다.`;
     rightEl.innerHTML = `
         <div class="bg-white rounded-xl border border-stone-300 shadow-2xs p-2.5">
             <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-stretch">
@@ -930,10 +998,15 @@ function renderRecipeDetailPanel() {
                                 <td class="fd-kv-val"><input type="text" value="${fmtDec(m.prodQty, 1)}" title="0 입력 시 (중량합계÷분할중량) 자동 계산" onchange="updateRecipeNumericField('customProductionQty', this.value)" class="fd-kv-input"></td>
                             </tr>
                             <tr>
-                                <td class="fd-kv-label">포장수량</td>
+                                <td class="fd-kv-label" title="1PK당 입수 수량(ea) — 제품단가 탭의 PK입수량과 동일">PK입수</td>
                                 <td class="fd-kv-val"><input type="text" value="${fmtDec(rc.packQty, 1)}" onchange="updateRecipeNumericField('packQty', this.value)" class="fd-kv-input"></td>
-                                <td class="fd-kv-label">판매금액</td>
-                                <td class="fd-kv-val"><input type="text" value="${fmtDec(rc.sellingPrice, 0)}" onchange="updateRecipeNumericField('sellingPrice', this.value)" class="fd-kv-input"></td>
+                                <td class="fd-kv-label" title="자동계산 = 제품단가의 바로가 출고가(1ea) × PK입수">판매금액</td>
+                                <td class="fd-kv-val cursor-help ${m.releasePriceEa > 0 ? 'bg-emerald-50/40 font-black text-emerald-900' : 'text-stone-400 font-bold'}" title="${escapeHtml(sellPriceTooltip)}">
+                                    <span class="inline-flex items-center justify-end gap-1 w-full">
+                                        ${m.releasePriceEa > 0 ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>' : ''}
+                                        <span>${fmtDec(m.sellPrice, 0)}</span>
+                                    </span>
+                                </td>
                             </tr>
                             <tr>
                                 <td class="fd-kv-label">원가비율(%)</td>
@@ -962,7 +1035,7 @@ function renderRecipeDetailPanel() {
                             <tr>
                                 <td class="fd-kv-label">총 포장가</td>
                                 <td class="fd-kv-val">${fmtDec(m.totalPackCost, 0)}</td>
-                                <td class="fd-kv-label">생산원가</td>
+                                <td class="fd-kv-label" title="배합 재료원가 + 총 포장가 — 제품단가 탭의 1배합 원재료비용과 동일">원재료비용</td>
                                 <td class="fd-kv-val font-black text-stone-900">${fmtDec(m.productionCost, 2)}</td>
                             </tr>
                             <tr>
@@ -1909,14 +1982,17 @@ async function pushRecipesToGoogleSheet(silent = false) {
 }
 
 function exportRecipesCsv() {
-    let csv = '\uFEFF구분,품목코드,품목명,분할중량(G),생산수량,포장수량,판매금액,원가비율(%),개당원가,판매원가,개별포장,총포장가,생산원가,중량합계(G),충전합계(G)\n';
+    let csv = '\uFEFF구분,품목코드,품목명,분할중량(G),생산수량,PK입수,판매금액,원가비율(%),개당원가,판매원가,개별포장,총포장가,원재료비용,중량합계(G),충전합계(G)\n';
     [...(recipesData || [])].sort(compareRecipeProductCode).forEach(rc => {
         const m = calculateRecipeMetrics(rc);
         const typeLabel = rc.recipeType === 'SUB' ? '반제품/충전물' : '완제품';
-        csv += `"${typeLabel}","${rc.productCode}","${rc.productName}",${rc.divisionWeight},${m.productQty.toFixed(1)},${rc.packQty},${rc.sellingPrice},${m.costRatioPct.toFixed(2)},${m.unitCost.toFixed(2)},${Math.round(m.salesCost)},${Math.round(m.unitPackCost)},${Math.round(m.totalPackCost)},${m.productionCost.toFixed(2)},${Math.round(m.weightTotalG)},${Math.round(m.fillingWeightG)}\n`;
+        csv += `"${typeLabel}","${rc.productCode}","${rc.productName}",${rc.divisionWeight},${m.productQty.toFixed(1)},${rc.packQty},${m.sellPrice},${m.costRatioPct.toFixed(2)},${m.unitCost.toFixed(2)},${Math.round(m.salesCost)},${Math.round(m.unitPackCost)},${Math.round(m.totalPackCost)},${m.productionCost.toFixed(2)},${Math.round(m.weightTotalG)},${Math.round(m.fillingWeightG)}\n`;
     });
     triggerCsvDownload(csv, `바로가공장_배합비원가표_${getTodayStr()}.csv`);
 }
+
+window.calculateRecipeMetrics = calculateRecipeMetrics;
+window.renderRecipeDetailPanel = renderRecipeDetailPanel;
 
 // 초기 구동 시 레시피 DB 자동 동기화 연결
 window.addEventListener('load', () => {
