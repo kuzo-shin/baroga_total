@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: v3.0 - 2026-11-19 공정선택 완전삭제 · 원재료 고정라벨 적용본]
+// [VERSION: v3.1 - 2026-11-19 원재료 팝업 검색 · 초성/다중투입 · 0원(식수) 허용 적용본]
 // 바로가 공장 통합 관리 시스템 - 레시피 전용 모듈 (recipe.js)
 // ============================================================================
 
@@ -9,6 +9,9 @@ const LEGACY_DUMMY_RECIPE_URL_PART = "AKfycbxR8N2mP9vL4kQ7wT1yU5iO3pA6sD8fG0hJ2k
 let collapsedSubRecipeNodes = new Set();
 let recipeCategoryFilter = 'ALL'; // ALL | PRODUCT | SUB
 let recipeRatioMode = 'WEIGHT';   // WEIGHT(중량비%) | BAKERS(베이커스%)
+let rawPickerModalSelectedKeys = new Set();
+let rawPickerVendorFilter = 'ALL';
+let rawPickerScopeFilter = 'RAW'; // RAW(원재료만) | ALL(포장재 포함 전체)
 
 // 레시피 전용 DB URL 초기화 및 기존 더미 URL 자동 교체
 (function initRecipeGasUrlDefault() {
@@ -77,7 +80,8 @@ function getRawMaterialCatalogForRecipe() {
         const specName = String(o.colC || '').trim();
         if (u < 0 || !itemName) return;
         const rawKey = `${itemName}||${specName}`;
-        const isPack = /비닐|박스|유포지|노루지|롤백|트레이|패드|스티커|테이프|봉투|랩|카톤/.test(itemName);
+        const isPack = /비닐|카톤박스|외포장|내포장|유포지|노루지|롤백|트레이|패드|스티커|테이프|봉투|^랩|박스\(외포장\)/.test(itemName)
+            && !/버터|치즈|초콜릿|다이스|앙금|필링|생크림|우유|설탕|밀가루/.test(itemName);
         const internalCode = generateInternalItemCode(itemName, specName, isPack ? 'PK' : 'RM');
         map[rawKey] = {
             key: rawKey,
@@ -443,6 +447,77 @@ function renderRecipeWorkspace() {
                 <!-- [3] 우측: 원가·수율 요약 + 이미지 + 제빵공정 -->
                 <div id="fdRightMetricsPanel" class="xl:col-span-4 flex flex-col gap-3"></div>
             </div>
+
+            <!-- [모달] 레시피 원재료 검색 · 다중 투입 팝업 -->
+            <div id="rawMaterialPickerModal" onclick="if(event.target===this) closeRawMaterialPickerModal()" class="fixed inset-0 bg-stone-950/60 backdrop-blur-xs z-50 hidden items-center justify-center p-3 sm:p-5">
+                <div class="bg-white rounded-2xl max-w-4xl w-full shadow-2xl border border-stone-300 flex flex-col max-h-[86vh] overflow-hidden text-xs">
+                    <div class="px-4 py-3 bg-stone-900 text-white flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="search" class="w-4 h-4 text-amber-400"></i>
+                            <div>
+                                <h3 class="text-sm font-extrabold">발주 원재료 검색 · 배합비 투입</h3>
+                                <p class="text-[11px] text-stone-400">원재료명·거래처·규격·초성(예: ㄱㄹㅂ, ㅇㅋㅂㅌ)으로 검색 후 즉시 투입하거나 여러 개를 체크해 일괄 투입하세요</p>
+                            </div>
+                        </div>
+                        <button type="button" onclick="closeRawMaterialPickerModal()" class="text-stone-400 hover:text-white p-1 cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button>
+                    </div>
+
+                    <!-- 검색창 & 필터 바 -->
+                    <div class="p-3 bg-amber-50/70 border-b border-stone-200 flex flex-wrap items-center gap-2">
+                        <div class="relative flex-1 min-w-[220px]">
+                            <input type="text" id="rawPickerSearchInput" oninput="renderRawPickerList()" onkeydown="handleRawPickerKeydown(event)" placeholder="품목명 · 거래처 · 규격 · 초성 검색 (예: 포리쉐, 버터, 식수, ㅂㅅㄲㅅㄱ)..." class="w-full h-9 pl-8 pr-8 rounded-xl border-2 border-amber-400 bg-white font-bold text-xs text-stone-900 focus:outline-none focus:border-amber-600">
+                            <i data-lucide="search" class="w-4 h-4 text-amber-700 absolute left-2.5 top-2.5"></i>
+                            <button type="button" onclick="clearRawPickerSearch()" title="검색어 지우기" class="absolute right-2.5 top-2 text-stone-400 hover:text-stone-700 font-black text-xs cursor-pointer">✕</button>
+                        </div>
+                        <select id="rawPickerVendorSelect" onchange="rawPickerVendorFilter=this.value; renderRawPickerList();" class="h-9 rounded-xl border border-stone-300 bg-white px-2.5 font-bold text-stone-700 max-w-[160px]">
+                            <option value="ALL">전체 거래처</option>
+                        </select>
+                        <div class="inline-flex rounded-xl border border-stone-300 bg-white p-0.5">
+                            <button type="button" id="rawScopeBtn_RAW" onclick="setRawPickerScope('RAW')" class="px-2.5 py-1 rounded-lg font-extrabold text-[11px] bg-stone-900 text-white cursor-pointer">원재료만</button>
+                            <button type="button" id="rawScopeBtn_ALL" onclick="setRawPickerScope('ALL')" class="px-2.5 py-1 rounded-lg font-bold text-[11px] text-stone-600 cursor-pointer">전체품목</button>
+                        </div>
+                    </div>
+
+                    <!-- 검색 결과 리스트 테이블 -->
+                    <div class="flex-1 overflow-y-auto min-h-[300px]">
+                        <table class="w-full table-fixed border-collapse text-left">
+                            <colgroup>
+                                <col class="w-[40px]">
+                                <col class="w-[15%]">
+                                <col class="w-[34%]">
+                                <col class="w-[12%]">
+                                <col class="w-[14%]">
+                                <col class="w-[13%]">
+                                <col class="w-[82px]">
+                            </colgroup>
+                            <thead class="sticky top-0 z-10 shadow-2xs">
+                                <tr>
+                                    <th class="fd-th py-2 px-2 text-center"><input type="checkbox" id="rawPickerCheckAll" onchange="toggleRawPickerAll(this.checked)" class="rounded cursor-pointer"></th>
+                                    <th class="fd-th py-2 px-2.5">거래처</th>
+                                    <th class="fd-th py-2 px-2.5">원재료명</th>
+                                    <th class="fd-th py-2 px-2 text-center">규격</th>
+                                    <th class="fd-th py-2 px-2.5 text-right">최신 발주단가</th>
+                                    <th class="fd-th py-2 px-2 text-right">g당 단가</th>
+                                    <th class="fd-th py-2 px-2 text-center">즉시투입</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rawPickerTableBody"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- 하단 액션 바 -->
+                    <div class="px-4 py-2.5 bg-stone-100 border-t border-stone-300 flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center gap-2 text-[11px] text-stone-600">
+                            <span id="rawPickerResultSummary" class="font-bold text-stone-800">총 0종</span>
+                            <span>· 행 클릭 시 다중 선택되며, 우측 <strong>[+ 투입]</strong> 클릭 시 1건 즉시 투입 후 창이 유지됩니다.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="closeRawMaterialPickerModal()" class="px-3.5 py-1.5 rounded-xl font-bold bg-white border border-stone-300 text-stone-700 hover:bg-stone-50 cursor-pointer">닫기</button>
+                            <button type="button" onclick="commitSelectedRawMaterialsFromModal()" id="rawPickerCommitBtn" class="px-4 py-1.5 rounded-xl font-extrabold bg-amber-600 hover:bg-amber-700 text-white shadow-xs cursor-pointer">선택 품목 일괄 투입 (0건)</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         `;
     }
 
@@ -742,18 +817,21 @@ function renderRecipeDetailPanel() {
 
         <!-- 배합비 투입 컨트롤 박스 (3줄 수직 정렬 그리드 · 줄바꿈 깨짐 방지) -->
         <div class="p-2.5 bg-amber-50/50 border-b border-stone-200 space-y-1.5 text-xs">
-            <!-- 1열: 원재료 투입 -->
+            <!-- 1열: 원재료 투입 (팝업 검색창 호출 방식) -->
             <div class="flex items-center gap-1.5">
                 <div class="w-[132px] shrink-0 h-7 px-2 rounded-lg bg-amber-100/80 border border-amber-300 flex items-center justify-center font-extrabold text-[11px] text-amber-950 whitespace-nowrap">
                     원재료
                 </div>
-                <select id="quickAddRawSelect" class="flex-1 min-w-0 h-7 border border-amber-400 rounded-lg px-2 font-bold bg-white text-[11.5px] truncate">
-                    <option value="">발주 원재료 선택 (${rawOnlyList.length}종)...</option>
-                    ${rawOnlyList.map(c => `<option value="${escapeHtml(c.key)}">${escapeHtml(c.item)} (${escapeHtml(c.spec)} · ${formatCurrency(c.unitPrice)})</option>`).join('')}
-                </select>
+                <button type="button" onclick="openRawMaterialPickerModal()" class="flex-1 min-w-0 h-7 border border-amber-400 hover:border-amber-600 rounded-lg px-2.5 bg-white hover:bg-amber-50/40 flex items-center justify-between text-left transition cursor-pointer group">
+                    <span class="flex items-center gap-1.5 min-w-0 truncate font-bold text-[11.5px] text-stone-700 group-hover:text-stone-950">
+                        <i data-lucide="search" class="w-3.5 h-3.5 text-amber-600 shrink-0"></i>
+                        <span class="truncate">클릭하여 발주 원재료 검색 · 선택 (등록 ${rawOnlyList.length}종)</span>
+                    </span>
+                    <span class="text-[10px] font-extrabold text-amber-700 bg-amber-100/80 px-1.5 py-0.5 rounded shrink-0 ml-1">검색창 열기</span>
+                </button>
                 <div class="w-[146px] shrink-0 grid grid-cols-12 gap-1">
-                    <button type="button" onclick="addIngredientToRecipe()" class="col-span-8 h-7 rounded-lg bg-stone-900 hover:bg-stone-800 text-white font-extrabold text-[11px] cursor-pointer whitespace-nowrap">+ 원재료 투입</button>
-                    <button type="button" onclick="addBlankIngredientToRecipe()" title="발주 내역에 없는 원재료(식수 등) 직접 추가" class="col-span-4 h-7 rounded-lg bg-white border border-stone-300 hover:bg-stone-100 text-stone-700 font-bold text-[11px] cursor-pointer whitespace-nowrap">수기</button>
+                    <button type="button" onclick="openRawMaterialPickerModal()" class="col-span-8 h-7 rounded-lg bg-stone-900 hover:bg-stone-800 text-white font-extrabold text-[11px] cursor-pointer whitespace-nowrap">+ 원재료 검색</button>
+                    <button type="button" onclick="addBlankIngredientToRecipe()" title="발주 내역에 없는 원재료 직접 추가" class="col-span-4 h-7 rounded-lg bg-white border border-stone-300 hover:bg-stone-100 text-stone-700 font-bold text-[11px] cursor-pointer whitespace-nowrap">수기</button>
                 </div>
             </div>
 
@@ -1071,16 +1149,172 @@ function updateBakingProcess(key, val) {
 }
 
 
-function addIngredientToRecipe() {
-    const rc = recipesData.find(r => r.id === selectedRecipeId);
-    if (!rc) return;
-    const rawKey = document.getElementById('quickAddRawSelect')?.value;
-    if (!rawKey) return showToast('발주 원재료 목록에서 품목을 선택해 주세요.', 'error');
-    const found = getRawMaterialCatalogForRecipe().find(c => c.key === rawKey);
-    if (!found) return;
+// 한글 초성 추출기 (예: '포리쉐' -> 'ㅍㄹㅅ', '앵커버터' -> 'ㅇㅋㅂㅌ')
+function extractKoreanChosung(str) {
+    const CHO = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+    let out = '';
+    const s = String(str || '');
+    for (let i = 0; i < s.length; i++) {
+        const code = s.charCodeAt(i) - 44032;
+        if (code >= 0 && code <= 11171) out += CHO[Math.floor(code / 588)];
+        else out += s[i].toLowerCase();
+    }
+    return out;
+}
 
+function getFilteredRawPickerItems() {
+    const allCatalog = getRawMaterialCatalogForRecipe();
+    const qRaw = (document.getElementById('rawPickerSearchInput')?.value || '').trim().toLowerCase();
+    const qNoSpace = qRaw.replace(/\s+/g, '');
+    const vendorF = rawPickerVendorFilter || 'ALL';
+
+    return allCatalog.filter(c => {
+        if (rawPickerScopeFilter === 'RAW' && c.isPackaging) return false;
+        if (vendorF !== 'ALL' && c.vendor !== vendorF) return false;
+        if (!qNoSpace) return true;
+        const target = `${c.item} ${c.vendor} ${c.spec}`.toLowerCase();
+        const targetNoSpace = target.replace(/\s+/g, '');
+        if (targetNoSpace.includes(qNoSpace)) return true;
+        const chosung = extractKoreanChosung(targetNoSpace);
+        return chosung.includes(qNoSpace);
+    });
+}
+
+function openRawMaterialPickerModal() {
+    const rc = recipesData.find(r => r.id === selectedRecipeId);
+    if (!rc) return showToast('먼저 좌측 제품내역에서 레시피를 선택해 주세요.', 'error');
+
+    rawPickerModalSelectedKeys.clear();
+    const modal = document.getElementById('rawMaterialPickerModal');
+    if (!modal) return;
+
+    // 거래처 필터 옵션 최신화
+    const allCatalog = getRawMaterialCatalogForRecipe();
+    const vendors = Array.from(new Set(allCatalog.map(c => c.vendor).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'ko'));
+    const vSel = document.getElementById('rawPickerVendorSelect');
+    if (vSel) {
+        vSel.innerHTML = `<option value="ALL">전체 거래처 (${vendors.length})</option>` +
+            vendors.map(v => `<option value="${escapeHtml(v)}" ${v === rawPickerVendorFilter ? 'selected' : ''}>${escapeHtml(v)}</option>`).join('');
+    }
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    renderRawPickerList();
+    if (window.lucide) lucide.createIcons();
+
+    setTimeout(() => {
+        const inp = document.getElementById('rawPickerSearchInput');
+        if (inp) { inp.focus(); inp.select(); }
+    }, 40);
+}
+
+function closeRawMaterialPickerModal() {
+    const modal = document.getElementById('rawMaterialPickerModal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+function clearRawPickerSearch() {
+    const inp = document.getElementById('rawPickerSearchInput');
+    if (inp) {
+        inp.value = '';
+        inp.focus();
+    }
+    renderRawPickerList();
+}
+
+function setRawPickerScope(scope) {
+    rawPickerScopeFilter = scope;
+    const btnRaw = document.getElementById('rawScopeBtn_RAW');
+    const btnAll = document.getElementById('rawScopeBtn_ALL');
+    if (btnRaw) btnRaw.className = scope === 'RAW' ? 'px-2.5 py-1 rounded-lg font-extrabold text-[11px] bg-stone-900 text-white cursor-pointer' : 'px-2.5 py-1 rounded-lg font-bold text-[11px] text-stone-600 cursor-pointer';
+    if (btnAll) btnAll.className = scope === 'ALL' ? 'px-2.5 py-1 rounded-lg font-extrabold text-[11px] bg-stone-900 text-white cursor-pointer' : 'px-2.5 py-1 rounded-lg font-bold text-[11px] text-stone-600 cursor-pointer';
+    renderRawPickerList();
+}
+
+function handleRawPickerKeydown(e) {
+    if (e.key === 'Escape') {
+        closeRawMaterialPickerModal();
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        const filtered = getFilteredRawPickerItems();
+        if (rawPickerModalSelectedKeys.size > 0) {
+            commitSelectedRawMaterialsFromModal();
+        } else if (filtered.length === 1) {
+            quickAddSingleRawFromModal(filtered[0].key);
+            closeRawMaterialPickerModal();
+        }
+    }
+}
+
+function renderRawPickerList() {
+    const tbody = document.getElementById('rawPickerTableBody');
+    const summaryEl = document.getElementById('rawPickerResultSummary');
+    const commitBtn = document.getElementById('rawPickerCommitBtn');
+    const chkAll = document.getElementById('rawPickerCheckAll');
+    if (!tbody) return;
+
+    const rc = recipesData.find(r => r.id === selectedRecipeId);
+    const existingKeys = new Set((rc?.ingredients || []).filter(ig => ig.rowType !== 'SUB_RECIPE').map(ig => ig.rawKey || `${ig.item}||${ig.spec || ''}`));
+    const filtered = getFilteredRawPickerItems();
+
+    if (summaryEl) summaryEl.textContent = `검색 결과 ${filtered.length}종`;
+    if (commitBtn) commitBtn.textContent = `선택 품목 일괄 투입 (${rawPickerModalSelectedKeys.size}건)`;
+    if (chkAll) chkAll.checked = filtered.length > 0 && filtered.every(c => rawPickerModalSelectedKeys.has(c.key));
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-stone-400 font-bold text-xs">조건에 일치하는 발주 원재료가 없습니다.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = filtered.map((c, idx) => {
+        const checked = rawPickerModalSelectedKeys.has(c.key);
+        const alreadyIn = existingKeys.has(c.rawKey);
+        const perG = c.specGrams > 0 ? (c.unitPrice / c.specGrams) : 0;
+        return `
+            <tr onclick="toggleRawPickerRowByIdx(${idx})" class="cursor-pointer transition border-b border-stone-100 ${checked ? 'bg-amber-100/70' : 'hover:bg-amber-50/40'}">
+                <td class="fd-td py-2 px-2 text-center" onclick="event.stopPropagation()">
+                    <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleRawPickerRowByIdx(${idx}, this.checked)" class="rounded cursor-pointer">
+                </td>
+                <td class="fd-td py-2 px-2.5 font-semibold text-stone-600 truncate" title="${escapeHtml(c.vendor || '-')}">${escapeHtml(c.vendor || '-')}</td>
+                <td class="fd-td py-2 px-2.5 font-extrabold text-stone-900 truncate" title="${escapeHtml(c.item)}">
+                    <span>${escapeHtml(c.item)}</span>
+                    ${alreadyIn ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">투입됨</span>` : ''}
+                </td>
+                <td class="fd-td py-2 px-2 text-center text-stone-600 truncate">${escapeHtml(c.spec || '-')}</td>
+                <td class="fd-td py-2 px-2.5 text-right font-bold text-stone-900">${formatCurrency(c.unitPrice)}</td>
+                <td class="fd-td py-2 px-2 text-right text-stone-500 font-mono text-[11px]">${perG.toFixed(2)}원/g</td>
+                <td class="fd-td py-1.5 px-2 text-center" onclick="event.stopPropagation()">
+                    <button type="button" onclick="quickAddSingleRawByIdx(${idx})" class="px-2.5 py-1 rounded-lg bg-stone-900 hover:bg-amber-600 text-white font-extrabold text-[11px] transition cursor-pointer whitespace-nowrap">+ 투입</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function toggleRawPickerRowByIdx(idx, explicitState) {
+    const filtered = getFilteredRawPickerItems();
+    const target = filtered[idx];
+    if (!target) return;
+    const shouldSelect = explicitState !== undefined ? explicitState : !rawPickerModalSelectedKeys.has(target.key);
+    if (shouldSelect) rawPickerModalSelectedKeys.add(target.key);
+    else rawPickerModalSelectedKeys.delete(target.key);
+    renderRawPickerList();
+}
+
+function toggleRawPickerAll(checked) {
+    const filtered = getFilteredRawPickerItems();
+    filtered.forEach(c => {
+        if (checked) rawPickerModalSelectedKeys.add(c.key);
+        else rawPickerModalSelectedKeys.delete(c.key);
+    });
+    renderRawPickerList();
+}
+
+function pushCatalogItemToRecipe(rc, found) {
     rc.ingredients.push({
-        rowId: 'ri_' + Date.now(),
+        rowId: 'ri_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
         rowType: 'RAW',
         rawKey: found.rawKey,
         itemCode: found.itemCode,
@@ -1095,8 +1329,53 @@ function addIngredientToRecipe() {
         weightG: 1000,
         seq: 0
     });
+}
+
+function quickAddSingleRawByIdx(idx) {
+    const filtered = getFilteredRawPickerItems();
+    const found = filtered[idx];
+    if (!found) return;
+    quickAddSingleRawFromModal(found.key);
+}
+
+function quickAddSingleRawFromModal(rawKey) {
+    const rc = recipesData.find(r => r.id === selectedRecipeId);
+    if (!rc) return;
+    const found = getRawMaterialCatalogForRecipe().find(c => c.key === rawKey);
+    if (!found) return;
+    pushCatalogItemToRecipe(rc, found);
+    rc.updatedAt = getTodayStr();
     saveLocalCache();
+    renderRecipeDetailPanel();
+    renderRawPickerList();
+    showToast(`[${found.item}] 투입 완료`, 'success');
+}
+
+function commitSelectedRawMaterialsFromModal() {
+    const rc = recipesData.find(r => r.id === selectedRecipeId);
+    if (!rc) return;
+    if (rawPickerModalSelectedKeys.size === 0) {
+        return showToast('투입할 원재료를 체크하거나 우측 [+ 투입] 버튼을 눌러주세요.', 'error');
+    }
+    const catalog = getRawMaterialCatalogForRecipe();
+    let addedCnt = 0;
+    rawPickerModalSelectedKeys.forEach(k => {
+        const found = catalog.find(c => c.key === k);
+        if (found) {
+            pushCatalogItemToRecipe(rc, found);
+            addedCnt++;
+        }
+    });
+    rawPickerModalSelectedKeys.clear();
+    rc.updatedAt = getTodayStr();
+    saveLocalCache();
+    closeRawMaterialPickerModal();
     renderRecipeWorkspace();
+    showToast(`원재료 ${addedCnt}종이 일괄 투입되었습니다.`, 'success');
+}
+
+function addIngredientToRecipe() {
+    openRawMaterialPickerModal();
 }
 
 function addBlankIngredientToRecipe() {
