@@ -1,4 +1,4 @@
-<!-- [VERSION: index.html v2.2 - 2026-11-19 원재료 · 엠즈입고(ms_inbound.js) · 레시피(recipe.js) · 제품단가(price.js) 4대 도메인 통합본] -->
+<!-- [VERSION: index.html v2.3 - 2026-11-19 원재료 탭 주기적/포커스 자동동기화 제거 · 액션 기반 동기화 전환본] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -38,7 +38,7 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-base sm:text-lg font-extrabold tracking-tight text-stone-900">바로가 공장 통합 관리 시스템</h1>
-                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.2.0</span>
+                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.3.0</span>
                     </div>
                     <p class="text-xs text-stone-500 hidden sm:block">원재료 발주/재고 · 엠즈 입고/회송 · 레시피 배합비 · 제품단가 출고마진 통합 관리</p>
                 </div>
@@ -1645,10 +1645,8 @@
             restoreLocalCacheIfEmpty();
             initYearAndMonthControls();
             renderDashboard();
+            // 최초 페이지 접속 시 1회만 자동 불러오기 수행 (이후에는 등록/수정/삭제 액션 또는 수동 새로고침 시에만 동기화)
             syncFromGoogleSheet(false);
-            setInterval(() => syncFromGoogleSheet(false), 60000);
-            window.addEventListener('focus', () => syncFromGoogleSheet(false));
-            document.addEventListener('visibilitychange', () => { if (!document.hidden) syncFromGoogleSheet(false); });
         };
     </script>
     <script src="./ms_inbound.js"></script>
