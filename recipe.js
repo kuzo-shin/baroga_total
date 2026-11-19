@@ -1,18 +1,45 @@
 // ============================================================================
-// 바로가 공장 통합 관리 시스템 - 레시피 전용 모듈 (FoodDiscovery 완벽 이식 · 확장판)
+// 바로가 공장 통합 관리 시스템 - 레시피 전용 모듈 (FoodDiscovery 이식 · UI/UX 정밀 보완판)
 // 파일명: recipe.js (index.html 수정 없이 단독 교체 가능)
 // ============================================================================
 
-let selectedRecipeIdsForBulk = new Set();
+const BAROGA_DEFAULT_RECIPE_GAS_URL = "https://script.google.com/macros/s/AKfycbw9zwUi9b7sNkdu4IVqIy0386ZkPLFe4cwqiZIb0qTkLLdq0mFWr2aHQvANPF2VOS4paw/exec";
+const LEGACY_DUMMY_RECIPE_URL_PART = "AKfycbxR8N2mP9vL4kQ7wT1yU5iO3pA6sD8fG0hJ2kL5zX9cV4bN7mM1qW6eR8tY";
+
 let collapsedSubRecipeNodes = new Set();
 let recipeCategoryFilter = 'ALL'; // ALL | PRODUCT | SUB
-let recipeRatioMode = 'WEIGHT'; // WEIGHT(푸드디스커버리 기본 중량비%) | BAKERS(밀가루100% 베이커스%)
+let recipeRatioMode = 'WEIGHT';   // WEIGHT(중량비%) | BAKERS(베이커스%)
 
-// 단위/규격 문자열에서 기준 수량(g, ml, 매, ea) 추출
+// 레시피 전용 DB URL 초기화 및 기존 더미 URL 자동 교체
+(function initRecipeGasUrlDefault() {
+    try {
+        const saved = localStorage.getItem('baroga_recipe_gas_url') || '';
+        if (!saved || saved.includes(LEGACY_DUMMY_RECIPE_URL_PART)) {
+            localStorage.setItem('baroga_recipe_gas_url', BAROGA_DEFAULT_RECIPE_GAS_URL);
+            recipeGasWebAppUrl = BAROGA_DEFAULT_RECIPE_GAS_URL;
+        } else {
+            recipeGasWebAppUrl = saved.trim();
+        }
+    } catch (e) {
+        recipeGasWebAppUrl = BAROGA_DEFAULT_RECIPE_GAS_URL;
+    }
+})();
+
+// 내부 원재료 고유코드 생성기 (화면에는 숨기고 내부 원가 연동 키로 사용)
+function generateInternalItemCode(name, spec = '', prefix = 'RM') {
+    const seed = `${String(name || '').trim()}||${String(spec || '').trim()}`;
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+        hash = ((hash << 5) - hash + seed.charCodeAt(i)) | 0;
+    }
+    const hex = Math.abs(hash).toString(36).toUpperCase().padStart(5, '0').slice(0, 6);
+    return `${prefix}_${hex}`;
+}
+
+// 단위/규격 문자열에서 기준 중량(g, ml) 추출
 function parseSpecToGrams(specStr) {
     const s = String(specStr || '').toLowerCase().replace(/,/g, '').trim();
     if (!s) return 1000;
-    // 예: 2kg*5, 500g*20 등 곱셈 규격 처리
     const mult = s.match(/(\d+(?:\.\d+)?)\s*(kg|g|l|ml)\s*[*x×]\s*(\d+(?:\.\d+)?)/);
     if (mult) {
         const base = parseFloat(mult[1]) || 1;
@@ -31,36 +58,131 @@ function parseSpecToGrams(specStr) {
 function parsePackagingSpecQty(specStr) {
     const s = String(specStr || '').toLowerCase().replace(/,/g, '').trim();
     if (!s) return 1;
-    // 예: 500매/롤, 1000매, 200ea 등
+    const mult = s.match(/(\d+(?:\.\d+)?)\s*[*x×]\s*(\d+(?:\.\d+)?)\s*(매|장|ea|개|입)/);
+    if (mult) return (parseFloat(mult[1]) || 1) * (parseFloat(mult[2]) || 1);
     const m = s.match(/(\d+(?:\.\d+)?)\s*(매|장|ea|개|입)/);
     if (m) return parseFloat(m[1]) || 1;
     return 1;
 }
 
-// 발주 데이터(ordersData)에서 최신 원재료/부자재 카탈로그 추출
+// 원재료 페이지(ordersData)에서 일자순 최신 단가 기준 카탈로그 및 내부코드 맵 생성
 function getRawMaterialCatalogForRecipe() {
     const map = {};
-    (ordersData || []).forEach(o => {
+    const sortedOrders = [...(ordersData || [])].sort((a, b) =>
+        String(a.date || '').localeCompare(String(b.date || ''))
+    );
+    sortedOrders.forEach(o => {
         const u = parseFloat(o.amount) || 0;
-        if (u <= 0 || !o.colB) return;
-        const k = `${o.colB}||${o.colC || ''}`;
-        const isPack = /비닐|박스|유포지|노루지|롤백|트레이|패드|스티커|테이프|봉투|랩|카톤/.test(o.colB);
-        map[k] = {
-            key: k,
-            item: o.colB,
-            spec: o.colC || '',
-            vendor: o.colA || '',
+        const itemName = String(o.colB || '').trim();
+        const specName = String(o.colC || '').trim();
+        if (u <= 0 || !itemName) return;
+        const rawKey = `${itemName}||${specName}`;
+        const isPack = /비닐|박스|유포지|노루지|롤백|트레이|패드|스티커|테이프|봉투|랩|카톤/.test(itemName);
+        const internalCode = generateInternalItemCode(itemName, specName, isPack ? 'PK' : 'RM');
+        map[rawKey] = {
+            key: rawKey,
+            rawKey,
+            itemCode: internalCode,
+            item: itemName,
+            spec: specName,
+            vendor: String(o.colA || '').trim(),
+            latestDate: o.date || '',
             unitPrice: u,
-            specGrams: parseSpecToGrams(o.colC),
-            specPackQty: parsePackagingSpecQty(o.colC),
+            specGrams: parseSpecToGrams(specName),
+            specPackQty: parsePackagingSpecQty(specName),
             isPackaging: isPack
         };
     });
     return Object.values(map).sort((a, b) => a.item.localeCompare(b.item, 'ko'));
 }
 
-// 레시피 데이터 구조 표준화 (기존 데이터 하위호환 100% 보장)
-function ensureRecipeSchema(rc) {
+function buildRawCatalogLookupMaps() {
+    const list = getRawMaterialCatalogForRecipe();
+    const byKey = new Map();
+    const byCode = new Map();
+    const byName = new Map();
+    list.forEach(entry => {
+        byKey.set(entry.rawKey, entry);
+        byCode.set(entry.itemCode, entry);
+        // 동일 품명이 여러 규격일 경우 가장 최근 발주 건 우선
+        const prev = byName.get(entry.item);
+        if (!prev || String(entry.latestDate).localeCompare(String(prev.latestDate)) >= 0) {
+            byName.set(entry.item, entry);
+        }
+    });
+    return { list, byKey, byCode, byName };
+}
+
+// 원재료 페이지(ordersData) 단가와 레시피 내부코드 실시간 동기화
+function syncIngredientWithRawCatalog(ig, lookup) {
+    if (!ig || ig.rowType === 'SUB_RECIPE') return null;
+    if (!lookup) lookup = buildRawCatalogLookupMaps();
+
+    let matched = null;
+    if (ig.rawKey && lookup.byKey.has(ig.rawKey)) {
+        matched = lookup.byKey.get(ig.rawKey);
+    } else if (ig.itemCode && lookup.byCode.has(ig.itemCode)) {
+        matched = lookup.byCode.get(ig.itemCode);
+    } else if (ig.item) {
+        const exactKey = `${String(ig.item).trim()}||${String(ig.spec || '').trim()}`;
+        if (lookup.byKey.has(exactKey)) matched = lookup.byKey.get(exactKey);
+        else if (lookup.byName.has(String(ig.item).trim())) matched = lookup.byName.get(String(ig.item).trim());
+    }
+
+    if (matched) {
+        ig.rawKey = matched.rawKey;
+        if (!ig.itemCode) ig.itemCode = matched.itemCode;
+        // 수동 고정 단가(priceSource === 'MANUAL')가 아니면 원재료 페이지 최신 발주단가를 자동 공유
+        if (ig.priceSource !== 'MANUAL') {
+            ig.unitPrice = matched.unitPrice;
+            if (matched.spec) {
+                ig.spec = matched.spec;
+                ig.specGrams = matched.specGrams;
+            }
+        }
+        return matched;
+    } else {
+        if (!ig.itemCode) ig.itemCode = generateInternalItemCode(ig.item || '원재료', ig.spec || '', 'RM');
+        if (!ig.rawKey && ig.item) ig.rawKey = `${String(ig.item).trim()}||${String(ig.spec || '').trim()}`;
+        return null;
+    }
+}
+
+function syncPackagingWithRawCatalog(pk, lookup) {
+    if (!pk) return null;
+    if (!lookup) lookup = buildRawCatalogLookupMaps();
+
+    let matched = null;
+    if (pk.rawKey && lookup.byKey.has(pk.rawKey)) {
+        matched = lookup.byKey.get(pk.rawKey);
+    } else if (pk.code && lookup.byCode.has(pk.code)) {
+        matched = lookup.byCode.get(pk.code);
+    } else if (pk.name) {
+        const exactKey = `${String(pk.name).trim()}||${String(pk.spec || '').trim()}`;
+        if (lookup.byKey.has(exactKey)) matched = lookup.byKey.get(exactKey);
+        else if (lookup.byName.has(String(pk.name).trim())) matched = lookup.byName.get(String(pk.name).trim());
+    }
+
+    if (matched) {
+        pk.rawKey = matched.rawKey;
+        if (!pk.code) pk.code = matched.itemCode;
+        if (pk.priceSource !== 'MANUAL') {
+            pk.purchasePrice = matched.unitPrice;
+            if (matched.spec) {
+                pk.spec = matched.spec;
+                pk.specQty = matched.specPackQty || pk.specQty || 1;
+            }
+        }
+        return matched;
+    } else {
+        if (!pk.code) pk.code = generateInternalItemCode(pk.name || '포장재', pk.spec || '', 'PK');
+        if (!pk.rawKey && pk.name) pk.rawKey = `${String(pk.name).trim()}||${String(pk.spec || '').trim()}`;
+        return null;
+    }
+}
+
+// 레시피 스키마 표준화 (하위호환 + 내부코드 자동보강)
+function ensureRecipeSchema(rc, lookup = null) {
     if (!rc) return null;
     if (!rc.productCode) rc.productCode = '100001';
     if (!rc.productName) rc.productName = '신규 제품 레시피';
@@ -71,7 +193,7 @@ function ensureRecipeSchema(rc) {
     if (rc.packQty === undefined || rc.packQty === null) rc.packQty = 1;
     if (rc.sellingPrice === undefined || rc.sellingPrice === null) rc.sellingPrice = 0;
     if (rc.lossRatio === undefined || rc.lossRatio === null) rc.lossRatio = 0;
-    if (rc.customProductionQty === undefined) rc.customProductionQty = 0; // 0이면 자동(중량합계/분할중량)
+    if (rc.customProductionQty === undefined) rc.customProductionQty = 0;
     if (!rc.imageData) rc.imageData = '';
 
     if (!Array.isArray(rc.activeProcesses) || rc.activeProcesses.length === 0) {
@@ -80,30 +202,33 @@ function ensureRecipeSchema(rc) {
     if (!Array.isArray(rc.ingredients)) rc.ingredients = [];
     rc.ingredients.forEach((ig, idx) => {
         if (!ig.rowId) ig.rowId = 'ri_' + Date.now() + '_' + idx;
-        if (!ig.rowType) ig.rowType = ig.subRecipeId ? 'SUB_RECIPE' : 'RAW'; // RAW | SUB_RECIPE
+        if (!ig.rowType) ig.rowType = ig.subRecipeId ? 'SUB_RECIPE' : 'RAW';
         if (!ig.process) ig.process = rc.activeProcesses[0] || '제1공정';
-        if (!ig.itemCode) ig.itemCode = '';
         if (!ig.origin) ig.origin = '';
         if (!ig.unit) ig.unit = ig.rowType === 'SUB_RECIPE' ? 'EA' : 'G';
         if (ig.qty === undefined || ig.qty === null) ig.qty = parseFloat(ig.weightG ?? ig.g1 ?? 0) || 0;
         if (ig.seq === undefined || ig.seq === null) ig.seq = 0;
         if (ig.unitPrice === undefined || ig.unitPrice === null) ig.unitPrice = 0;
         if (!ig.specGrams) ig.specGrams = parseSpecToGrams(ig.spec || '1kg');
+        if (ig.rowType !== 'SUB_RECIPE') {
+            syncIngredientWithRawCatalog(ig, lookup);
+        } else if (!ig.itemCode && ig.subRecipeId) {
+            const sub = (recipesData || []).find(r => r.id === ig.subRecipeId);
+            if (sub) ig.itemCode = sub.productCode || '';
+        }
     });
 
     if (!Array.isArray(rc.packagingList)) rc.packagingList = [];
     rc.packagingList.forEach((pk, idx) => {
         if (!pk.rowId) pk.rowId = 'pk_' + Date.now() + '_' + idx;
-        if (!pk.code) pk.code = '';
         if (!pk.unit) pk.unit = 'EA';
         if (pk.purchasePrice === undefined) pk.purchasePrice = 0;
         if (pk.specQty === undefined || pk.specQty <= 0) pk.specQty = 1;
         if (pk.usedQty === undefined) pk.usedQty = 1;
+        syncPackagingWithRawCatalog(pk, lookup);
     });
 
-    if (!rc.bakingProcess || typeof rc.bakingProcess !== 'object') {
-        rc.bakingProcess = {};
-    }
+    if (!rc.bakingProcess || typeof rc.bakingProcess !== 'object') rc.bakingProcess = {};
     const bpDefaults = {
         mixLow: '', mixMid: '', mixHigh: '',
         ferm2Temp: '', ferm2Humid: '', ferm2Time: '',
@@ -117,9 +242,10 @@ function ensureRecipeSchema(rc) {
     return rc;
 }
 
-// 다단계(Multi-level) 하위 반제품/충전물 재귀 평가 (순환 참조 방지 포함)
-function evaluateRecipeBaseTotals(rc, visitedIds = new Set()) {
-    ensureRecipeSchema(rc);
+// 다단계 하위 반제품/충전물 재귀 평가 (원재료 페이지 단가 실시간 반영)
+function evaluateRecipeBaseTotals(rc, visitedIds = new Set(), lookup = null) {
+    if (!lookup) lookup = buildRawCatalogLookupMaps();
+    ensureRecipeSchema(rc, lookup);
     if (visitedIds.has(rc.id)) {
         return { weightTotalG: 0, fillingWeightG: 0, rawCostTotal: 0, baseYieldQty: 1, itemBreakdown: [] };
     }
@@ -136,17 +262,13 @@ function evaluateRecipeBaseTotals(rc, visitedIds = new Set()) {
         if (ig.rowType === 'SUB_RECIPE' && ig.subRecipeId) {
             const subRc = (recipesData || []).find(r => r.id === ig.subRecipeId);
             if (subRc) {
-                const subEval = evaluateRecipeBaseTotals(subRc, nextVisited);
-                // 스케일 산정:
-                // 1) 단위 'G'이거나 투입수량이 하위 총중량 수준(예: 35,375g 충전물)일 때 중량비례
-                // 2) 단위 'EA'일 때 하위 레시피 생산수량(baseYieldQty) 대비 투입 EA 비율로 스케일링
+                const subEval = evaluateRecipeBaseTotals(subRc, nextVisited, lookup);
                 let scale = 1;
                 const unitUpper = String(ig.unit || 'EA').toUpperCase();
                 if (unitUpper === 'G' || unitUpper === 'KG') {
                     const targetG = unitUpper === 'KG' ? qty * 1000 : qty;
                     scale = subEval.weightTotalG > 0 ? (targetG / subEval.weightTotalG) : 0;
                 } else {
-                    // FoodDiscovery 호환: 충전물처럼 단위가 EA인데 수량이 중량(예: 35375)으로 입력된 경우 자동 감지
                     if (subEval.weightTotalG > 0 && Math.abs(qty - subEval.weightTotalG) < 1 && subEval.baseYieldQty !== qty) {
                         scale = 1;
                     } else {
@@ -160,11 +282,12 @@ function evaluateRecipeBaseTotals(rc, visitedIds = new Set()) {
                 weightTotalG += effWeightG;
                 if (isFilling) fillingWeightG += effWeightG;
                 rawCostTotal += effCost;
-                itemBreakdown.push({ ig, subRc, subEval, scale, effWeightG, effCost });
+                itemBreakdown.push({ ig, subRc, subEval, scale, effWeightG, effCost, linkedRaw: null });
                 return;
             }
         }
-        // 일반 원재료
+
+        const linkedRaw = syncIngredientWithRawCatalog(ig, lookup);
         const unitUpper = String(ig.unit || 'G').toUpperCase();
         const effWeightG = unitUpper === 'KG' ? qty * 1000 : (unitUpper === 'EA' ? qty * (parseFloat(ig.unitWeightG) || 0) : qty);
         const specG = parseFloat(ig.specGrams) || parseSpecToGrams(ig.spec) || 1000;
@@ -176,7 +299,7 @@ function evaluateRecipeBaseTotals(rc, visitedIds = new Set()) {
         weightTotalG += effWeightG;
         if (/(충전물|필링|앙금)/.test(ig.process || '')) fillingWeightG += effWeightG;
         rawCostTotal += effCost;
-        itemBreakdown.push({ ig, subRc: null, subEval: null, scale: 1, effWeightG, effCost });
+        itemBreakdown.push({ ig, subRc: null, subEval: null, scale: 1, effWeightG, effCost, linkedRaw });
     });
 
     const divW = parseFloat(rc.divisionWeight) || 0;
@@ -186,10 +309,11 @@ function evaluateRecipeBaseTotals(rc, visitedIds = new Set()) {
     return { weightTotalG, fillingWeightG, rawCostTotal, baseYieldQty, itemBreakdown };
 }
 
-// FoodDiscovery 우측 상단 16개 지표 완벽 산출
+// 우측 16개 원가·수율 지표 산출
 function calculateRecipeMetrics(rc) {
-    ensureRecipeSchema(rc);
-    const base = evaluateRecipeBaseTotals(rc);
+    const lookup = buildRawCatalogLookupMaps();
+    ensureRecipeSchema(rc, lookup);
+    const base = evaluateRecipeBaseTotals(rc, new Set(), lookup);
     const weightTotalG = base.weightTotalG;
     const fillingWeightG = base.fillingWeightG;
     const rawMaterialCost = base.rawCostTotal;
@@ -200,12 +324,12 @@ function calculateRecipeMetrics(rc) {
 
     const lossR = Math.max(0, parseFloat(rc.lossRatio) || 0);
     const lossWeightG = weightTotalG * (lossR / 100);
-    const productQty = prodQty * (1 - lossR / 100); // 제품수량 (손실 반영 후 최종 수량)
+    const productQty = prodQty * (1 - lossR / 100);
     const lossAmount = rawMaterialCost * (lossR / 100);
 
-    // 포장지(1PK 기준 개별포장 원가 합산)
     let unitPackCost = 0;
     (rc.packagingList || []).forEach(pk => {
+        syncPackagingWithRawCatalog(pk, lookup);
         const pPrice = parseFloat(pk.purchasePrice) || 0;
         const sQty = parseFloat(pk.specQty) || 1;
         const uQty = parseFloat(pk.usedQty) || 0;
@@ -214,17 +338,16 @@ function calculateRecipeMetrics(rc) {
 
     const packQty = Math.max(1, parseFloat(rc.packQty) || 1);
     const packCount = productQty > 0 ? (productQty / packQty) : 0;
-    const totalPackCost = packCount * unitPackCost; // 총 포장가 = (제품수량 / 포장수량) * 개별포장
+    const totalPackCost = packCount * unitPackCost;
 
-    const productionCost = rawMaterialCost + totalPackCost; // 생산원가 = 배합 재료원가 합계 + 총 포장가
-    const unitCost = productQty > 0 ? (productionCost / productQty) : 0; // 개당원가
-    const salesCost = unitCost * packQty; // 판매원가 (1PK 총원가)
-    const sellingPrice = parseFloat(rc.sellingPrice) || 0; // 판매금액 (1PK 판매가)
-    const costRatioPct = sellingPrice > 0 ? ((salesCost / sellingPrice) * 100) : 0; // 원가비율(%)
+    const productionCost = rawMaterialCost + totalPackCost;
+    const unitCost = productQty > 0 ? (productionCost / productQty) : 0;
+    const salesCost = unitCost * packQty;
+    const sellingPrice = parseFloat(rc.sellingPrice) || 0;
+    const costRatioPct = sellingPrice > 0 ? ((salesCost / sellingPrice) * 100) : 0;
     const marginRatioPct = sellingPrice > 0 ? (100 - costRatioPct) : 0;
 
     return {
-        // 구버전 필드 호환 유지
         weightTotalG,
         flourTotalG: weightTotalG,
         productionCost,
@@ -241,7 +364,6 @@ function calculateRecipeMetrics(rc) {
         onePkMargin: sellingPrice - salesCost,
         costRatioPct,
         marginRatioPct,
-        // FoodDiscovery 전용 정밀 지표
         divisionWeight: divW,
         lossRatio: lossR,
         lossWeightG,
@@ -269,28 +391,28 @@ function fmtDec(n, digits = 1) {
     return val.toLocaleString('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: digits });
 }
 
-// 메인 레시피 워크스페이스 렌더링 (3단 FoodDiscovery 레이아웃으로 자동 전환)
+// 메인 레시피 워크스페이스 렌더링
 function renderRecipeWorkspace() {
-    (recipesData || []).forEach(r => ensureRecipeSchema(r));
+    const lookup = buildRawCatalogLookupMaps();
+    (recipesData || []).forEach(r => ensureRecipeSchema(r, lookup));
     if (!selectedRecipeId && recipesData.length > 0) selectedRecipeId = recipesData[0].id;
 
     const mainEl = document.getElementById('recipeMainSection');
     if (!mainEl) return;
     mainEl.className = `${activeMasterDomain === 'RECIPE' ? 'flex' : 'hidden'} max-w-[1880px] w-full mx-auto px-3 sm:px-5 py-3.5 flex-1 flex-col gap-3`;
 
-    // 최초 1회 FoodDiscovery 3단 스켈레톤 주입
     if (!document.getElementById('fdThreeColRoot')) {
         mainEl.innerHTML = `
             <style>
-                .fd-th { background-color: #EFE2C6; color: #292524; font-weight: 800; font-size: 11px; border: 1px solid #D6C7A9; }
+                .fd-th { background-color: #EFE2C6; color: #292524; font-weight: 800; font-size: 11px; border: 1px solid #D6C7A9; white-space: nowrap; }
                 .fd-td { border: 1px solid #E5E0D8; font-size: 11.5px; }
-                .fd-kv-label { background-color: #EFE2C6; color: #292524; font-weight: 800; font-size: 11px; border: 1px solid #D6C7A9; padding: 5px 8px; text-align: center; white-space: nowrap; }
-                .fd-kv-val { background-color: #FFFFFF; color: #1C1917; font-weight: 700; font-size: 11.5px; border: 1px solid #DFD9CE; padding: 4px 8px; text-align: right; }
-                .fd-kv-input { width: 100%; text-align: right; font-weight: 800; background: #FFFBEB; border: 1px solid #F59E0B; border-radius: 4px; padding: 1px 5px; font-size: 11.5px; color: #1C1917; }
+                .fd-kv-label { background-color: #EFE2C6; color: #292524; font-weight: 800; font-size: 11px; border: 1px solid #D6C7A9; padding: 5px 6px; text-align: center; white-space: nowrap; }
+                .fd-kv-val { background-color: #FFFFFF; color: #1C1917; font-weight: 700; font-size: 11.5px; border: 1px solid #DFD9CE; padding: 4px 7px; text-align: right; }
+                .fd-kv-input { width: 100%; min-width: 0; text-align: right; font-weight: 800; background: #FFFBEB; border: 1px solid #F59E0B; border-radius: 4px; padding: 1px 5px; font-size: 11.5px; color: #1C1917; }
                 .fd-kv-input:focus { outline: 2px solid #D97706; background: #FFFFFF; }
             </style>
             <div id="fdThreeColRoot" class="grid grid-cols-1 xl:grid-cols-12 gap-3.5 items-start flex-1">
-                <!-- [1] 좌측: 제품내역 -->
+                <!-- [1] 좌측: 제품내역 (체크박스·배합비 열 제거로 깔끔한 목차) -->
                 <div class="xl:col-span-3 bg-white rounded-xl border border-stone-300 shadow-2xs flex flex-col overflow-hidden">
                     <div class="px-3 py-2.5 bg-stone-100 border-b border-stone-300 flex flex-wrap items-center justify-between gap-1.5">
                         <div class="flex items-center gap-1.5">
@@ -301,7 +423,7 @@ function renderRecipeWorkspace() {
                             <button type="button" onclick="createNewRecipeItem('PRODUCT')" class="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-amber-600 hover:bg-amber-700 text-white cursor-pointer">+ 완제품</button>
                             <button type="button" onclick="createNewRecipeItem('SUB')" class="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-rose-700 hover:bg-rose-800 text-white cursor-pointer" title="다른 제품에 투입 가능한 반제품·충전물 레시피">+ 반제품</button>
                             <button type="button" onclick="duplicateSelectedRecipe()" class="px-2 py-1 rounded-lg text-[11px] font-bold bg-white border border-stone-300 text-stone-700 hover:bg-stone-50 cursor-pointer">복제</button>
-                            <button type="button" onclick="deleteBulkSelectedRecipes()" class="px-2 py-1 rounded-lg text-[11px] font-bold bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 cursor-pointer">삭제</button>
+                            <button type="button" onclick="deleteSelectedRecipe()" class="px-2 py-1 rounded-lg text-[11px] font-bold bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 cursor-pointer">삭제</button>
                         </div>
                     </div>
                     <div class="p-2 border-b border-stone-200 bg-stone-50/70 flex flex-col gap-1.5">
@@ -311,7 +433,7 @@ function renderRecipeWorkspace() {
                             <button type="button" onclick="setRecipeCategoryFilter('SUB')" id="rcCat_SUB" class="py-1 rounded text-[11px] font-bold bg-white border border-stone-200 text-rose-700 cursor-pointer">반제품·충전물</button>
                         </div>
                         <div class="flex items-center gap-1">
-                            <input type="text" id="recipeListSearchInput" oninput="renderRecipeSidebarList()" placeholder="품목코드 · 품목명 검색..." class="flex-1 text-xs border border-stone-300 rounded-lg px-2.5 py-1 bg-white focus:outline-none focus:border-amber-500">
+                            <input type="text" id="recipeListSearchInput" oninput="renderRecipeSidebarList()" placeholder="품목코드 · 품목명 검색..." class="flex-1 min-w-0 text-xs border border-stone-300 rounded-lg px-2.5 py-1 bg-white focus:outline-none focus:border-amber-500">
                             <button type="button" onclick="insertFoodDiscoverySampleSet()" title="푸드디스커버리 다단계 반제품 샘플 넣기" class="px-2 py-1 rounded-lg text-[10px] font-bold bg-amber-50 border border-amber-300 text-amber-900 hover:bg-amber-100 cursor-pointer shrink-0">샘플추가</button>
                         </div>
                     </div>
@@ -344,7 +466,7 @@ function setRecipeCategoryFilter(cat) {
     renderRecipeSidebarList();
 }
 
-// [1] 좌측 패널: 제품내역 테이블 렌더링
+// [1] 좌측 패널: 제품내역 (체크박스 및 배합비 열 완전 제거 -> 품목코드 + 품목명 2열 구성)
 function renderRecipeSidebarList() {
     const q = (document.getElementById('recipeListSearchInput')?.value || '').trim().toLowerCase();
     const sub = document.getElementById('recipeCountSub');
@@ -360,34 +482,28 @@ function renderRecipeSidebarList() {
         return true;
     });
 
-    const allChecked = filtered.length > 0 && filtered.every(r => selectedRecipeIdsForBulk.has(r.id));
-
     listEl.innerHTML = `
-        <table class="w-full border-collapse text-left">
+        <table class="w-full table-fixed border-collapse text-left">
+            <colgroup>
+                <col class="w-[74px]">
+                <col>
+            </colgroup>
             <thead class="sticky top-0 z-10">
                 <tr>
-                    <th class="fd-th py-1.5 px-2 w-7 text-center"><input type="checkbox" ${allChecked ? 'checked' : ''} onchange="toggleSelectAllRecipes(this.checked)" class="rounded"></th>
-                    <th class="fd-th py-1.5 px-2 w-18 text-center">품목코드</th>
+                    <th class="fd-th py-1.5 px-2 text-center">품목코드</th>
                     <th class="fd-th py-1.5 px-2.5">품목명</th>
-                    <th class="fd-th py-1.5 px-1.5 w-12 text-center">배합비</th>
                 </tr>
             </thead>
             <tbody>
-                ${filtered.length === 0 ? `<tr><td colspan="4" class="py-10 text-center text-xs text-stone-400 font-bold">등록된 품목이 없습니다.</td></tr>` : filtered.map(r => {
+                ${filtered.length === 0 ? `<tr><td colspan="2" class="py-10 text-center text-xs text-stone-400 font-bold">등록된 품목이 없습니다.</td></tr>` : filtered.map(r => {
                     const active = r.id === selectedRecipeId;
-                    const hasFormula = (r.ingredients && r.ingredients.length > 0) || (r.packagingList && r.packagingList.length > 0);
                     const isSub = r.recipeType === 'SUB';
-                    const checked = selectedRecipeIdsForBulk.has(r.id);
                     return `
                         <tr onclick="selectRecipeItem('${escapeHtml(r.id)}')" class="cursor-pointer transition ${active ? 'bg-amber-100/80 font-extrabold' : 'hover:bg-stone-50'}">
-                            <td class="fd-td py-1.5 px-2 text-center" onclick="event.stopPropagation()">
-                                <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleBulkRecipeCheck('${escapeHtml(r.id)}', this.checked)" class="rounded">
-                            </td>
-                            <td class="fd-td py-1.5 px-2 text-center font-mono text-[11px] text-stone-700">${escapeHtml(r.productCode)}</td>
-                            <td class="fd-td py-1.5 px-2.5 ${isSub ? 'text-rose-700 font-bold' : 'text-stone-900 font-semibold'} truncate max-w-[180px]" title="${escapeHtml(r.productName)}">
+                            <td class="fd-td py-1.5 px-2 text-center font-mono text-[11px] text-stone-700 truncate">${escapeHtml(r.productCode)}</td>
+                            <td class="fd-td py-1.5 px-2.5 ${isSub ? 'text-rose-700 font-bold' : 'text-stone-900 font-semibold'} truncate" title="${escapeHtml(r.productName)}">
                                 ${escapeHtml(r.productName)}
                             </td>
-                            <td class="fd-td py-1.5 px-1.5 text-center font-bold ${hasFormula ? 'text-emerald-700' : 'text-stone-300'}">${hasFormula ? 'V' : '-'}</td>
                         </tr>
                     `;
                 }).join('')}
@@ -396,17 +512,16 @@ function renderRecipeSidebarList() {
     `;
 }
 
-// 하위 반제품 트리를 재귀적으로 HTML 행(<tr>)으로 생성 (읽기전용 펼침 뷰)
-function renderNestedSubRecipeRowsHtml(subRc, parentScale, depth = 1, visited = new Set()) {
+// 하위 반제품 트리 재귀 렌더링 (코드 비노출, 깔끔한 품명 표시)
+function renderNestedSubRecipeRowsHtml(subRc, parentScale, depth = 1, visited = new Set(), lookup = null) {
     if (!subRc || visited.has(subRc.id) || depth > 5) return '';
     const nextVisited = new Set(visited);
     nextVisited.add(subRc.id);
 
-    const subEval = evaluateRecipeBaseTotals(subRc, visited);
-    const indentPx = depth * 18;
+    const subEval = evaluateRecipeBaseTotals(subRc, visited, lookup);
+    const indentPx = depth * 14;
     let html = '';
 
-    // 공정별 그룹핑
     const procGroups = {};
     (subRc.activeProcesses || ['제1공정']).forEach(p => { procGroups[p] = []; });
     subEval.itemBreakdown.forEach(entry => {
@@ -417,16 +532,15 @@ function renderNestedSubRecipeRowsHtml(subRc, parentScale, depth = 1, visited = 
 
     Object.entries(procGroups).forEach(([procName, entries]) => {
         if (entries.length === 0) return;
-        // 하위 공정 헤더 행
         html += `
             <tr class="bg-stone-50/90 text-stone-700">
-                <td class="fd-td py-1 px-2 font-extrabold" style="padding-left:${indentPx}px">${escapeHtml(procName)}</td>
-                <td class="fd-td py-1 px-1.5 text-center"></td>
-                <td class="fd-td py-1 px-1.5 text-center"></td>
-                <td class="fd-td py-1 px-2 text-right text-stone-400">0</td>
+                <td class="fd-td py-1 px-2 font-extrabold truncate" style="padding-left:${indentPx}px">${escapeHtml(procName)}</td>
+                <td class="fd-td py-1 px-1 text-center"></td>
+                <td class="fd-td py-1 px-1 text-center"></td>
                 <td class="fd-td py-1 px-1.5 text-right text-stone-400">0</td>
-                <td class="fd-td py-1 px-1.5 text-center text-stone-400">0</td>
-                <td class="fd-td py-1 px-2 text-right text-stone-400">0</td>
+                <td class="fd-td py-1 px-1 text-right text-stone-400">0</td>
+                <td class="fd-td py-1 px-1 text-center text-stone-400">0</td>
+                <td class="fd-td py-1 px-1.5 text-right text-stone-400">0</td>
                 <td class="fd-td py-1 px-1 text-center"></td>
             </tr>
         `;
@@ -442,36 +556,37 @@ function renderNestedSubRecipeRowsHtml(subRc, parentScale, depth = 1, visited = 
             if (ig.rowType === 'SUB_RECIPE' && entry.subRc) {
                 const nodeKey = `${subRc.id}_${ig.rowId}_${depth}`;
                 const isCollapsed = collapsedSubRecipeNodes.has(nodeKey);
-                const codeLabel = entry.subRc.productCode ? ` (${entry.subRc.productCode})` : '';
                 html += `
                     <tr class="bg-rose-50/30 hover:bg-rose-50/60">
-                        <td class="fd-td py-1 px-2 font-extrabold text-rose-600" style="padding-left:${indentPx + 10}px">
+                        <td class="fd-td py-1 px-2 font-extrabold text-rose-600 truncate" style="padding-left:${indentPx + 8}px" title="${escapeHtml(entry.subRc.productName)} (내부코드: ${escapeHtml(entry.subRc.productCode)})">
                             <button type="button" onclick="toggleSubNodeCollapse('${escapeHtml(nodeKey)}')" class="mr-1 text-[10px] px-1 rounded border border-rose-200 bg-white text-rose-700 cursor-pointer">${isCollapsed ? '+' : '-'}</button>
-                            <span onclick="selectRecipeItem('${escapeHtml(entry.subRc.id)}')" class="underline decoration-dotted cursor-pointer" title="클릭 시 해당 반제품 레시피로 이동">${escapeHtml(entry.subRc.productName)}${escapeHtml(codeLabel)}</span>
+                            <span onclick="selectRecipeItem('${escapeHtml(entry.subRc.id)}')" class="underline decoration-dotted cursor-pointer">${escapeHtml(entry.subRc.productName)}</span>
                         </td>
-                        <td class="fd-td py-1 px-1.5 text-center text-stone-600">${escapeHtml(ig.origin || '')}</td>
-                        <td class="fd-td py-1 px-1.5 text-center font-semibold text-stone-700">${escapeHtml(ig.unit || 'EA')}</td>
-                        <td class="fd-td py-1 px-2 text-right font-bold text-stone-800">${fmtDec(scaledInputQty, 2)}</td>
-                        <td class="fd-td py-1 px-1.5 text-right text-stone-700">${fmtDec(pct, 1)}</td>
-                        <td class="fd-td py-1 px-1.5 text-center text-stone-500">${ig.seq || 0}</td>
-                        <td class="fd-td py-1 px-2 text-right font-bold text-stone-900">${fmtDec(scaledCost, 1)}</td>
-                        <td class="fd-td py-1 px-1 text-center text-[10px] text-stone-400">하위</td>
+                        <td class="fd-td py-1 px-1 text-center text-stone-600 truncate">${escapeHtml(ig.origin || '')}</td>
+                        <td class="fd-td py-1 px-1 text-center font-semibold text-stone-700">${escapeHtml(ig.unit || 'EA')}</td>
+                        <td class="fd-td py-1 px-1.5 text-right font-bold text-stone-800">${fmtDec(scaledInputQty, 2)}</td>
+                        <td class="fd-td py-1 px-1 text-right text-stone-700">${fmtDec(pct, 1)}</td>
+                        <td class="fd-td py-1 px-1 text-center text-stone-500">${ig.seq || 0}</td>
+                        <td class="fd-td py-1 px-1.5 text-right font-bold text-stone-900">${fmtDec(scaledCost, 1)}</td>
+                        <td class="fd-td py-1 px-1 text-center text-[10px] text-stone-400">-</td>
                     </tr>
                 `;
                 if (!isCollapsed) {
-                    html += renderNestedSubRecipeRowsHtml(entry.subRc, parentScale * entry.scale, depth + 1, nextVisited);
+                    html += renderNestedSubRecipeRowsHtml(entry.subRc, parentScale * entry.scale, depth + 1, nextVisited, lookup);
                 }
             } else {
-                const codeSuffix = ig.itemCode ? ` (${ig.itemCode})` : '';
+                const syncHint = entry.linkedRaw
+                    ? `원재료DB 연동됨 (${entry.linkedRaw.spec} · ${formatCurrency(entry.linkedRaw.unitPrice)})`
+                    : `기준단가: ${escapeHtml(ig.spec || '1kg')} · ${formatCurrency(ig.unitPrice)}`;
                 html += `
                     <tr class="bg-white/80 hover:bg-stone-50 text-stone-700">
-                        <td class="fd-td py-1 px-2 font-medium" style="padding-left:${indentPx + 14}px">${escapeHtml(ig.item || '')}${escapeHtml(codeSuffix)}</td>
-                        <td class="fd-td py-1 px-1.5 text-center text-stone-500">${escapeHtml(ig.origin || '')}</td>
-                        <td class="fd-td py-1 px-1.5 text-center text-stone-600">${escapeHtml(ig.unit || 'G')}</td>
-                        <td class="fd-td py-1 px-2 text-right text-stone-800">${fmtDec(scaledInputQty, 2)}</td>
-                        <td class="fd-td py-1 px-1.5 text-right text-stone-600">${fmtDec(pct, 1)}</td>
-                        <td class="fd-td py-1 px-1.5 text-center text-stone-400">${ig.seq || 0}</td>
-                        <td class="fd-td py-1 px-2 text-right text-stone-800">${fmtDec(scaledCost, 1)}</td>
+                        <td class="fd-td py-1 px-2 font-medium truncate" style="padding-left:${indentPx + 12}px" title="${escapeHtml(ig.item || '')} · ${escapeHtml(syncHint)}">${escapeHtml(ig.item || '')}</td>
+                        <td class="fd-td py-1 px-1 text-center text-stone-500 truncate">${escapeHtml(ig.origin || '')}</td>
+                        <td class="fd-td py-1 px-1 text-center text-stone-600">${escapeHtml(ig.unit || 'G')}</td>
+                        <td class="fd-td py-1 px-1.5 text-right text-stone-800">${fmtDec(scaledInputQty, 2)}</td>
+                        <td class="fd-td py-1 px-1 text-right text-stone-600">${fmtDec(pct, 1)}</td>
+                        <td class="fd-td py-1 px-1 text-center text-stone-400">${ig.seq || 0}</td>
+                        <td class="fd-td py-1 px-1.5 text-right text-stone-800" title="${escapeHtml(syncHint)}">${fmtDec(scaledCost, 1)}</td>
                         <td class="fd-td py-1 px-1 text-center"></td>
                     </tr>
                 `;
@@ -501,12 +616,16 @@ function renderRecipeDetailPanel() {
         return;
     }
 
-    ensureRecipeSchema(rc);
+    const lookup = buildRawCatalogLookupMaps();
+    ensureRecipeSchema(rc, lookup);
     const m = calculateRecipeMetrics(rc);
-    const rawCatalog = getRawMaterialCatalogForRecipe();
+    const rawCatalog = lookup.list;
+    const rawOnlyList = rawCatalog.filter(c => !c.isPackaging);
+    const packOnlyList = rawCatalog.filter(c => c.isPackaging);
+    // 포장 키워드에 안 걸린 부자재도 선택 가능하도록 전체 목록 보조 제공
+    const packDropdownList = packOnlyList.length > 0 ? packOnlyList : rawCatalog;
     const availableSubRecipes = (recipesData || []).filter(r => r.id !== rc.id);
 
-    // 최상위 배합 행들을 공정별로 정리
     const topProcGroups = {};
     rc.activeProcesses.forEach(p => { topProcGroups[p] = []; });
     m.itemBreakdown.forEach((entry, idx) => {
@@ -517,19 +636,20 @@ function renderRecipeDetailPanel() {
 
     let formulaRowsHtml = '';
     Object.entries(topProcGroups).forEach(([procName, entries]) => {
-        // 최상위 공정 구분 행
         formulaRowsHtml += `
             <tr class="bg-stone-100/90">
-                <td class="fd-td py-1.5 px-2.5 font-black text-stone-900 flex items-center justify-between">
-                    <span>${escapeHtml(procName)}</span>
-                    ${rc.activeProcesses.length > 1 ? `<button type="button" onclick="removeProcessFromRecipe('${escapeHtml(procName)}')" class="text-[10px] text-stone-400 hover:text-rose-600 cursor-pointer" title="공정 제거">✕</button>` : ''}
+                <td class="fd-td py-1.5 px-2 font-black text-stone-900">
+                    <div class="flex items-center justify-between gap-1">
+                        <span class="truncate">${escapeHtml(procName)}</span>
+                        ${rc.activeProcesses.length > 1 ? `<button type="button" onclick="removeProcessFromRecipe('${escapeHtml(procName)}')" class="text-[10px] text-stone-400 hover:text-rose-600 cursor-pointer shrink-0" title="공정 제거">✕</button>` : ''}
+                    </div>
                 </td>
-                <td class="fd-td py-1.5 px-1.5 text-center"></td>
-                <td class="fd-td py-1.5 px-1.5 text-center"></td>
-                <td class="fd-td py-1.5 px-2 text-right text-stone-400 font-semibold">0</td>
+                <td class="fd-td py-1.5 px-1 text-center"></td>
+                <td class="fd-td py-1.5 px-1 text-center"></td>
                 <td class="fd-td py-1.5 px-1.5 text-right text-stone-400 font-semibold">0</td>
-                <td class="fd-td py-1.5 px-1.5 text-center text-stone-400 font-semibold">0</td>
-                <td class="fd-td py-1.5 px-2 text-right text-stone-400 font-semibold">0</td>
+                <td class="fd-td py-1.5 px-1 text-right text-stone-400 font-semibold">0</td>
+                <td class="fd-td py-1.5 px-1 text-center text-stone-400 font-semibold">0</td>
+                <td class="fd-td py-1.5 px-1.5 text-right text-stone-400 font-semibold">0</td>
                 <td class="fd-td py-1.5 px-1 text-center"></td>
             </tr>
         `;
@@ -544,62 +664,65 @@ function renderRecipeDetailPanel() {
             if (ig.rowType === 'SUB_RECIPE' && entry.subRc) {
                 const nodeKey = `TOP_${rc.id}_${ig.rowId}`;
                 const isCollapsed = collapsedSubRecipeNodes.has(nodeKey);
-                const codeSuffix = entry.subRc.productCode ? ` (${entry.subRc.productCode})` : '';
                 formulaRowsHtml += `
                     <tr class="bg-rose-50/40 hover:bg-rose-50/80">
-                        <td class="fd-td py-1.5 px-2 font-extrabold text-rose-600 pl-3">
-                            <div class="flex items-center gap-1">
+                        <td class="fd-td py-1.5 px-2 font-extrabold text-rose-600">
+                            <div class="flex items-center gap-1 min-w-0">
                                 <button type="button" onclick="toggleSubNodeCollapse('${escapeHtml(nodeKey)}')" class="text-[10px] w-4 h-4 inline-flex items-center justify-center rounded border border-rose-300 bg-white text-rose-700 cursor-pointer shrink-0">${isCollapsed ? '+' : '-'}</button>
-                                <span onclick="selectRecipeItem('${escapeHtml(entry.subRc.id)}')" class="underline decoration-dotted cursor-pointer truncate" title="클릭하면 하위 반제품 배합비로 이동하여 수정할 수 있습니다">${escapeHtml(entry.subRc.productName)}${escapeHtml(codeSuffix)}</span>
+                                <span onclick="selectRecipeItem('${escapeHtml(entry.subRc.id)}')" class="underline decoration-dotted cursor-pointer truncate" title="${escapeHtml(entry.subRc.productName)} (클릭 시 해당 반제품 레시피로 이동)">${escapeHtml(entry.subRc.productName)}</span>
                             </div>
                         </td>
-                        <td class="fd-td py-1 px-1 text-center"><input type="text" value="${escapeHtml(ig.origin || '')}" onchange="updateRecipeIngredient(${idx}, 'origin', this.value)" class="w-full text-center bg-transparent focus:bg-white focus:outline-amber-500 text-[11px]"></td>
-                        <td class="fd-td py-1 px-1 text-center">
-                            <select onchange="updateRecipeIngredient(${idx}, 'unit', this.value)" class="bg-transparent font-bold text-[11px] text-stone-800 focus:outline-none">
+                        <td class="fd-td py-1 px-1 text-center"><input type="text" value="${escapeHtml(ig.origin || '')}" onchange="updateRecipeIngredient(${idx}, 'origin', this.value)" class="w-full min-w-0 text-center bg-transparent focus:bg-white focus:outline-amber-500 text-[11px]"></td>
+                        <td class="fd-td py-1 px-0.5 text-center">
+                            <select onchange="updateRecipeIngredient(${idx}, 'unit', this.value)" class="w-full bg-transparent font-bold text-[11px] text-center text-stone-800 focus:outline-none">
                                 <option value="EA" ${ig.unit === 'EA' ? 'selected' : ''}>EA</option>
                                 <option value="G" ${ig.unit === 'G' ? 'selected' : ''}>G</option>
                             </select>
                         </td>
-                        <td class="fd-td py-1 px-1.5 text-right bg-amber-50/50">
-                            <input type="text" value="${fmtDec(ig.qty, 2)}" onchange="updateRecipeIngredient(${idx}, 'qty', this.value)" class="w-18 text-right font-extrabold text-stone-900 bg-transparent focus:bg-white focus:outline-amber-500">
+                        <td class="fd-td py-1 px-1 text-right bg-amber-50/50">
+                            <input type="text" value="${fmtDec(ig.qty, 2)}" onchange="updateRecipeIngredient(${idx}, 'qty', this.value)" class="w-full min-w-0 text-right font-extrabold text-stone-900 bg-transparent focus:bg-white focus:outline-amber-500">
                         </td>
-                        <td class="fd-td py-1 px-1.5 text-right font-bold text-stone-800">${fmtDec(pct, 1)}</td>
-                        <td class="fd-td py-1 px-1 text-center"><input type="text" value="${ig.seq || 0}" onchange="updateRecipeIngredient(${idx}, 'seq', this.value)" class="w-8 text-center bg-transparent focus:bg-white"></td>
-                        <td class="fd-td py-1 px-2 text-right font-extrabold text-stone-900">${fmtDec(entry.effCost, 1)}</td>
-                        <td class="fd-td py-1 px-1 text-center">
+                        <td class="fd-td py-1 px-1 text-right font-bold text-stone-800">${fmtDec(pct, 1)}</td>
+                        <td class="fd-td py-1 px-0.5 text-center"><input type="text" value="${ig.seq || 0}" onchange="updateRecipeIngredient(${idx}, 'seq', this.value)" class="w-full min-w-0 text-center bg-transparent focus:bg-white"></td>
+                        <td class="fd-td py-1 px-1.5 text-right font-extrabold text-stone-900">${fmtDec(entry.effCost, 1)}</td>
+                        <td class="fd-td py-1 px-0.5 text-center">
                             <button type="button" onclick="removeRecipeIngredient(${idx})" class="text-stone-400 hover:text-rose-600 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                         </td>
                     </tr>
                 `;
                 if (!isCollapsed) {
-                    formulaRowsHtml += renderNestedSubRecipeRowsHtml(entry.subRc, entry.scale, 1, new Set([rc.id]));
+                    formulaRowsHtml += renderNestedSubRecipeRowsHtml(entry.subRc, entry.scale, 1, new Set([rc.id]), lookup);
                 }
             } else {
-                // 일반 원재료 행 (클릭/인라인 편집 완벽 지원)
+                // 일반 원재료 행 (코드 입력칸 숨김, 내부코드 및 원재료DB 단가 자동 연동)
                 const perGramPrice = (parseFloat(ig.specGrams) || 1000) > 0 ? ((parseFloat(ig.unitPrice) || 0) / (parseFloat(ig.specGrams) || 1000)) : 0;
+                const isLinked = Boolean(entry.linkedRaw && ig.priceSource !== 'MANUAL');
+                const priceTooltip = isLinked
+                    ? `[원재료DB 자동연동] 규격: ${entry.linkedRaw.spec} / 최신발주단가: ${formatCurrency(entry.linkedRaw.unitPrice)} (g당 ${perGramPrice.toFixed(2)}원) · 클릭 시 수동단가 설정`
+                    : `[수동단가] 기준규격: ${ig.spec || '1kg'} / 단가: ${formatCurrency(ig.unitPrice)} (g당 ${perGramPrice.toFixed(2)}원) · 클릭 시 단가 수정 또는 DB 재연동`;
                 formulaRowsHtml += `
                     <tr class="hover:bg-amber-50/30">
-                        <td class="fd-td py-1 px-2 pl-4">
-                            <div class="flex items-center gap-1">
-                                <input type="text" value="${escapeHtml(ig.item || '')}" onchange="updateRecipeIngredient(${idx}, 'item', this.value)" class="flex-1 font-bold text-stone-900 bg-transparent focus:bg-white focus:outline-amber-500 min-w-[90px]" title="구매규격: ${escapeHtml(ig.spec || '1kg')} / 규격단가: ${formatCurrency(ig.unitPrice)}">
-                                <input type="text" value="${escapeHtml(ig.itemCode || '')}" placeholder="코드" onchange="updateRecipeIngredient(${idx}, 'itemCode', this.value)" class="w-13 text-[10px] font-mono text-stone-500 bg-stone-50 border border-stone-200 rounded px-1 text-center" title="원재료 품목코드">
+                        <td class="fd-td py-1 px-2 pl-3">
+                            <div class="flex items-center gap-1 min-w-0" title="${escapeHtml(ig.item || '')} (내부코드: ${escapeHtml(ig.itemCode || '-')})">
+                                <span class="w-1.5 h-1.5 rounded-full shrink-0 ${isLinked ? 'bg-emerald-500' : 'bg-stone-300'}" title="${isLinked ? '원재료 페이지 최신단가 공유중' : '수기/개별 단가'}"></span>
+                                <input type="text" value="${escapeHtml(ig.item || '')}" onchange="updateRecipeIngredient(${idx}, 'item', this.value)" class="w-full min-w-0 font-bold text-stone-900 bg-transparent focus:bg-white focus:outline-amber-500 truncate">
                             </div>
                         </td>
-                        <td class="fd-td py-1 px-1 text-center"><input type="text" value="${escapeHtml(ig.origin || '')}" placeholder="-" onchange="updateRecipeIngredient(${idx}, 'origin', this.value)" class="w-14 text-center text-[11px] text-stone-700 bg-transparent focus:bg-white"></td>
-                        <td class="fd-td py-1 px-1 text-center">
-                            <select onchange="updateRecipeIngredient(${idx}, 'unit', this.value)" class="bg-transparent font-semibold text-[11px] text-stone-700">
+                        <td class="fd-td py-1 px-1 text-center"><input type="text" value="${escapeHtml(ig.origin || '')}" placeholder="-" onchange="updateRecipeIngredient(${idx}, 'origin', this.value)" class="w-full min-w-0 text-center text-[11px] text-stone-700 bg-transparent focus:bg-white"></td>
+                        <td class="fd-td py-1 px-0.5 text-center">
+                            <select onchange="updateRecipeIngredient(${idx}, 'unit', this.value)" class="w-full bg-transparent font-semibold text-[11px] text-center text-stone-700 focus:outline-none">
                                 <option value="G" ${ig.unit === 'G' ? 'selected' : ''}>G</option>
                                 <option value="EA" ${ig.unit === 'EA' ? 'selected' : ''}>EA</option>
                                 <option value="ML" ${ig.unit === 'ML' ? 'selected' : ''}>ML</option>
                             </select>
                         </td>
-                        <td class="fd-td py-1 px-1.5 text-right bg-amber-50/40">
-                            <input type="text" value="${fmtDec(ig.qty, 2)}" onchange="updateRecipeIngredient(${idx}, 'qty', this.value)" class="w-18 text-right font-extrabold text-stone-900 bg-transparent focus:bg-white focus:outline-amber-500">
+                        <td class="fd-td py-1 px-1 text-right bg-amber-50/40">
+                            <input type="text" value="${fmtDec(ig.qty, 2)}" onchange="updateRecipeIngredient(${idx}, 'qty', this.value)" class="w-full min-w-0 text-right font-extrabold text-stone-900 bg-transparent focus:bg-white focus:outline-amber-500">
                         </td>
-                        <td class="fd-td py-1 px-1.5 text-right text-stone-700 font-semibold">${fmtDec(pct, 1)}</td>
-                        <td class="fd-td py-1 px-1 text-center"><input type="text" value="${ig.seq || 0}" onchange="updateRecipeIngredient(${idx}, 'seq', this.value)" class="w-8 text-center text-stone-600 bg-transparent focus:bg-white"></td>
-                        <td class="fd-td py-1 px-2 text-right font-bold text-stone-900 cursor-pointer" onclick="promptIngredientUnitPrice(${idx})" title="클릭하여 기준규격(${escapeHtml(ig.spec || '1kg')}) 구매단가(${formatCurrency(ig.unitPrice)} / g당 ${perGramPrice.toFixed(2)}원) 수정">${fmtDec(entry.effCost, 1)}</td>
-                        <td class="fd-td py-1 px-1 text-center">
+                        <td class="fd-td py-1 px-1 text-right text-stone-700 font-semibold">${fmtDec(pct, 1)}</td>
+                        <td class="fd-td py-1 px-0.5 text-center"><input type="text" value="${ig.seq || 0}" onchange="updateRecipeIngredient(${idx}, 'seq', this.value)" class="w-full min-w-0 text-center text-stone-600 bg-transparent focus:bg-white"></td>
+                        <td class="fd-td py-1 px-1.5 text-right font-bold text-stone-900 cursor-pointer hover:bg-amber-100/50" onclick="promptIngredientUnitPrice(${idx})" title="${escapeHtml(priceTooltip)}">${fmtDec(entry.effCost, 1)}</td>
+                        <td class="fd-td py-1 px-0.5 text-center">
                             <button type="button" onclick="removeRecipeIngredient(${idx})" class="text-stone-400 hover:text-rose-600 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                         </td>
                     </tr>
@@ -608,42 +731,44 @@ function renderRecipeDetailPanel() {
         });
     });
 
-    // 하단: 포장지(1EA제품기준) 섹션 (FoodDiscovery 스타일 빨간색 텍스트)
+    // 하단: 포장지(1EA제품기준) 섹션 (코드 입력칸 숨김, 깔끔 정렬)
     formulaRowsHtml += `
         <tr class="bg-stone-100/90">
-            <td class="fd-td py-1.5 px-2.5 font-black text-stone-900">포장지(1EA제품기준)</td>
-            <td class="fd-td py-1.5 px-1.5"></td>
-            <td class="fd-td py-1.5 px-1.5"></td>
-            <td class="fd-td py-1.5 px-2 text-right text-stone-400 font-semibold">0</td>
+            <td class="fd-td py-1.5 px-2 font-black text-stone-900 truncate">포장지(1EA제품기준)</td>
+            <td class="fd-td py-1.5 px-1"></td>
+            <td class="fd-td py-1.5 px-1"></td>
             <td class="fd-td py-1.5 px-1.5 text-right text-stone-400 font-semibold">0</td>
-            <td class="fd-td py-1.5 px-1.5 text-center text-stone-400 font-semibold">0</td>
-            <td class="fd-td py-1.5 px-2 text-right text-stone-400 font-semibold">0</td>
+            <td class="fd-td py-1.5 px-1 text-right text-stone-400 font-semibold">0</td>
+            <td class="fd-td py-1.5 px-1 text-center text-stone-400 font-semibold">0</td>
+            <td class="fd-td py-1.5 px-1.5 text-right text-stone-400 font-semibold">0</td>
             <td class="fd-td py-1.5 px-1"></td>
         </tr>
     `;
 
     (rc.packagingList || []).forEach((pk, idx) => {
+        const linkedPk = syncPackagingWithRawCatalog(pk, lookup);
+        const isPkLinked = Boolean(linkedPk && pk.priceSource !== 'MANUAL');
         const sQty = parseFloat(pk.specQty) || 1;
         const pPrice = parseFloat(pk.purchasePrice) || 0;
         const uQty = parseFloat(pk.usedQty) || 0;
         const rowPackCost = sQty > 0 ? (pPrice / sQty) * uQty : 0;
         formulaRowsHtml += `
             <tr class="hover:bg-rose-50/30">
-                <td class="fd-td py-1 px-2 pl-4">
-                    <div class="flex items-center gap-1">
-                        <input type="text" value="${escapeHtml(pk.name || '')}" onchange="updateRecipePackaging(${idx}, 'name', this.value)" class="flex-1 font-bold text-rose-600 bg-transparent focus:bg-white min-w-[100px]" title="클릭하여 포장재명 수정">
-                        <input type="text" value="${escapeHtml(pk.code || '')}" placeholder="코드" onchange="updateRecipePackaging(${idx}, 'code', this.value)" class="w-13 text-[10px] font-mono text-rose-500 bg-rose-50/50 border border-rose-200 rounded px-1 text-center">
+                <td class="fd-td py-1 px-2 pl-3">
+                    <div class="flex items-center gap-1 min-w-0" title="${escapeHtml(pk.name || '')} (내부코드: ${escapeHtml(pk.code || '-')})">
+                        <span class="w-1.5 h-1.5 rounded-full shrink-0 ${isPkLinked ? 'bg-emerald-500' : 'bg-rose-300'}" title="${isPkLinked ? '원재료 페이지 최신단가 공유중' : '수기/개별 단가'}"></span>
+                        <input type="text" value="${escapeHtml(pk.name || '')}" onchange="updateRecipePackaging(${idx}, 'name', this.value)" class="w-full min-w-0 font-bold text-rose-600 bg-transparent focus:bg-white truncate">
                     </div>
                 </td>
-                <td class="fd-td py-1 px-1 text-center text-[10px] text-stone-400" onclick="promptPackagingPrice(${idx})" title="클릭하여 구매단가/입수량 수정"><span class="cursor-pointer underline decoration-dotted">단가수정</span></td>
-                <td class="fd-td py-1 px-1 text-center font-semibold text-stone-700">${escapeHtml(pk.unit || 'EA')}</td>
-                <td class="fd-td py-1 px-1.5 text-right bg-amber-50/40">
-                    <input type="text" value="${fmtDec(uQty, 3)}" onchange="updateRecipePackaging(${idx}, 'usedQty', this.value)" class="w-18 text-right font-extrabold text-stone-900 bg-transparent focus:bg-white">
+                <td class="fd-td py-1 px-1 text-center text-[10px] text-stone-400 cursor-pointer hover:text-stone-700" onclick="promptPackagingPrice(${idx})" title="클릭하여 구매단가/입수량 수정">단가설정</td>
+                <td class="fd-td py-1 px-0.5 text-center font-semibold text-stone-700">${escapeHtml(pk.unit || 'EA')}</td>
+                <td class="fd-td py-1 px-1 text-right bg-amber-50/40">
+                    <input type="text" value="${fmtDec(uQty, 3)}" onchange="updateRecipePackaging(${idx}, 'usedQty', this.value)" class="w-full min-w-0 text-right font-extrabold text-stone-900 bg-transparent focus:bg-white">
                 </td>
-                <td class="fd-td py-1 px-1.5 text-right text-stone-400">0</td>
-                <td class="fd-td py-1 px-1 text-center text-stone-400">0</td>
-                <td class="fd-td py-1 px-2 text-right font-bold text-stone-900 cursor-pointer" onclick="promptPackagingPrice(${idx})" title="구매가 ${formatCurrency(pPrice)} / 입수 ${sQty}개 (1개당 ${fmtDec(pPrice / sQty, 1)}원)">${fmtDec(rowPackCost, 1)}</td>
-                <td class="fd-td py-1 px-1 text-center">
+                <td class="fd-td py-1 px-1 text-right text-stone-400">0</td>
+                <td class="fd-td py-1 px-0.5 text-center text-stone-400">0</td>
+                <td class="fd-td py-1 px-1.5 text-right font-bold text-stone-900 cursor-pointer hover:bg-rose-50" onclick="promptPackagingPrice(${idx})" title="구매가 ${formatCurrency(pPrice)} / 입수 ${sQty}개 (1개당 ${fmtDec(pPrice / sQty, 1)}원)">${fmtDec(rowPackCost, 1)}</td>
+                <td class="fd-td py-1 px-0.5 text-center">
                     <button type="button" onclick="removeRecipePackaging(${idx})" class="text-stone-400 hover:text-rose-600 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                 </td>
             </tr>
@@ -652,62 +777,91 @@ function renderRecipeDetailPanel() {
 
     centerEl.innerHTML = `
         <!-- 상단 현재 선택 품목 헤더 -->
-        <div class="px-3.5 py-2.5 bg-stone-100 border-b border-stone-300 flex flex-wrap items-center justify-between gap-2">
-            <div class="flex flex-wrap items-center gap-1.5 flex-1">
-                <h3 class="text-xs sm:text-sm font-black text-stone-900 mr-1">제품 배합비내역</h3>
-                <select onchange="updateRecipeField('recipeType', this.value)" class="text-[11px] font-extrabold rounded-lg px-2 py-1 border ${rc.recipeType === 'SUB' ? 'bg-rose-50 text-rose-700 border-rose-300' : 'bg-white text-stone-800 border-stone-300'}">
+        <div class="px-3.5 py-2.5 bg-stone-100 border-b border-stone-300 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5 flex-1 min-w-0">
+                <h3 class="text-xs sm:text-sm font-black text-stone-900 shrink-0">제품 배합비내역</h3>
+                <select onchange="updateRecipeField('recipeType', this.value)" class="text-[11px] font-extrabold rounded-lg px-2 py-1 border shrink-0 ${rc.recipeType === 'SUB' ? 'bg-rose-50 text-rose-700 border-rose-300' : 'bg-white text-stone-800 border-stone-300'}">
                     <option value="PRODUCT" ${rc.recipeType === 'PRODUCT' ? 'selected' : ''}>완제품</option>
                     <option value="SUB" ${rc.recipeType === 'SUB' ? 'selected' : ''}>반제품·충전물</option>
                 </select>
-                <input type="text" value="${escapeHtml(rc.productCode)}" onchange="updateRecipeField('productCode', this.value)" placeholder="품목코드" class="w-20 text-xs font-mono font-extrabold text-center bg-white border border-stone-300 rounded-lg px-2 py-1">
-                <input type="text" value="${escapeHtml(rc.productName)}" onchange="updateRecipeField('productName', this.value)" placeholder="품목명 입력" class="flex-1 min-w-[160px] text-xs sm:text-sm font-black text-stone-900 bg-white border border-stone-300 rounded-lg px-2.5 py-1">
+                <input type="text" value="${escapeHtml(rc.productCode)}" onchange="updateRecipeField('productCode', this.value)" placeholder="코드" class="w-[74px] shrink-0 text-xs font-mono font-extrabold text-center bg-white border border-stone-300 rounded-lg px-1.5 py-1">
+                <input type="text" value="${escapeHtml(rc.productName)}" onchange="updateRecipeField('productName', this.value)" placeholder="품목명 입력" class="flex-1 min-w-0 text-xs sm:text-sm font-black text-stone-900 bg-white border border-stone-300 rounded-lg px-2.5 py-1">
             </div>
         </div>
 
-        <!-- 배합비 빠른 투입 툴바 (원재료 / 반제품 / 공정 / 포장재) -->
-        <div class="p-2.5 bg-amber-50/60 border-b border-stone-200 flex flex-col gap-2 text-xs">
-            <div class="flex flex-wrap items-center gap-1.5">
-                <select id="quickAddProcessSelect" class="border border-stone-300 rounded-lg px-2 py-1 font-extrabold bg-white text-xs">
-                    ${rc.activeProcesses.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('')}
+        <!-- 배합비 투입 컨트롤 박스 (3줄 수직 정렬 그리드 · 줄바꿈 깨짐 방지) -->
+        <div class="p-2.5 bg-amber-50/50 border-b border-stone-200 space-y-1.5 text-xs">
+            <!-- 1열: 원재료 투입 -->
+            <div class="flex items-center gap-1.5">
+                <div class="w-[132px] shrink-0 flex items-center gap-1">
+                    <select id="quickAddProcessSelect" class="flex-1 min-w-0 h-7 border border-stone-300 rounded-lg px-1.5 font-extrabold bg-white text-[11px]">
+                        ${rc.activeProcesses.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('')}
+                    </select>
+                    <button type="button" onclick="promptAddProcessName()" title="새 공정 추가" class="w-7 h-7 rounded-lg bg-white border border-stone-300 text-stone-700 hover:bg-stone-100 font-black text-xs cursor-pointer shrink-0">+</button>
+                </div>
+                <select id="quickAddRawSelect" class="flex-1 min-w-0 h-7 border border-amber-400 rounded-lg px-2 font-bold bg-white text-[11.5px] truncate">
+                    <option value="">발주 원재료 선택 (${rawOnlyList.length}종)...</option>
+                    ${rawOnlyList.map(c => `<option value="${escapeHtml(c.key)}">${escapeHtml(c.item)} (${escapeHtml(c.spec)} · ${formatCurrency(c.unitPrice)})</option>`).join('')}
                 </select>
-                <button type="button" onclick="promptAddProcessName()" class="px-2 py-1 rounded-lg bg-white border border-stone-300 text-[11px] font-bold text-stone-700 hover:bg-stone-100 cursor-pointer">+ 공정추가</button>
-
-                <select id="quickAddRawSelect" class="flex-1 min-w-[180px] border border-amber-400 rounded-lg px-2 py-1 font-bold bg-white text-xs">
-                    <option value="">① 발주 원재료 선택 (${rawCatalog.filter(c => !c.isPackaging).length}종)...</option>
-                    ${rawCatalog.filter(c => !c.isPackaging).map(c => `<option value="${escapeHtml(c.key)}">${escapeHtml(c.item)} (${escapeHtml(c.spec)} · ${formatCurrency(c.unitPrice)})</option>`).join('')}
-                </select>
-                <button type="button" onclick="addIngredientToRecipe()" class="px-2.5 py-1 rounded-lg bg-stone-900 text-white font-extrabold text-[11px] cursor-pointer">+ 원재료투입</button>
-                <button type="button" onclick="addBlankIngredientToRecipe()" class="px-2 py-1 rounded-lg bg-white border border-stone-300 text-stone-700 font-bold text-[11px] cursor-pointer">+ 수기원재료</button>
+                <div class="w-[146px] shrink-0 grid grid-cols-12 gap-1">
+                    <button type="button" onclick="addIngredientToRecipe()" class="col-span-8 h-7 rounded-lg bg-stone-900 hover:bg-stone-800 text-white font-extrabold text-[11px] cursor-pointer whitespace-nowrap">+ 원재료 투입</button>
+                    <button type="button" onclick="addBlankIngredientToRecipe()" title="발주 내역에 없는 원재료(식수 등) 직접 추가" class="col-span-4 h-7 rounded-lg bg-white border border-stone-300 hover:bg-stone-100 text-stone-700 font-bold text-[11px] cursor-pointer whitespace-nowrap">수기</button>
+                </div>
             </div>
 
-            <div class="flex flex-wrap items-center gap-1.5">
-                <select id="quickAddSubRecipeSelect" class="flex-1 min-w-[180px] border border-rose-300 rounded-lg px-2 py-1 font-bold bg-white text-rose-800 text-xs">
-                    <option value="">② 하위 반제품·충전물 레시피 불러오기 (${availableSubRecipes.length}종)...</option>
-                    ${availableSubRecipes.map(sr => `<option value="${escapeHtml(sr.id)}">[${sr.recipeType === 'SUB' ? '반제품' : '레시피'}] ${escapeHtml(sr.productName)} (${escapeHtml(sr.productCode)})</option>`).join('')}
+            <!-- 2열: 반제품·충전물 투입 -->
+            <div class="flex items-center gap-1.5">
+                <div class="w-[132px] shrink-0 h-7 px-2 rounded-lg bg-rose-100/70 border border-rose-200 flex items-center justify-center font-extrabold text-[11px] text-rose-800 whitespace-nowrap">
+                    반제품 · 충전물
+                </div>
+                <select id="quickAddSubRecipeSelect" class="flex-1 min-w-0 h-7 border border-rose-300 rounded-lg px-2 font-bold bg-white text-rose-900 text-[11.5px] truncate">
+                    <option value="">하위 반제품 · 충전물 선택 (${availableSubRecipes.length}종)...</option>
+                    ${availableSubRecipes.map(sr => `<option value="${escapeHtml(sr.id)}">[${sr.recipeType === 'SUB' ? '반제품' : '완제품'}] ${escapeHtml(sr.productName)}</option>`).join('')}
                 </select>
-                <button type="button" onclick="addSubRecipeToFormula()" class="px-2.5 py-1 rounded-lg bg-rose-700 hover:bg-rose-800 text-white font-extrabold text-[11px] cursor-pointer">+ 반제품투입</button>
+                <div class="w-[146px] shrink-0">
+                    <button type="button" onclick="addSubRecipeToFormula()" class="w-full h-7 rounded-lg bg-rose-700 hover:bg-rose-800 text-white font-extrabold text-[11px] cursor-pointer whitespace-nowrap">+ 반제품 투입</button>
+                </div>
+            </div>
 
-                <select id="quickAddPackCatalogSelect" class="flex-1 min-w-[150px] border border-emerald-300 rounded-lg px-2 py-1 font-bold bg-white text-emerald-900 text-xs">
-                    <option value="">③ 포장 부자재 선택...</option>
-                    ${rawCatalog.filter(c => c.isPackaging).map(c => `<option value="${escapeHtml(c.key)}">${escapeHtml(c.item)} (${escapeHtml(c.spec)} · ${formatCurrency(c.unitPrice)})</option>`).join('')}
+            <!-- 3열: 포장지·부자재 추가 -->
+            <div class="flex items-center gap-1.5">
+                <div class="w-[132px] shrink-0 h-7 px-2 rounded-lg bg-emerald-100/70 border border-emerald-200 flex items-center justify-center font-extrabold text-[11px] text-emerald-900 whitespace-nowrap">
+                    포장지 · 부자재
+                </div>
+                <select id="quickAddPackCatalogSelect" class="flex-1 min-w-0 h-7 border border-emerald-300 rounded-lg px-2 font-bold bg-white text-emerald-950 text-[11.5px] truncate">
+                    <option value="">발주 포장 부자재 선택 (${packDropdownList.length}종)...</option>
+                    ${packDropdownList.map(c => `<option value="${escapeHtml(c.key)}">${escapeHtml(c.item)} (${escapeHtml(c.spec)} · ${formatCurrency(c.unitPrice)})</option>`).join('')}
                 </select>
-                <button type="button" onclick="addPackagingRowToRecipe()" class="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-[11px] cursor-pointer">+ 포장지추가</button>
+                <div class="w-[146px] shrink-0 grid grid-cols-12 gap-1">
+                    <button type="button" onclick="addPackagingRowToRecipe(false)" class="col-span-8 h-7 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-[11px] cursor-pointer whitespace-nowrap">+ 포장지 추가</button>
+                    <button type="button" onclick="addPackagingRowToRecipe(true)" title="포장 부자재 직접 입력 행 추가" class="col-span-4 h-7 rounded-lg bg-white border border-stone-300 hover:bg-stone-100 text-stone-700 font-bold text-[11px] cursor-pointer whitespace-nowrap">수기</button>
+                </div>
             </div>
         </div>
 
-        <!-- 배합비 메인 그리드 -->
-        <div class="overflow-x-auto overflow-y-auto max-h-[680px]">
-            <table class="w-full border-collapse text-left min-w-[580px]">
+        <!-- 배합비 메인 그리드 (table-fixed + 최적 열 비율로 원재료·수량 과도한 확장 방지) -->
+        <div class="overflow-y-auto max-h-[680px]">
+            <table class="w-full table-fixed border-collapse text-left">
+                <colgroup>
+                    <col class="w-[33%]">
+                    <col class="w-[11%]">
+                    <col class="w-[8%]">
+                    <col class="w-[12%]">
+                    <col class="w-[9%]">
+                    <col class="w-[6%]">
+                    <col class="w-[15%]">
+                    <col class="w-[6%]">
+                </colgroup>
                 <thead class="sticky top-0 z-10">
                     <tr>
-                        <th class="fd-th py-1.5 px-2.5">원재료</th>
-                        <th class="fd-th py-1.5 px-1.5 w-16 text-center">원산지</th>
-                        <th class="fd-th py-1.5 px-1.5 w-12 text-center">단위</th>
-                        <th class="fd-th py-1.5 px-2 w-20 text-right">수량</th>
-                        <th onclick="toggleRecipeRatioMode()" title="클릭 시 중량비(%) ⇄ 베이커스(%) 전환" class="fd-th py-1.5 px-1.5 w-15 text-right cursor-pointer hover:bg-amber-200/70 select-none">${recipeRatioMode === 'BAKERS' ? 'B(%)' : '(%)'} ⇄</th>
-                        <th class="fd-th py-1.5 px-1 w-10 text-center">순차</th>
-                        <th class="fd-th py-1.5 px-2 w-24 text-right">재료원가</th>
-                        <th class="fd-th py-1.5 px-1 w-8 text-center">삭제</th>
+                        <th class="fd-th py-1.5 px-2">원재료</th>
+                        <th class="fd-th py-1.5 px-1 text-center">원산지</th>
+                        <th class="fd-th py-1.5 px-1 text-center">단위</th>
+                        <th class="fd-th py-1.5 px-1.5 text-right">수량</th>
+                        <th onclick="toggleRecipeRatioMode()" title="클릭 시 중량비(%) ⇄ 베이커스(%) 전환" class="fd-th py-1.5 px-1 text-right cursor-pointer hover:bg-amber-200/70 select-none">${recipeRatioMode === 'BAKERS' ? 'B(%)' : '(%)'}⇄</th>
+                        <th class="fd-th py-1.5 px-1 text-center">순차</th>
+                        <th class="fd-th py-1.5 px-1.5 text-right">재료원가</th>
+                        <th class="fd-th py-1.5 px-1 text-center">삭제</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -715,20 +869,25 @@ function renderRecipeDetailPanel() {
                 </tbody>
             </table>
         </div>
-        <div class="px-3 py-1.5 bg-stone-50 border-t border-stone-200 text-[11px] text-stone-500 flex flex-wrap justify-between gap-1">
-            <span>💡 <strong>재료원가</strong> 셀을 클릭하면 구매규격 단가를 직접 수정할 수 있습니다.</span>
-            <span>배합 순수 재료원가 합계: <strong class="text-stone-900">${fmtDec(m.rawMaterialCost, 1)}원</strong></span>
+        <div class="px-3 py-1.5 bg-stone-50 border-t border-stone-200 text-[11px] text-stone-500 flex flex-wrap items-center justify-between gap-1">
+            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>원재료 페이지 최신 발주단가 자동 공유중 (재료원가 클릭 시 개별 설정)</span>
+            <span>배합 재료원가 합계: <strong class="text-stone-900">${fmtDec(m.rawMaterialCost, 1)}원</strong></span>
         </div>
     `;
 
-    // [3] 우측 패널: FoodDiscovery 16항목 요약표 + 제품이미지 + 제빵공정 테이블
+    // [3] 우측 패널: 16항목 요약표 + 제품이미지 + 제빵공정 테이블
     const bp = rc.bakingProcess || {};
     rightEl.innerHTML = `
-        <!-- 상단: 원가·수율 요약표 + 우측 제품이미지 박스 -->
         <div class="bg-white rounded-xl border border-stone-300 shadow-2xs p-2.5">
             <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-stretch">
                 <div class="sm:col-span-8 overflow-x-auto">
-                    <table class="w-full border-collapse">
+                    <table class="w-full table-fixed border-collapse">
+                        <colgroup>
+                            <col class="w-[24%]">
+                            <col class="w-[26%]">
+                            <col class="w-[24%]">
+                            <col class="w-[26%]">
+                        </colgroup>
                         <tbody>
                             <tr>
                                 <td class="fd-kv-label">분할중량(G)</td>
@@ -782,7 +941,7 @@ function renderRecipeDetailPanel() {
                     </table>
                 </div>
 
-                <!-- 우측 제품이미지 영역 -->
+                <!-- 제품이미지 영역 -->
                 <div class="sm:col-span-4 border border-[#D6C7A9] bg-[#F7EFE1] rounded flex flex-col items-center justify-center relative overflow-hidden min-h-[190px] group">
                     ${rc.imageData
                         ? `<img src="${rc.imageData}" alt="제품이미지" class="w-full h-full object-cover max-h-[225px]">
@@ -801,35 +960,42 @@ function renderRecipeDetailPanel() {
             </div>
         </div>
 
-        <!-- 하단: 제빵공정 테이블 (FoodDiscovery 동일 레이아웃) -->
+        <!-- 하단: 제빵공정 테이블 -->
         <div class="bg-white rounded-xl border border-stone-300 shadow-2xs p-2.5">
             <h4 class="text-xs sm:text-sm font-black text-stone-900 mb-2 px-0.5">제빵공정</h4>
             <div class="overflow-x-auto">
-                <table class="w-full border-collapse text-xs">
+                <table class="w-full table-fixed border-collapse text-xs">
+                    <colgroup>
+                        <col class="w-[14%]">
+                        <col class="w-[16%]">
+                        <col class="w-[16%]">
+                        <col class="w-[18%]">
+                        <col class="w-[36%]">
+                    </colgroup>
                     <tbody>
                         <tr>
-                            <td rowspan="3" class="fd-kv-label w-16">믹싱</td>
-                            <td class="fd-kv-label w-18">저속(분)</td>
-                            <td class="fd-td p-1 w-20"><input type="text" value="${escapeHtml(bp.mixLow)}" onchange="updateBakingProcess('mixLow', this.value)" class="w-full text-center font-bold focus:outline-amber-500"></td>
-                            <td class="fd-kv-label w-20">반죽온도(°C)</td>
-                            <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.doughTemp)}" onchange="updateBakingProcess('doughTemp', this.value)" class="w-full text-center font-bold focus:outline-amber-500"></td>
+                            <td rowspan="3" class="fd-kv-label">믹싱</td>
+                            <td class="fd-kv-label">저속(분)</td>
+                            <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.mixLow)}" onchange="updateBakingProcess('mixLow', this.value)" class="w-full min-w-0 text-center font-bold focus:outline-amber-500"></td>
+                            <td class="fd-kv-label">반죽온도(°C)</td>
+                            <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.doughTemp)}" onchange="updateBakingProcess('doughTemp', this.value)" class="w-full min-w-0 text-center font-bold focus:outline-amber-500"></td>
                         </tr>
                         <tr>
                             <td class="fd-kv-label">중속(분)</td>
-                            <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.mixMid)}" onchange="updateBakingProcess('mixMid', this.value)" class="w-full text-center font-bold focus:outline-amber-500"></td>
+                            <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.mixMid)}" onchange="updateBakingProcess('mixMid', this.value)" class="w-full min-w-0 text-center font-bold focus:outline-amber-500"></td>
                             <td class="fd-kv-label">1차발효(분)</td>
-                            <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.ferm1Time)}" onchange="updateBakingProcess('ferm1Time', this.value)" class="w-full text-center font-bold focus:outline-amber-500"></td>
+                            <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.ferm1Time)}" onchange="updateBakingProcess('ferm1Time', this.value)" class="w-full min-w-0 text-center font-bold focus:outline-amber-500"></td>
                         </tr>
                         <tr>
                             <td class="fd-kv-label">고속(분)</td>
-                            <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.mixHigh)}" onchange="updateBakingProcess('mixHigh', this.value)" class="w-full text-center font-bold focus:outline-amber-500"></td>
+                            <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.mixHigh)}" onchange="updateBakingProcess('mixHigh', this.value)" class="w-full min-w-0 text-center font-bold focus:outline-amber-500"></td>
                             <td class="fd-kv-label">벤치타임(분)</td>
-                            <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.benchTime)}" onchange="updateBakingProcess('benchTime', this.value)" class="w-full text-center font-bold focus:outline-amber-500"></td>
+                            <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.benchTime)}" onchange="updateBakingProcess('benchTime', this.value)" class="w-full min-w-0 text-center font-bold focus:outline-amber-500"></td>
                         </tr>
                         <tr>
                             <td rowspan="3" class="fd-kv-label">2차발효</td>
                             <td class="fd-kv-label">온도(°C)</td>
-                            <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.ferm2Temp)}" onchange="updateBakingProcess('ferm2Temp', this.value)" class="w-full text-center font-bold focus:outline-amber-500"></td>
+                            <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.ferm2Temp)}" onchange="updateBakingProcess('ferm2Temp', this.value)" class="w-full min-w-0 text-center font-bold focus:outline-amber-500"></td>
                             <td rowspan="6" class="fd-kv-label">메모</td>
                             <td rowspan="6" class="fd-td p-1.5 align-top">
                                 <textarea onchange="updateBakingProcess('memo', this.value)" placeholder="성형 · 충전 · 분할 · 굽기 특이사항 메모 입력..." class="w-full h-36 resize-none text-xs font-semibold text-stone-800 leading-relaxed focus:outline-none">${escapeHtml(bp.memo)}</textarea>
@@ -837,24 +1003,24 @@ function renderRecipeDetailPanel() {
                         </tr>
                         <tr>
                             <td class="fd-kv-label">습도(%)</td>
-                            <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.ferm2Humid)}" onchange="updateBakingProcess('ferm2Humid', this.value)" class="w-full text-center font-bold focus:outline-amber-500"></td>
+                            <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.ferm2Humid)}" onchange="updateBakingProcess('ferm2Humid', this.value)" class="w-full min-w-0 text-center font-bold focus:outline-amber-500"></td>
                         </tr>
                         <tr>
                             <td class="fd-kv-label">시간(분)</td>
-                            <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.ferm2Time)}" onchange="updateBakingProcess('ferm2Time', this.value)" class="w-full text-center font-bold focus:outline-amber-500"></td>
+                            <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.ferm2Time)}" onchange="updateBakingProcess('ferm2Time', this.value)" class="w-full min-w-0 text-center font-bold focus:outline-amber-500"></td>
                         </tr>
                         <tr>
                             <td rowspan="2" class="fd-kv-label">오븐온도</td>
                             <td class="fd-kv-label">상(°C)</td>
-                            <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.ovenTop)}" onchange="updateBakingProcess('ovenTop', this.value)" class="w-full text-center font-bold focus:outline-amber-500"></td>
+                            <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.ovenTop)}" onchange="updateBakingProcess('ovenTop', this.value)" class="w-full min-w-0 text-center font-bold focus:outline-amber-500"></td>
                         </tr>
                         <tr>
                             <td class="fd-kv-label">하(°C)</td>
-                            <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.ovenBottom)}" onchange="updateBakingProcess('ovenBottom', this.value)" class="w-full text-center font-bold focus:outline-amber-500"></td>
+                            <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.ovenBottom)}" onchange="updateBakingProcess('ovenBottom', this.value)" class="w-full min-w-0 text-center font-bold focus:outline-amber-500"></td>
                         </tr>
                         <tr>
                             <td colspan="2" class="fd-kv-label">굽는시간(분)</td>
-                            <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.bakeTime)}" onchange="updateBakingProcess('bakeTime', this.value)" class="w-full text-center font-bold focus:outline-amber-500"></td>
+                            <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.bakeTime)}" onchange="updateBakingProcess('bakeTime', this.value)" class="w-full min-w-0 text-center font-bold focus:outline-amber-500"></td>
                         </tr>
                     </tbody>
                 </table>
@@ -872,18 +1038,6 @@ function renderRecipeDetailPanel() {
 function selectRecipeItem(id) {
     selectedRecipeId = id;
     renderRecipeWorkspace();
-}
-
-function toggleBulkRecipeCheck(id, checked) {
-    if (checked) selectedRecipeIdsForBulk.add(id);
-    else selectedRecipeIdsForBulk.delete(id);
-    renderRecipeSidebarList();
-}
-
-function toggleSelectAllRecipes(checked) {
-    if (checked) (recipesData || []).forEach(r => selectedRecipeIdsForBulk.add(r.id));
-    else selectedRecipeIdsForBulk.clear();
-    renderRecipeSidebarList();
 }
 
 function createNewRecipeItem(type = 'PRODUCT') {
@@ -926,27 +1080,20 @@ function duplicateSelectedRecipe() {
     showToast('레시피가 복제되었습니다.', 'success');
 }
 
-function deleteCurrentRecipeItem(id) {
-    openConfirmModal('품목 삭제', '선택한 레시피를 삭제하시겠습니까?', () => {
-        recipesData = recipesData.filter(r => r.id !== id);
+function deleteSelectedRecipe() {
+    const target = (recipesData || []).find(r => r.id === selectedRecipeId);
+    if (!target) return showToast('삭제할 품목을 먼저 선택해 주세요.', 'error');
+    openConfirmModal('품목 삭제', `[${target.productName}] 레시피를 삭제하시겠습니까?`, () => {
+        recipesData = recipesData.filter(r => r.id !== target.id);
         selectedRecipeId = recipesData[0]?.id || null;
         saveLocalCache();
         renderRecipeWorkspace();
     });
 }
 
-function deleteBulkSelectedRecipes() {
-    const targets = selectedRecipeIdsForBulk.size > 0
-        ? Array.from(selectedRecipeIdsForBulk)
-        : (selectedRecipeId ? [selectedRecipeId] : []);
-    if (targets.length === 0) return showToast('삭제할 품목을 선택해 주세요.', 'error');
-    openConfirmModal('품목 삭제', `선택한 ${targets.length}개 레시피를 삭제하시겠습니까?`, () => {
-        recipesData = recipesData.filter(r => !targets.includes(r.id));
-        selectedRecipeIdsForBulk.clear();
-        if (!recipesData.some(r => r.id === selectedRecipeId)) selectedRecipeId = recipesData[0]?.id || null;
-        saveLocalCache();
-        renderRecipeWorkspace();
-    });
+function deleteCurrentRecipeItem(id) {
+    selectedRecipeId = id;
+    deleteSelectedRecipe();
 }
 
 function updateRecipeField(field, val) {
@@ -1011,8 +1158,10 @@ function addIngredientToRecipe() {
         rowId: 'ri_' + Date.now(),
         rowType: 'RAW',
         process: proc,
+        rawKey: found.rawKey,
+        itemCode: found.itemCode,
+        priceSource: 'RAW_DB',
         item: found.item,
-        itemCode: '',
         origin: '',
         spec: found.spec,
         unit: 'G',
@@ -1030,12 +1179,15 @@ function addBlankIngredientToRecipe() {
     const rc = recipesData.find(r => r.id === selectedRecipeId);
     if (!rc) return;
     const proc = document.getElementById('quickAddProcessSelect')?.value || rc.activeProcesses[0] || '제1공정';
+    const defaultName = '식수(물)';
     rc.ingredients.push({
         rowId: 'ri_' + Date.now(),
         rowType: 'RAW',
         process: proc,
-        item: '식수(물)',
-        itemCode: '590001',
+        rawKey: `${defaultName}||1kg`,
+        itemCode: generateInternalItemCode(defaultName, '1kg', 'RM'),
+        priceSource: 'RAW_DB',
+        item: defaultName,
         origin: '',
         spec: '1kg',
         unit: 'G',
@@ -1058,7 +1210,6 @@ function addSubRecipeToFormula() {
     const subRc = recipesData.find(r => r.id === subId);
     if (!subRc) return;
 
-    // 순환 참조 검사
     const subEval = evaluateRecipeBaseTotals(subRc, new Set([rc.id]));
     rc.ingredients.push({
         rowId: 'ri_' + Date.now(),
@@ -1087,6 +1238,22 @@ function updateRecipeIngredient(idx, field, val) {
         ig.weightG = num;
     } else if (field === 'unitPrice' || field === 'seq') {
         ig[field] = parseNumericCell(val);
+    } else if (field === 'item') {
+        ig.item = String(val || '').trim();
+        // 이름 변경 시 원재료 페이지에 동일 품목이 있으면 내부코드와 단가를 자동 재연결
+        const lookup = buildRawCatalogLookupMaps();
+        if (lookup.byName.has(ig.item)) {
+            const matched = lookup.byName.get(ig.item);
+            ig.rawKey = matched.rawKey;
+            ig.itemCode = matched.itemCode;
+            ig.priceSource = 'RAW_DB';
+            ig.unitPrice = matched.unitPrice;
+            ig.spec = matched.spec;
+            ig.specGrams = matched.specGrams;
+        } else {
+            ig.rawKey = `${ig.item}||${ig.spec || ''}`;
+            ig.itemCode = generateInternalItemCode(ig.item, ig.spec || '', 'RM');
+        }
     } else {
         ig[field] = val;
     }
@@ -1099,13 +1266,33 @@ function promptIngredientUnitPrice(idx) {
     const rc = recipesData.find(r => r.id === selectedRecipeId);
     if (!rc || !rc.ingredients[idx]) return;
     const ig = rc.ingredients[idx];
-    const newSpec = prompt(`[${ig.item}] 기준 구매규격을 입력하세요 (예: 25kg, 20kg, 15kg, 1kg):`, ig.spec || '1kg');
+    const lookup = buildRawCatalogLookupMaps();
+    const matched = lookup.byKey.get(ig.rawKey) || lookup.byName.get(String(ig.item || '').trim());
+
+    const guideMsg = matched
+        ? `[${ig.item}] 현재 원재료 페이지 발주단가(${matched.spec} · ${formatCurrency(matched.unitPrice)})와 연동 가능\n기준 규격을 입력하세요 (빈칸 입력 시 원재료DB 자동연동 복원):`
+        : `[${ig.item}] 기준 구매규격을 입력하세요 (예: 25kg, 20kg, 15kg, 1kg):`;
+
+    const newSpec = prompt(guideMsg, ig.spec || '1kg');
     if (newSpec === null) return;
-    const newPrice = prompt(`[${ig.item}] (${newSpec}) 1포/박스당 구매단가(원)를 입력하세요:`, String(ig.unitPrice || 0));
+    if (newSpec.trim() === '' && matched) {
+        ig.priceSource = 'RAW_DB';
+        ig.rawKey = matched.rawKey;
+        ig.itemCode = matched.itemCode;
+        ig.spec = matched.spec;
+        ig.specGrams = matched.specGrams;
+        ig.unitPrice = matched.unitPrice;
+        saveLocalCache();
+        renderRecipeWorkspace();
+        return showToast('원재료 페이지 최신 단가 자동연동으로 복원되었습니다.', 'success');
+    }
+
+    const newPrice = prompt(`[${ig.item}] (${newSpec}) 구매단가(원)를 입력하세요:`, String(ig.unitPrice || 0));
     if (newPrice === null) return;
     ig.spec = newSpec.trim() || '1kg';
     ig.specGrams = parseSpecToGrams(ig.spec);
     ig.unitPrice = parseNumericCell(newPrice);
+    ig.priceSource = 'MANUAL';
     saveLocalCache();
     renderRecipeWorkspace();
 }
@@ -1118,17 +1305,19 @@ function removeRecipeIngredient(idx) {
     renderRecipeWorkspace();
 }
 
-function addPackagingRowToRecipe() {
+function addPackagingRowToRecipe(forceManual = false) {
     const rc = recipesData.find(r => r.id === selectedRecipeId);
     if (!rc) return;
     const selKey = document.getElementById('quickAddPackCatalogSelect')?.value || '';
-    if (selKey) {
+    if (!forceManual && selKey) {
         const found = getRawMaterialCatalogForRecipe().find(c => c.key === selKey);
         if (found) {
             rc.packagingList.push({
                 rowId: 'pk_' + Date.now(),
+                rawKey: found.rawKey,
+                code: found.itemCode,
+                priceSource: 'RAW_DB',
                 name: found.item,
-                code: '',
                 spec: found.spec,
                 unit: 'EA',
                 purchasePrice: found.unitPrice,
@@ -1141,10 +1330,16 @@ function addPackagingRowToRecipe() {
             return;
         }
     }
+    if (!forceManual && !selKey) {
+        return showToast('발주 포장 부자재를 선택하거나 우측 [수기] 버튼을 눌러주세요.', 'error');
+    }
+    const defaultPkName = '소비닐 / 외포장박스';
     rc.packagingList.push({
         rowId: 'pk_' + Date.now(),
-        name: '소비닐 / 외포장박스',
-        code: '800001',
+        rawKey: `${defaultPkName}||1000매`,
+        code: generateInternalItemCode(defaultPkName, '1000매', 'PK'),
+        priceSource: 'MANUAL',
+        name: defaultPkName,
         spec: '1,000매',
         unit: 'EA',
         purchasePrice: 100000,
@@ -1159,10 +1354,26 @@ function addPackagingRowToRecipe() {
 function updateRecipePackaging(idx, field, val) {
     const rc = recipesData.find(r => r.id === selectedRecipeId);
     if (!rc || !rc.packagingList[idx]) return;
+    const pk = rc.packagingList[idx];
     if (['purchasePrice', 'specQty', 'usedQty'].includes(field)) {
-        rc.packagingList[idx][field] = parseNumericCell(val);
+        pk[field] = parseNumericCell(val);
+    } else if (field === 'name') {
+        pk.name = String(val || '').trim();
+        const lookup = buildRawCatalogLookupMaps();
+        if (lookup.byName.has(pk.name)) {
+            const matched = lookup.byName.get(pk.name);
+            pk.rawKey = matched.rawKey;
+            pk.code = matched.itemCode;
+            pk.priceSource = 'RAW_DB';
+            pk.purchasePrice = matched.unitPrice;
+            pk.spec = matched.spec;
+            pk.specQty = matched.specPackQty || 1;
+        } else {
+            pk.rawKey = `${pk.name}||${pk.spec || ''}`;
+            pk.code = generateInternalItemCode(pk.name, pk.spec || '', 'PK');
+        }
     } else {
-        rc.packagingList[idx][field] = val;
+        pk[field] = val;
     }
     saveLocalCache();
     renderRecipeWorkspace();
@@ -1178,6 +1389,7 @@ function promptPackagingPrice(idx) {
     if (s === null) return;
     pk.purchasePrice = parseNumericCell(p);
     pk.specQty = Math.max(1, parseNumericCell(s));
+    pk.priceSource = 'MANUAL';
     saveLocalCache();
     renderRecipeWorkspace();
 }
@@ -1190,7 +1402,7 @@ function removeRecipePackaging(idx) {
     renderRecipeWorkspace();
 }
 
-// 제품 이미지 업로드 (자동 리사이즈 압축으로 용량 절약)
+// 제품 이미지 업로드 (자동 리사이즈 압축)
 function handleRecipeImageUpload(files) {
     if (!files || !files[0]) return;
     const rc = recipesData.find(r => r.id === selectedRecipeId);
@@ -1227,7 +1439,7 @@ function clearRecipeImage() {
     renderRecipeDetailPanel();
 }
 
-// 푸드디스커버리 스크린샷 속 실제 3단계 계층형(퀸아망생지) 샘플 세트 원클릭 추가 기능
+// 푸드디스커버리 3단계 계층형 샘플 세트 추가
 function insertFoodDiscoverySampleSet() {
     if (recipesData.some(r => r.productCode === '100148')) {
         selectedRecipeId = recipesData.find(r => r.productCode === '100148').id;
@@ -1337,11 +1549,32 @@ function insertFoodDiscoverySampleSet() {
 }
 
 // ============================================================================
-// 구글 스프레드시트 DB 연동 & CSV 내보내기 (기존 스키마 100% 호환)
+// 레시피 전용 구글 시트 DB 연동 (기본 URL 자동 내장 + 상태 표시 + 초기 동기화)
 // ============================================================================
 
+function updateRecipeDbStatusUI(state, text) {
+    const dot = document.getElementById('recipeDbStatusDot');
+    const label = document.getElementById('recipeDbStatusText');
+    const badge = document.getElementById('recipeDbStatusBadge');
+    if (label && text) label.textContent = text;
+    if (dot) {
+        dot.className = state === 'syncing'
+            ? 'w-2 h-2 rounded-full bg-amber-500 animate-pulse'
+            : (state === 'error' ? 'w-2 h-2 rounded-full bg-rose-500' : 'w-2 h-2 rounded-full bg-emerald-500');
+    }
+    if (badge) {
+        badge.className = state === 'connected'
+            ? 'flex items-center gap-1.5 px-3 py-1.5 h-8 rounded-xl text-xs font-bold border bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100 transition cursor-pointer'
+            : 'flex items-center gap-1.5 px-3 py-1.5 h-8 rounded-xl text-xs font-bold border bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100 transition cursor-pointer';
+    }
+}
+
 function openRecipeDbModal() {
-    document.getElementById('recipeGasUrlInput').value = recipeGasWebAppUrl;
+    const urlToUse = (!recipeGasWebAppUrl || recipeGasWebAppUrl.includes(LEGACY_DUMMY_RECIPE_URL_PART))
+        ? BAROGA_DEFAULT_RECIPE_GAS_URL
+        : recipeGasWebAppUrl;
+    recipeGasWebAppUrl = urlToUse;
+    document.getElementById('recipeGasUrlInput').value = urlToUse;
     const m = document.getElementById('recipeDbModal');
     m.classList.remove('hidden');
     m.classList.add('flex');
@@ -1354,62 +1587,76 @@ function closeRecipeDbModal() {
 }
 
 function saveRecipeGasUrlConfig() {
-    const v = document.getElementById('recipeGasUrlInput').value.trim();
-    if (v) {
-        recipeGasWebAppUrl = v;
-        localStorage.setItem('baroga_recipe_gas_url', v);
-        closeRecipeDbModal();
-        syncRecipesFromGoogleSheet(true);
-    }
+    const v = document.getElementById('recipeGasUrlInput').value.trim() || BAROGA_DEFAULT_RECIPE_GAS_URL;
+    recipeGasWebAppUrl = v;
+    try { localStorage.setItem('baroga_recipe_gas_url', v); } catch (e) {}
+    closeRecipeDbModal();
+    syncRecipesFromGoogleSheet(true);
 }
 
 async function syncRecipesFromGoogleSheet(showMessage = false) {
-    if (!recipeGasWebAppUrl) return;
+    if (!recipeGasWebAppUrl || recipeGasWebAppUrl.includes(LEGACY_DUMMY_RECIPE_URL_PART)) {
+        recipeGasWebAppUrl = BAROGA_DEFAULT_RECIPE_GAS_URL;
+    }
+    updateRecipeDbStatusUI('syncing', '레시피 동기화중...');
     try {
         const sep = recipeGasWebAppUrl.includes('?') ? '&' : '?';
-        const res = await fetchWithTimeout(`${recipeGasWebAppUrl}${sep}action=getAll&t=${Date.now()}`, { method: 'GET' }, 12000);
+        const res = await fetchWithTimeout(`${recipeGasWebAppUrl}${sep}action=getAll&t=${Date.now()}`, { method: 'GET' }, 14000);
         const json = await res.json();
-        const rows = Array.isArray(json) ? json : (json.data || []);
-        if (Array.isArray(rows) && rows.length > 0) {
-            recipesData = rows.map(r => {
-                let parsedJson = {};
-                try { parsedJson = typeof r.ingredientsJson === 'string' ? JSON.parse(r.ingredientsJson) : {}; } catch (e) {}
-                const ings = Array.isArray(parsedJson) ? parsedJson : (parsedJson.ingredients || []);
-                const pkgs = parsedJson.packagingList || [];
-                const procs = parsedJson.activeProcesses || ['제1공정'];
-                return ensureRecipeSchema({
-                    id: r.id || ('rc_' + Date.now() + Math.random()),
-                    recipeType: parsedJson.recipeType || undefined,
-                    productCode: String(r.productCode || '100001'),
-                    productName: r.productName || '레시피',
-                    divisionWeight: parseFloat(r.divisionWeight) || 100,
-                    customProductionQty: parseFloat(r.customProductionQty) || 0,
-                    packQty: parseFloat(r.packQty) || 1,
-                    sellingPrice: parseFloat(r.sellingPrice) || 0,
-                    lossRatio: parseFloat(r.lossRatio) || 0,
-                    activeProcesses: procs,
-                    ingredients: ings,
-                    packagingList: pkgs,
-                    bakingProcess: parsedJson.bakingProcess || {},
-                    imageData: parsedJson.imageData || '',
-                    updatedAt: r.updatedAt || getTodayStr()
+        const rows = Array.isArray(json) ? json : (json.data || json.rows || json.recipes || []);
+        if (Array.isArray(rows)) {
+            if (rows.length > 0) {
+                const lookup = buildRawCatalogLookupMaps();
+                recipesData = rows.map(r => {
+                    let parsedJson = {};
+                    try { parsedJson = typeof r.ingredientsJson === 'string' ? JSON.parse(r.ingredientsJson) : (r.ingredientsJson || {}); } catch (e) {}
+                    const ings = Array.isArray(parsedJson) ? parsedJson : (parsedJson.ingredients || []);
+                    const pkgs = parsedJson.packagingList || [];
+                    const procs = parsedJson.activeProcesses || ['제1공정'];
+                    return ensureRecipeSchema({
+                        id: r.id || ('rc_' + Date.now() + Math.random()),
+                        recipeType: parsedJson.recipeType || undefined,
+                        productCode: String(r.productCode || '100001'),
+                        productName: r.productName || '레시피',
+                        divisionWeight: parseFloat(r.divisionWeight) || 100,
+                        customProductionQty: parseFloat(r.customProductionQty) || 0,
+                        packQty: parseFloat(r.packQty) || 1,
+                        sellingPrice: parseFloat(r.sellingPrice) || 0,
+                        lossRatio: parseFloat(r.lossRatio) || 0,
+                        activeProcesses: procs,
+                        ingredients: ings,
+                        packagingList: pkgs,
+                        bakingProcess: parsedJson.bakingProcess || {},
+                        imageData: parsedJson.imageData || '',
+                        updatedAt: r.updatedAt || getTodayStr()
+                    }, lookup);
                 });
-            });
-            selectedRecipeId = recipesData[0]?.id || null;
-            saveLocalCache();
-            if (activeMasterDomain === 'RECIPE') renderRecipeWorkspace();
-            if (showMessage) showToast(`레시피 DB에서 ${recipesData.length}종 불러오기 완료`, 'success');
+                if (!recipesData.some(r => r.id === selectedRecipeId)) {
+                    selectedRecipeId = recipesData[0]?.id || null;
+                }
+                saveLocalCache();
+                if (activeMasterDomain === 'RECIPE') renderRecipeWorkspace();
+                if (showMessage) showToast(`레시피 DB에서 ${recipesData.length}종 동기화 완료`, 'success');
+            } else if (showMessage) {
+                showToast('레시피 DB가 연결되었습니다 (저장된 데이터 0건).', 'info');
+            }
+            updateRecipeDbStatusUI('connected', `레시피 DB 연동됨 (${recipesData.length}종)`);
         }
     } catch (e) {
-        if (showMessage) showToast('레시피 DB URL을 확인해 주세요.', 'error');
+        updateRecipeDbStatusUI('error', '레시피 DB 확인');
+        if (showMessage) showToast('레시피 DB 연결 또는 배포 권한을 확인해 주세요.', 'error');
     }
 }
 
 async function pushRecipesToGoogleSheet(silent = false) {
     saveLocalCache();
-    if (!recipeGasWebAppUrl) return;
+    if (!recipeGasWebAppUrl || recipeGasWebAppUrl.includes(LEGACY_DUMMY_RECIPE_URL_PART)) {
+        recipeGasWebAppUrl = BAROGA_DEFAULT_RECIPE_GAS_URL;
+    }
+    updateRecipeDbStatusUI('syncing', '레시피 저장중...');
+    const lookup = buildRawCatalogLookupMaps();
     const payloadRows = (recipesData || []).map(rc => {
-        ensureRecipeSchema(rc);
+        ensureRecipeSchema(rc, lookup);
         const m = calculateRecipeMetrics(rc);
         return {
             productCode: rc.productCode,
@@ -1435,12 +1682,14 @@ async function pushRecipesToGoogleSheet(silent = false) {
             id: rc.id
         };
     });
+    const bodyStr = JSON.stringify({ action: 'replaceAll', data: payloadRows, recipes: payloadRows });
     try {
         await fetchWithTimeout(recipeGasWebAppUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'replaceAll', data: payloadRows })
+            body: bodyStr
         }, 16000);
+        updateRecipeDbStatusUI('connected', `레시피 DB 연동됨 (${recipesData.length}종)`);
         if (!silent) showToast('레시피 DB에 저장되었습니다.', 'success');
     } catch (e) {
         try {
@@ -1448,10 +1697,12 @@ async function pushRecipesToGoogleSheet(silent = false) {
                 method: 'POST',
                 mode: 'no-cors',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'replaceAll', data: payloadRows })
+                body: bodyStr
             });
-            if (!silent) showToast('레시피 DB 저장 요청 완료', 'success');
+            updateRecipeDbStatusUI('connected', `레시피 DB 연동됨 (${recipesData.length}종)`);
+            if (!silent) showToast('레시피 DB 저장 완료', 'success');
         } catch (e2) {
+            updateRecipeDbStatusUI('error', '레시피 DB 저장 실패');
             if (!silent) showToast('레시피 DB 저장 실패', 'error');
         }
     }
@@ -1466,3 +1717,8 @@ function exportRecipesCsv() {
     });
     triggerCsvDownload(csv, `바로가공장_배합비원가표_${getTodayStr()}.csv`);
 }
+
+// 초기 구동 시 레시피 DB 자동 동기화 연결
+window.addEventListener('load', () => {
+    setTimeout(() => { syncRecipesFromGoogleSheet(false); }, 350);
+});
