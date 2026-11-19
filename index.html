@@ -1,4 +1,4 @@
-<!-- [VERSION: index.html v2.1 - 2026-11-19 원재료 · 레시피 · 제품단가(price.js) 3대 도메인 통합본] -->
+<!-- [VERSION: index.html v2.2 - 2026-11-19 원재료 · 엠즈입고(ms_inbound.js) · 레시피(recipe.js) · 제품단가(price.js) 4대 도메인 통합본] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -38,9 +38,9 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-base sm:text-lg font-extrabold tracking-tight text-stone-900">바로가 공장 통합 관리 시스템</h1>
-                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.1.0</span>
+                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.2.0</span>
                     </div>
-                    <p class="text-xs text-stone-500 hidden sm:block">원재료 발주 · 일일 사용 보고 · 실사 재고 · 레시피 배합비 · 제품단가 출고마진 통합 관리</p>
+                    <p class="text-xs text-stone-500 hidden sm:block">원재료 발주/재고 · 엠즈 입고/회송 · 레시피 배합비 · 제품단가 출고마진 통합 관리</p>
                 </div>
             </div>
             <div class="flex flex-wrap items-center gap-2">
@@ -58,6 +58,9 @@
                 <div class="flex items-center gap-2">
                     <button type="button" onclick="switchMasterDomain('RAW')" id="masterTab_RAW" class="flex items-center gap-2 px-5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition cursor-pointer bg-amber-500 text-stone-950 shadow-xs">
                         <i data-lucide="package" class="w-4 h-4"></i><span>원재료</span>
+                    </button>
+                    <button type="button" onclick="switchMasterDomain('MS_INBOUND')" id="masterTab_MS_INBOUND" class="flex items-center gap-2 px-5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition cursor-pointer text-stone-300 hover:text-white hover:bg-stone-800">
+                        <i data-lucide="truck" class="w-4 h-4"></i><span>엠즈 입고</span>
                     </button>
                     <button type="button" onclick="switchMasterDomain('RECIPE')" id="masterTab_RECIPE" class="flex items-center gap-2 px-5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition cursor-pointer text-stone-300 hover:text-white hover:bg-stone-800">
                         <i data-lucide="chef-hat" class="w-4 h-4"></i><span>레시피</span>
@@ -272,6 +275,10 @@
                 </div>
             </div>
         </section>
+    </main>
+    <!-- [B-0] 엠즈 입고 메인 영역 (ms_inbound.js 마운트 컨테이너) -->
+    <main id="msInboundMainSection" class="hidden w-full flex-1 flex-col">
+        <div id="msInboundRoot" class="w-full flex-1"></div>
     </main>
     <!-- [B] 레시피 메인 영역 -->
     <main id="recipeMainSection" class="hidden max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-4 flex-1 flex-col gap-4">
@@ -835,25 +842,31 @@
             const activeCls = 'flex items-center gap-2 px-5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition cursor-pointer bg-amber-500 text-stone-950 shadow-xs';
             const idleCls = 'flex items-center gap-2 px-5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition cursor-pointer text-stone-300 hover:text-white hover:bg-stone-800';
             const btnRaw = document.getElementById('masterTab_RAW');
+            const btnMs = document.getElementById('masterTab_MS_INBOUND');
             const btnRec = document.getElementById('masterTab_RECIPE');
             const btnPrice = document.getElementById('masterTab_PRODUCT_PRICE');
             const rawBar = document.getElementById('rawSubWorkspaceBar');
             const recBar = document.getElementById('recipeSubHeaderBar');
             const rawMain = document.getElementById('rawMaterialMainSection');
+            const msMain = document.getElementById('msInboundMainSection');
             const recMain = document.getElementById('recipeMainSection');
             const priceMain = document.getElementById('productPriceMainSection');
 
             if (btnRaw) btnRaw.className = domain === 'RAW' ? activeCls : idleCls;
+            if (btnMs) btnMs.className = domain === 'MS_INBOUND' ? activeCls : idleCls;
             if (btnRec) btnRec.className = domain === 'RECIPE' ? activeCls : idleCls;
             if (btnPrice) btnPrice.className = domain === 'PRODUCT_PRICE' ? activeCls : idleCls;
 
             [rawBar, recBar].forEach(el => { if (el) el.classList.add('hidden'); });
-            [rawMain, recMain, priceMain].forEach(el => { if (el) { el.classList.add('hidden'); el.classList.remove('flex'); } });
+            [rawMain, msMain, recMain, priceMain].forEach(el => { if (el) { el.classList.add('hidden'); el.classList.remove('flex'); } });
 
             if (domain === 'RAW') {
                 if (rawBar) rawBar.classList.remove('hidden');
                 if (rawMain) { rawMain.classList.remove('hidden'); rawMain.classList.add('flex'); }
                 renderDashboard();
+            } else if (domain === 'MS_INBOUND') {
+                if (msMain) { msMain.classList.remove('hidden'); msMain.classList.add('flex'); }
+                if (typeof window.mountMsInboundApp === 'function') window.mountMsInboundApp();
             } else if (domain === 'RECIPE') {
                 if (recBar) recBar.classList.remove('hidden');
                 if (recMain) { recMain.classList.remove('hidden'); recMain.classList.add('flex'); }
@@ -1600,7 +1613,8 @@
 
         function triggerCsvDownload(csv, name) { const b = new Blob([csv], { type: 'text/csv;charset=utf-8;' }), u = URL.createObjectURL(b), a = document.createElement('a'); a.href = u; a.download = name; a.click(); URL.revokeObjectURL(u); }
         function exportCurrentMasterCsv() {
-            if (activeMasterDomain === 'RECIPE' && typeof exportRecipesCsv === 'function') exportRecipesCsv();
+            if (activeMasterDomain === 'MS_INBOUND' && typeof window.exportMsInboundExcel === 'function') window.exportMsInboundExcel();
+            else if (activeMasterDomain === 'RECIPE' && typeof exportRecipesCsv === 'function') exportRecipesCsv();
             else if (activeMasterDomain === 'PRODUCT_PRICE' && typeof window.exportProductPriceCsv === 'function') window.exportProductPriceCsv();
             else exportFilteredCsv();
         }
@@ -1637,6 +1651,7 @@
             document.addEventListener('visibilitychange', () => { if (!document.hidden) syncFromGoogleSheet(false); });
         };
     </script>
+    <script src="./ms_inbound.js"></script>
     <script src="./recipe.js"></script>
     <script src="./price.js"></script>
 </body>
