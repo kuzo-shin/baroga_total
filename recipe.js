@@ -1,6 +1,6 @@
 // ============================================================================
-// 바로가 공장 통합 관리 시스템 - 레시피 전용 모듈 (FoodDiscovery 이식 · UI/UX 정밀 보완판)
-// 파일명: recipe.js (index.html 수정 없이 단독 교체 가능)
+// [VERSION: v3.0 - 2026-11-19 공정선택 완전삭제 · 원재료 고정라벨 적용본]
+// 바로가 공장 통합 관리 시스템 - 레시피 전용 모듈 (recipe.js)
 // ============================================================================
 
 const BAROGA_DEFAULT_RECIPE_GAS_URL = "https://script.google.com/macros/s/AKfycbw9zwUi9b7sNkdu4IVqIy0386ZkPLFe4cwqiZIb0qTkLLdq0mFWr2aHQvANPF2VOS4paw/exec";
