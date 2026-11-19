@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: v3.4 - 2026-11-19 1배합 pk수량(생산수량÷PK입수) 적용 · 포장지 0/단가설정 정리 · 롤재단 등 포장부자재 인식 확장본]
+// [VERSION: v3.5 - 2026-11-19 포장 부자재 원재료DB 연동 시 품명 괄호매수(200매 등) 중복나눗셈 제거 · 규격칸(1EA=1) 기준 원가 보정본]
 // 바로가 공장 통합 관리 시스템 - 레시피 전용 모듈 (recipe.js)
 // ============================================================================
 
@@ -58,20 +58,17 @@ function parseSpecToGrams(specStr) {
     return 1000;
 }
 
-function parsePackagingSpecQty(specStr, itemName = '') {
-    const candidates = [specStr, itemName];
-    for (const raw of candidates) {
-        const s = String(raw || '').toLowerCase().replace(/,/g, '').trim();
-        if (!s) continue;
-        // 예: `롤재단 4*60*45(200매)`처럼 치수 뒤에 괄호로 적힌 매수 우선 추출
-        const parenM = s.match(/\(\s*(\d+(?:\.\d+)?)\s*(매|장|ea|개|입)\s*\)/);
-        if (parenM) return parseFloat(parenM[1]) || 1;
-        // 예: `100매*10` 형태 추출
-        const multUnitFirst = s.match(/(\d+(?:\.\d+)?)\s*(매|장|ea|개|입)\s*[*x×]\s*(\d+(?:\.\d+)?)/);
-        if (multUnitFirst) return (parseFloat(multUnitFirst[1]) || 1) * (parseFloat(multUnitFirst[3]) || 1);
-        const m = s.match(/(\d+(?:\.\d+)?)\s*(매|장|ea|개|입)/);
-        if (m) return parseFloat(m[1]) || 1;
-    }
+function parsePackagingSpecQty(specStr) {
+    // 품명(예: `롤재단 4*60*45(200매)`)에 적힌 매수는 단순 명칭이고 발주단가는 이미 1EA(80원) 기준인 경우가 많으므로,
+    // 반드시 규격(spec) 열에 명시된 수량(예: `1,000매` -> 1000, `EA`/`1EA`/공란 -> 1)만 입수량으로 반영합니다.
+    const s = String(specStr || '').toLowerCase().replace(/,/g, '').trim();
+    if (!s) return 1;
+    const parenM = s.match(/\(\s*(\d+(?:\.\d+)?)\s*(매|장|ea|개|입)\s*\)/);
+    if (parenM) return parseFloat(parenM[1]) || 1;
+    const multUnitFirst = s.match(/(\d+(?:\.\d+)?)\s*(매|장|ea|개|입)\s*[*x×]\s*(\d+(?:\.\d+)?)/);
+    if (multUnitFirst) return (parseFloat(multUnitFirst[1]) || 1) * (parseFloat(multUnitFirst[3]) || 1);
+    const m = s.match(/(\d+(?:\.\d+)?)\s*(매|장|ea|개|입)/);
+    if (m) return parseFloat(m[1]) || 1;
     return 1;
 }
 
@@ -103,7 +100,7 @@ function getRawMaterialCatalogForRecipe() {
             latestDate: o.date || '',
             unitPrice: u,
             specGrams: parseSpecToGrams(specName),
-            specPackQty: parsePackagingSpecQty(specName, itemName),
+            specPackQty: parsePackagingSpecQty(specName),
             isPackaging: isPack
         };
     });
@@ -182,10 +179,8 @@ function syncPackagingWithRawCatalog(pk, lookup) {
         if (!pk.code) pk.code = matched.itemCode;
         if (pk.priceSource !== 'MANUAL') {
             pk.purchasePrice = matched.unitPrice;
-            if (matched.spec) {
-                pk.spec = matched.spec;
-                pk.specQty = matched.specPackQty || pk.specQty || 1;
-            }
+            pk.spec = matched.spec || '';
+            pk.specQty = matched.specPackQty || 1;
         }
         return matched;
     } else {
