@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: v3.6 - 2026-11-19 포장 부자재 원재료DB 연동 시 규격/품명 매수 자동나눗셈 전면 해제(1EA 단가 그대로 반영) 및 기존 0.4원 행 강제복원본]
+// [VERSION: v3.7 - 2026-11-19 상단 DB 버튼 3종 UI/UX 통일 (DB 연동됨 배지 h-9 · 초록 DB저장 · 우측 회전 동기화 아이콘 스핀 연동)]
 // 바로가 공장 통합 관리 시스템 - 레시피 전용 모듈 (recipe.js)
 // ============================================================================
 
@@ -1838,6 +1838,11 @@ function updateRecipeDbStatusUI(state, text) {
     const dot = document.getElementById('recipeDbStatusDot');
     const label = document.getElementById('recipeDbStatusText');
     const badge = document.getElementById('recipeDbStatusBadge');
+    const spin = document.getElementById('recipeSyncSpinWrap');
+    if (spin) {
+        if (state === 'syncing') spin.classList.add('animate-spin');
+        else spin.classList.remove('animate-spin');
+    }
     if (label && text) label.textContent = text;
     if (dot) {
         dot.className = state === 'syncing'
@@ -1845,9 +1850,11 @@ function updateRecipeDbStatusUI(state, text) {
             : (state === 'error' ? 'w-2 h-2 rounded-full bg-rose-500' : 'w-2 h-2 rounded-full bg-emerald-500');
     }
     if (badge) {
-        badge.className = state === 'connected'
-            ? 'flex items-center gap-1.5 px-3 py-1.5 h-8 rounded-xl text-xs font-bold border bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100 transition cursor-pointer'
-            : 'flex items-center gap-1.5 px-3 py-1.5 h-8 rounded-xl text-xs font-bold border bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100 transition cursor-pointer';
+        badge.className = state === 'syncing'
+            ? 'flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-xl text-xs font-bold border bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100 transition cursor-pointer'
+            : (state === 'error'
+                ? 'flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-xl text-xs font-bold border bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100 transition cursor-pointer'
+                : 'flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-xl text-xs font-bold border bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100 transition cursor-pointer');
     }
 }
 
@@ -1880,7 +1887,7 @@ async function syncRecipesFromGoogleSheet(showMessage = false) {
     if (!recipeGasWebAppUrl || recipeGasWebAppUrl.includes(LEGACY_DUMMY_RECIPE_URL_PART)) {
         recipeGasWebAppUrl = BAROGA_DEFAULT_RECIPE_GAS_URL;
     }
-    updateRecipeDbStatusUI('syncing', '레시피 동기화중...');
+    updateRecipeDbStatusUI('syncing', '동기화중...');
     try {
         const sep = recipeGasWebAppUrl.includes('?') ? '&' : '?';
         const res = await fetchWithTimeout(`${recipeGasWebAppUrl}${sep}action=getAll&t=${Date.now()}`, { method: 'GET' }, 14000);
@@ -1920,10 +1927,10 @@ async function syncRecipesFromGoogleSheet(showMessage = false) {
             } else if (showMessage) {
                 showToast('레시피 DB가 연결되었습니다 (저장된 데이터 0건).', 'info');
             }
-            updateRecipeDbStatusUI('connected', `레시피 DB 연동됨 (${recipesData.length}종)`);
+            updateRecipeDbStatusUI('connected', `DB 연동됨 (${recipesData.length}종)`);
         }
     } catch (e) {
-        updateRecipeDbStatusUI('error', '레시피 DB 확인');
+        updateRecipeDbStatusUI('error', 'DB 연결 확인');
         if (showMessage) showToast('레시피 DB 연결 또는 배포 권한을 확인해 주세요.', 'error');
     }
 }
@@ -1933,7 +1940,7 @@ async function pushRecipesToGoogleSheet(silent = false) {
     if (!recipeGasWebAppUrl || recipeGasWebAppUrl.includes(LEGACY_DUMMY_RECIPE_URL_PART)) {
         recipeGasWebAppUrl = BAROGA_DEFAULT_RECIPE_GAS_URL;
     }
-    updateRecipeDbStatusUI('syncing', '레시피 저장중...');
+    updateRecipeDbStatusUI('syncing', '저장중...');
     const lookup = buildRawCatalogLookupMaps();
     const payloadRows = (recipesData || []).map(rc => {
         ensureRecipeSchema(rc, lookup);
@@ -1968,7 +1975,7 @@ async function pushRecipesToGoogleSheet(silent = false) {
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: bodyStr
         }, 16000);
-        updateRecipeDbStatusUI('connected', `레시피 DB 연동됨 (${recipesData.length}종)`);
+        updateRecipeDbStatusUI('connected', `DB 연동됨 (${recipesData.length}종)`);
         if (!silent) showToast('레시피 DB에 저장되었습니다.', 'success');
     } catch (e) {
         try {
@@ -1978,10 +1985,10 @@ async function pushRecipesToGoogleSheet(silent = false) {
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: bodyStr
             });
-            updateRecipeDbStatusUI('connected', `레시피 DB 연동됨 (${recipesData.length}종)`);
+            updateRecipeDbStatusUI('connected', `DB 연동됨 (${recipesData.length}종)`);
             if (!silent) showToast('레시피 DB 저장 완료', 'success');
         } catch (e2) {
-            updateRecipeDbStatusUI('error', '레시피 DB 저장 실패');
+            updateRecipeDbStatusUI('error', 'DB 저장 확인');
             if (!silent) showToast('레시피 DB 저장 실패', 'error');
         }
     }
