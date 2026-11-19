@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: v3.1 - 2026-11-19 원재료 팝업 검색 · 초성/다중투입 · 0원(식수) 허용 적용본]
+// [VERSION: v3.2 - 2026-11-19 제품내역 품목코드 오름차순 자동정렬 적용본]
 // 바로가 공장 통합 관리 시스템 - 레시피 전용 모듈 (recipe.js)
 // ============================================================================
 
@@ -539,6 +539,14 @@ function setRecipeCategoryFilter(cat) {
 }
 
 // [1] 좌측 패널: 제품내역 (체크박스 및 배합비 열 완전 제거 -> 품목코드 + 품목명 2열 구성)
+function compareRecipeProductCode(a, b) {
+    const ca = String(a?.productCode || '').trim();
+    const cb = String(b?.productCode || '').trim();
+    const cmp = ca.localeCompare(cb, 'ko', { numeric: true, sensitivity: 'base' });
+    if (cmp !== 0) return cmp;
+    return String(a?.productName || '').localeCompare(String(b?.productName || ''), 'ko');
+}
+
 function renderRecipeSidebarList() {
     const q = (document.getElementById('recipeListSearchInput')?.value || '').trim().toLowerCase();
     const sub = document.getElementById('recipeCountSub');
@@ -552,7 +560,7 @@ function renderRecipeSidebarList() {
         if (recipeCategoryFilter === 'SUB' && r.recipeType !== 'SUB') return false;
         if (q && !`${r.productCode || ''} ${r.productName || ''}`.toLowerCase().includes(q)) return false;
         return true;
-    });
+    }).sort(compareRecipeProductCode);
 
     listEl.innerHTML = `
         <table class="w-full table-fixed border-collapse text-left">
@@ -672,7 +680,7 @@ function renderRecipeDetailPanel() {
     const packOnlyList = rawCatalog.filter(c => c.isPackaging);
     // 포장 키워드에 안 걸린 부자재도 선택 가능하도록 전체 목록 보조 제공
     const packDropdownList = packOnlyList.length > 0 ? packOnlyList : rawCatalog;
-    const availableSubRecipes = (recipesData || []).filter(r => r.id !== rc.id);
+    const availableSubRecipes = (recipesData || []).filter(r => r.id !== rc.id).sort(compareRecipeProductCode);
 
     let formulaRowsHtml = '';
     if (m.itemBreakdown.length === 0) {
@@ -1902,7 +1910,7 @@ async function pushRecipesToGoogleSheet(silent = false) {
 
 function exportRecipesCsv() {
     let csv = '\uFEFF구분,품목코드,품목명,분할중량(G),생산수량,포장수량,판매금액,원가비율(%),개당원가,판매원가,개별포장,총포장가,생산원가,중량합계(G),충전합계(G)\n';
-    (recipesData || []).forEach(rc => {
+    [...(recipesData || [])].sort(compareRecipeProductCode).forEach(rc => {
         const m = calculateRecipeMetrics(rc);
         const typeLabel = rc.recipeType === 'SUB' ? '반제품/충전물' : '완제품';
         csv += `"${typeLabel}","${rc.productCode}","${rc.productName}",${rc.divisionWeight},${m.productQty.toFixed(1)},${rc.packQty},${rc.sellingPrice},${m.costRatioPct.toFixed(2)},${m.unitCost.toFixed(2)},${Math.round(m.salesCost)},${Math.round(m.unitPackCost)},${Math.round(m.totalPackCost)},${m.productionCost.toFixed(2)},${Math.round(m.weightTotalG)},${Math.round(m.fillingWeightG)}\n`;
