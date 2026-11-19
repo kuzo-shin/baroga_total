@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: price.js v1.2 - 2026-11-19 백그라운드 즉시동기화 · 바로가출고가→레시피 판매금액 실시간 브릿지 · 용어통일 적용본]
+// [VERSION: price.js v1.3 - 2026-11-19 신규 제품단가 DB URL 기본내장 · DB URL 설정 모달 추가 · 다양한 GAS 응답스키마 완벽호환본]
 // 바로가 공장 통합 관리 시스템 - 제품단가 전용 모듈 (price.js)
 // ============================================================================
 (function () {
@@ -1300,8 +1300,23 @@
       );
     }
 
-    const GOOGLE_SHEET_WEB_APP_URL =
-      'https://script.google.com/macros/s/AKfycbyxvi_Xp6HasU8GA1t5Av6CDqeM4pAUkB8Y7YSxUo_c2hTRvxNxWhNWEMBwWBCX2lnDIg/exec';
+    const DEFAULT_PRICE_GAS_WEB_APP_URL =
+      'https://script.google.com/macros/s/AKfycbyDgXS0bpuOs-VA4BgiTyRBnB2KsXQXd43-BKA8bIsjWB7KcKDQ8v7kR4r1e_b3o9Q-Pw/exec';
+    const LEGACY_PRICE_GAS_URL_PART = 'AKfycbyxvi_Xp6HasU8GA1t5Av6CDqeM4pAUkB8Y7YSxUo_c2hTRvxNxWhNWEMBwWBCX2lnDIg';
+    const PRICE_GAS_URL_STORAGE_KEY = 'baroga_product_price_gas_url';
+
+    function loadSavedPriceGasUrl() {
+      try {
+        const saved = (localStorage.getItem(PRICE_GAS_URL_STORAGE_KEY) || '').trim();
+        if (!saved || saved.includes(LEGACY_PRICE_GAS_URL_PART)) {
+          localStorage.setItem(PRICE_GAS_URL_STORAGE_KEY, DEFAULT_PRICE_GAS_WEB_APP_URL);
+          return DEFAULT_PRICE_GAS_WEB_APP_URL;
+        }
+        return saved;
+      } catch (e) {
+        return DEFAULT_PRICE_GAS_WEB_APP_URL;
+      }
+    }
 
     function mergeSettingsWithDefaults(loaded) {
       if (!loaded) return INITIAL_BASIC_SETTINGS;
@@ -1403,6 +1418,10 @@
         setFormulaTooltip(null);
       };
 
+      const [priceGasUrl, setPriceGasUrl] = useState(() => loadSavedPriceGasUrl());
+      const [isPriceDbModalOpen, setIsPriceDbModalOpen] = useState(false);
+      const [draftPriceGasUrl, setDraftPriceGasUrl] = useState('');
+
       const [syncStatus, setSyncStatus] = useState('IDLE');
       const [lastSyncedAt, setLastSyncedAt] = useState(null);
 
@@ -1424,51 +1443,153 @@
         }, 2800);
       };
 
-      const handleSaveToGoogleSheet = async () => {
+      const openPriceDbConfigModal = () => {
+        setDraftPriceGasUrl(priceGasUrl || DEFAULT_PRICE_GAS_WEB_APP_URL);
+        setIsPriceDbModalOpen(true);
+      };
+
+      const closePriceDbConfigModal = () => {
+        setIsPriceDbModalOpen(false);
+      };
+
+      const extractPricePayloadFromResponse = (result) => {
+        if (!result) return null;
+        if (result.payload && typeof result.payload === 'object' && !Array.isArray(result.payload)) {
+          return result.payload;
+        }
+        if (result.categoryDbs || result.pkCostRows || result.settings) {
+          return result;
+        }
+        const rows = Array.isArray(result) ? result : (result.data || result.rows || null);
+        if (Array.isArray(rows)) {
+          if (rows.length === 0) return { __emptySheet: true };
+          for (const r of rows) {
+            if (!r) continue;
+            if (r.payload) {
+              try {
+                return typeof r.payload === 'string' ? JSON.parse(r.payload) : r.payload;
+              } catch (e) {}
+            }
+            if (r.json || r.dataJson || r.colE) {
+              try {
+                const rawJ = r.json || r.dataJson || r.colE;
+                if (typeof rawJ === 'string' && rawJ.trim().startsWith('{')) {
+                  const p = JSON.parse(rawJ);
+                  if (p.categoryDbs || p.pkCostRows || p.settings) return p;
+                  if (p.payload) return p.payload;
+                }
+              } catch (e) {}
+            }
+            if (r.categoryDbs || r.pkCostRows || r.settings) return r;
+          }
+          if (rows[0] && rows[0].productName !== undefined && rows[0].releasePriceEa !== undefined) {
+            return { pkCostRows: rows };
+          }
+        }
+        return null;
+      };
+
+      const handleSaveToGoogleSheet = async (overrideUrl = null, silent = false) => {
+        const targetUrl = (typeof overrideUrl === 'string' && overrideUrl.trim())
+          ? overrideUrl.trim()
+          : (priceGasUrl || DEFAULT_PRICE_GAS_WEB_APP_URL);
+        if (!targetUrl) return;
+
         setSyncStatus('SAVING');
+        const corePayload = {
+          settings,
+          categoryDbs,
+          pkCostRows,
+          msUpdatedDate,
+        };
+        const bodyStr = JSON.stringify({
+          action: 'replaceAll',
+          payload: corePayload,
+          data: [{ id: '__PRICE_STATE__', date: msUpdatedDate || '2026-11-19', colA: '__PRICE_STATE__', colB: 'BAROGA_PRODUCT_PRICE_DB', colE: JSON.stringify(corePayload) }],
+        });
 
         try {
-          const response = await fetch(GOOGLE_SHEET_WEB_APP_URL, {
+          const response = await fetch(targetUrl, {
             method: 'POST',
+            redirect: 'follow',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({
-              payload: {
-                settings,
-                categoryDbs,
-                pkCostRows,
-                msUpdatedDate,
-              },
-            }),
+            body: bodyStr,
           });
 
-          const result = await response.json();
-          if (result.status === 'ok') {
-            setSyncStatus('SUCCESS');
-            setLastSyncedAt(result.updatedAt || new Date().toLocaleTimeString('ko-KR'));
-            showToast('구글 스프레드시트 DB에 성공적으로 저장되었습니다!');
-          } else {
-            throw new Error(result.message || '저장 응답 오류');
+          let timeLabel = new Date().toLocaleTimeString('ko-KR');
+          try {
+            const text = await response.text();
+            if (text) {
+              const parsed = JSON.parse(text);
+              if (parsed.status === 'error' || parsed.result === 'error' || parsed.ok === false) {
+                throw new Error(parsed.message || parsed.error || '저장 응답 오류');
+              }
+              if (parsed.updatedAt) timeLabel = parsed.updatedAt;
+            }
+          } catch (parseErr) {
+            if (parseErr && parseErr.message && parseErr.message.includes('오류')) throw parseErr;
           }
+
+          setSyncStatus('SUCCESS');
+          setLastSyncedAt(timeLabel);
+          if (!silent) showToast('제품단가 구글 스프레드시트 DB에 저장되었습니다!');
         } catch (err) {
-          setSyncStatus('ERROR');
-          showToast('구글 시트 저장에 실패했습니다. 배포 권한("모든 사용자")을 확인해주세요.');
+          try {
+            await fetch(targetUrl, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: bodyStr,
+            });
+            setSyncStatus('SUCCESS');
+            setLastSyncedAt(new Date().toLocaleTimeString('ko-KR'));
+            if (!silent) showToast('제품단가 구글 시트 저장 요청이 완료되었습니다.');
+          } catch (err2) {
+            setSyncStatus('ERROR');
+            if (!silent) showToast('구글 시트 저장 실패 — URL 또는 배포 권한("모든 사용자")을 확인해주세요.');
+          }
         }
       };
 
-      const handleLoadFromGoogleSheet = async (silentOnEmpty = false) => {
+      const handleLoadFromGoogleSheet = async (silentOnEmpty = false, overrideUrl = null) => {
+        const targetUrl = (typeof overrideUrl === 'string' && overrideUrl.trim())
+          ? overrideUrl.trim()
+          : (priceGasUrl || DEFAULT_PRICE_GAS_WEB_APP_URL);
+        if (!targetUrl) return;
+
         setSyncStatus('LOADING');
 
         try {
-          const urlWithNoCache = `${GOOGLE_SHEET_WEB_APP_URL}?t=${Date.now()}`;
-          const response = await fetch(urlWithNoCache, { method: 'GET' });
+          const sep = targetUrl.includes('?') ? '&' : '?';
+          const urlWithNoCache = `${targetUrl}${sep}action=getAll&t=${Date.now()}`;
+          const response = await fetch(urlWithNoCache, { method: 'GET', redirect: 'follow' });
           const result = await response.json();
 
-          if (result.status === 'ok' && result.payload) {
-            if (result.payload.settings) {
-              setSettings(mergeSettingsWithDefaults(result.payload.settings));
+          if (result && (result.status === 'empty' || result.empty === true)) {
+            setSyncStatus('IDLE');
+            if (!silentOnEmpty) {
+              showToast('시트가 비어있어 현재 데이터를 새 시트에 초기 저장합니다.');
             }
-            const loadedCatDbs = result.payload.categoryDbs || null;
-            const loadedPkRows = result.payload.pkCostRows || null;
+            handleSaveToGoogleSheet(targetUrl, silentOnEmpty);
+            return;
+          }
+
+          const extracted = extractPricePayloadFromResponse(result);
+          if (extracted && extracted.__emptySheet) {
+            setSyncStatus('IDLE');
+            if (!silentOnEmpty) {
+              showToast('시트가 비어있어 현재 데이터를 새 시트에 초기 저장합니다.');
+            }
+            handleSaveToGoogleSheet(targetUrl, silentOnEmpty);
+            return;
+          }
+
+          if (extracted) {
+            if (extracted.settings) {
+              setSettings(mergeSettingsWithDefaults(extracted.settings));
+            }
+            const loadedCatDbs = extracted.categoryDbs || null;
+            const loadedPkRows = extracted.pkCostRows || null;
             if (loadedCatDbs && loadedPkRows) {
               // 양쪽 시트 간 품목코드(productCode) 및 productId 상호 보완 동기화
               const codeByName = new Map();
@@ -1503,8 +1624,8 @@
               if (loadedCatDbs) setCategoryDbs(loadedCatDbs);
               if (loadedPkRows) setPkCostRows(loadedPkRows);
             }
-            if (result.payload.msUpdatedDate) {
-              const rawDate = String(result.payload.msUpdatedDate).trim();
+            if (extracted.msUpdatedDate) {
+              const rawDate = String(extracted.msUpdatedDate).trim();
               const normalizedDate = /^\d{2}\.\d{2}\.\d{2}$/.test(rawDate)
                 ? `20${rawDate.replace(/\./g, '-')}`
                 : rawDate;
@@ -1513,27 +1634,35 @@
             setSyncStatus('SUCCESS');
             setLastSyncedAt(result.updatedAt || new Date().toLocaleTimeString('ko-KR'));
             if (!silentOnEmpty) {
-              showToast('구글 스프레드시트에서 최신 DB를 불러왔습니다!');
+              showToast('제품단가 구글 스프레드시트에서 최신 DB를 불러왔습니다!');
             }
-          } else if (result.status === 'empty') {
-            setSyncStatus('IDLE');
-            if (!silentOnEmpty) {
-              showToast('시트가 비어있어 현재 초기 데이터를 시트에 바로 저장합니다.');
-            }
-            handleSaveToGoogleSheet();
           } else {
-            throw new Error(result.message || '불러오기 응답 오류');
+            throw new Error(result?.message || '인식할 수 없는 응답 형식');
           }
         } catch (err) {
           setSyncStatus('ERROR');
           if (!silentOnEmpty) {
-            showToast('구글 시트 불러오기 실패 — 네트워크 또는 배포 설정을 확인해주세요.');
+            showToast('제품단가 DB 불러오기 실패 — [제품단가 DB 설정]에서 URL 및 배포 권한("모든 사용자")을 확인해주세요.');
           }
         }
       };
 
+      const handleSavePriceGasUrlConfig = () => {
+        const nextUrl = (draftPriceGasUrl || '').trim() || DEFAULT_PRICE_GAS_WEB_APP_URL;
+        setPriceGasUrl(nextUrl);
+        try {
+          localStorage.setItem(PRICE_GAS_URL_STORAGE_KEY, nextUrl);
+        } catch (e) {}
+        setIsPriceDbModalOpen(false);
+        handleLoadFromGoogleSheet(false, nextUrl);
+      };
+
+      const handleResetDefaultPriceGasUrl = () => {
+        setDraftPriceGasUrl(DEFAULT_PRICE_GAS_WEB_APP_URL);
+      };
+
       useEffect(() => {
-        handleLoadFromGoogleSheet(true);
+        handleLoadFromGoogleSheet(true, priceGasUrl);
       }, []);
 
       const calc = useMemo(() => {
@@ -3016,19 +3145,81 @@
                           activeTab === 'MS_PRICE'
                             ? 'bg-amber-400 text-slate-950'
                             : 'bg-slate-200/90 text-slate-600 group-hover:bg-slate-300/80'
-                        }` }, pkCostRows.length))))), React.createElement("div", { className: "flex items-center gap-2 text-xs" }, React.createElement("div", { className: "hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200/80 text-[11px] font-semibold text-slate-600" }, React.createElement("span", { className: `w-2 h-2 rounded-full ${
+                        }` }, pkCostRows.length))))), React.createElement("div", { className: "flex flex-wrap items-center gap-2 text-xs" }, React.createElement("button", { type: "button", onClick: openPriceDbConfigModal, title: `현재 연결된 제품단가 DB URL:\n${priceGasUrl}`, className: `inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition cursor-pointer ${
+                      syncStatus === 'ERROR'
+                        ? 'bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100'
+                        : syncStatus === 'SAVING' || syncStatus === 'LOADING'
+                          ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
+                          : 'bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100'
+                    }` }, React.createElement("span", { className: `w-2 h-2 rounded-full ${
                       syncStatus === 'SAVING' || syncStatus === 'LOADING'
-                        ? 'bg-amber-400 animate-ping'
+                        ? 'bg-amber-500 animate-ping'
                         : syncStatus === 'ERROR'
                           ? 'bg-rose-500'
                           : 'bg-emerald-500'
                     }` }), React.createElement("span", null, syncStatus === 'SAVING'
-                      ? '시트 저장 중...'
+                      ? '단가 DB 저장중...'
                       : syncStatus === 'LOADING'
-                        ? '동기화 중...'
-                        : lastSyncedAt
-                          ? `동기화: ${lastSyncedAt}`
-                          : '구글시트 연동됨')), React.createElement("button", { type: "button", onClick: () => handleLoadFromGoogleSheet(false), disabled: syncStatus === 'LOADING' || syncStatus === 'SAVING', className: "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold shadow-sm transition disabled:opacity-50" }, React.createElement("span", null, "🔄"), React.createElement("span", null, "불러오기")), React.createElement("button", { type: "button", onClick: handleSaveToGoogleSheet, disabled: syncStatus === 'LOADING' || syncStatus === 'SAVING', className: "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold shadow-sm shadow-emerald-600/20 transition disabled:opacity-50" }, React.createElement("span", null, "💾"), React.createElement("span", null, "구글시트 저장"))))), toastMessage && (
+                        ? '단가 DB 동기화중...'
+                        : syncStatus === 'ERROR'
+                          ? '단가 DB 확인 (설정)'
+                          : lastSyncedAt
+                            ? `단가 DB 연동됨 (${lastSyncedAt})`
+                            : '제품단가 DB 설정'), React.createElement("span", { className: "text-[11px] opacity-75 ml-0.5" }, "⚙️")), React.createElement("button", { type: "button", onClick: () => handleLoadFromGoogleSheet(false), disabled: syncStatus === 'LOADING' || syncStatus === 'SAVING', className: "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold shadow-sm transition cursor-pointer disabled:opacity-50" }, React.createElement("span", null, "🔄"), React.createElement("span", null, "불러오기")), React.createElement("button", { type: "button", onClick: () => handleSaveToGoogleSheet(null, false), disabled: syncStatus === 'LOADING' || syncStatus === 'SAVING', className: "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold shadow-sm shadow-emerald-600/20 transition cursor-pointer disabled:opacity-50" }, React.createElement("span", null, "💾"), React.createElement("span", null, "구글시트 저장"))))), isPriceDbModalOpen && (
+            React.createElement("div", { onClick: (e) => { if (e.target === e.currentTarget) closePriceDbConfigModal(); }, className: "fixed inset-0 bg-stone-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4" },
+              React.createElement("div", { className: "bg-white rounded-2xl max-w-lg w-full p-5 shadow-xl border border-stone-200 text-xs" },
+                React.createElement("div", { className: "flex items-center justify-between pb-3 border-b border-stone-200" },
+                  React.createElement("div", null,
+                    React.createElement("h3", { className: "text-base font-extrabold text-stone-900" }, "제품단가 전용 구글 스프레드시트 DB 설정"),
+                    React.createElement("p", { className: "text-[11px] text-stone-500 mt-0.5" }, "PK단위 원가표 · 공정별 인건비 DB · 기본설정 · 엠즈 단가표를 저장하는 Apps Script URL입니다")
+                  ),
+                  React.createElement("button", { type: "button", onClick: closePriceDbConfigModal, className: "text-stone-400 hover:text-stone-700 text-base font-bold px-1 cursor-pointer" }, "✕")
+                ),
+                React.createElement("div", { className: "mt-4 space-y-3" },
+                  React.createElement("div", null,
+                    React.createElement("label", { className: "font-bold text-stone-700 block mb-1" }, "제품단가 Google Apps Script 웹 앱 URL"),
+                    React.createElement("input", {
+                      type: "text",
+                      value: draftPriceGasUrl,
+                      onChange: (e) => setDraftPriceGasUrl(e.target.value),
+                      placeholder: "https://script.google.com/macros/s/.../exec",
+                      className: "w-full border border-stone-300 focus:border-emerald-600 focus:outline-none rounded-xl px-3 py-2 font-mono text-[11.5px] bg-stone-50 focus:bg-white text-stone-900"
+                    })
+                  ),
+                  React.createElement("div", { className: "p-2.5 rounded-xl bg-stone-50 border border-stone-200 text-[11px] text-stone-600 space-y-1" },
+                    React.createElement("div", { className: "font-bold text-stone-800" }, "• 동기화 점검 체크리스트"),
+                    React.createElement("div", null, "1. Apps Script 배포 시 [액세스 권한이 있는 사용자: 모든 사용자]로 설정되어 있어야 합니다."),
+                    React.createElement("div", null, "2. 새 시트로 변경한 경우 [현재 화면 데이터 강제 저장]을 누르면 현재 40종 데이터가 새 시트에 기록됩니다.")
+                  ),
+                  React.createElement("div", { className: "flex flex-wrap items-center justify-between gap-2 pt-1" },
+                    React.createElement("button", {
+                      type: "button",
+                      onClick: handleResetDefaultPriceGasUrl,
+                      className: "px-3 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold cursor-pointer"
+                    }, "기본 URL 복원"),
+                    React.createElement("div", { className: "flex items-center gap-2" },
+                      React.createElement("button", {
+                        type: "button",
+                        onClick: () => {
+                          const nextUrl = (draftPriceGasUrl || '').trim() || DEFAULT_PRICE_GAS_WEB_APP_URL;
+                          setPriceGasUrl(nextUrl);
+                          try { localStorage.setItem(PRICE_GAS_URL_STORAGE_KEY, nextUrl); } catch (e) {}
+                          setIsPriceDbModalOpen(false);
+                          handleSaveToGoogleSheet(nextUrl, false);
+                        },
+                        className: "px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold cursor-pointer"
+                      }, "URL 저장 후 현재 데이터 업로드"),
+                      React.createElement("button", {
+                        type: "button",
+                        onClick: handleSavePriceGasUrlConfig,
+                        className: "px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold cursor-pointer"
+                      }, "URL 저장 및 불러오기")
+                    )
+                  )
+                )
+              )
+            )
+          ), toastMessage && (
             React.createElement("div", { className: "fixed bottom-4 right-4 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-lg text-xs font-bold border border-slate-700" }, toastMessage)
           ), React.createElement("main", { className: "flex-1 p-3 sm:p-4 max-w-[1920px] w-full mx-auto" }, activeTab === 'BASIC_DB' && renderBasicSettingsSheet(), activeTab === 'PK_MAIN' && renderPkMainCostSheet(), activeTab === 'MS_PRICE' && renderMsPriceSheet(), activeTab === 'PIE' && renderProcessCategorySheet('PIE'), activeTab === 'DOUGH' && renderProcessCategorySheet('DOUGH'), activeTab === 'PARBAKE' && renderProcessCategorySheet('PARBAKE'), activeTab === 'BAKERY' && renderProcessCategorySheet('BAKERY')))
       );
