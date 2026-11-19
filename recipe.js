@@ -196,14 +196,11 @@ function ensureRecipeSchema(rc, lookup = null) {
     if (rc.customProductionQty === undefined) rc.customProductionQty = 0;
     if (!rc.imageData) rc.imageData = '';
 
-    if (!Array.isArray(rc.activeProcesses) || rc.activeProcesses.length === 0) {
-        rc.activeProcesses = ['제1공정'];
-    }
+    delete rc.activeProcesses;
     if (!Array.isArray(rc.ingredients)) rc.ingredients = [];
     rc.ingredients.forEach((ig, idx) => {
         if (!ig.rowId) ig.rowId = 'ri_' + Date.now() + '_' + idx;
         if (!ig.rowType) ig.rowType = ig.subRecipeId ? 'SUB_RECIPE' : 'RAW';
-        if (!ig.process) ig.process = rc.activeProcesses[0] || '제1공정';
         if (!ig.origin) ig.origin = '';
         if (!ig.unit) ig.unit = ig.rowType === 'SUB_RECIPE' ? 'EA' : 'G';
         if (ig.qty === undefined || ig.qty === null) ig.qty = parseFloat(ig.weightG ?? ig.g1 ?? 0) || 0;
@@ -297,7 +294,7 @@ function evaluateRecipeBaseTotals(rc, visitedIds = new Set(), lookup = null) {
             : (specG > 0 ? (uPrice / specG) * effWeightG : 0);
 
         weightTotalG += effWeightG;
-        if (/(충전물|필링|앙금)/.test(ig.process || '')) fillingWeightG += effWeightG;
+        if (/(충전물|필링|앙금)/.test(ig.item || '')) fillingWeightG += effWeightG;
         rawCostTotal += effCost;
         itemBreakdown.push({ ig, subRc: null, subEval: null, scale: 1, effWeightG, effCost, linkedRaw });
     });
@@ -522,30 +519,7 @@ function renderNestedSubRecipeRowsHtml(subRc, parentScale, depth = 1, visited = 
     const indentPx = depth * 14;
     let html = '';
 
-    const procGroups = {};
-    (subRc.activeProcesses || ['제1공정']).forEach(p => { procGroups[p] = []; });
     subEval.itemBreakdown.forEach(entry => {
-        const p = entry.ig.process || '제1공정';
-        if (!procGroups[p]) procGroups[p] = [];
-        procGroups[p].push(entry);
-    });
-
-    Object.entries(procGroups).forEach(([procName, entries]) => {
-        if (entries.length === 0) return;
-        html += `
-            <tr class="bg-stone-50/90 text-stone-700">
-                <td class="fd-td py-1 px-2 font-extrabold truncate" style="padding-left:${indentPx}px">${escapeHtml(procName)}</td>
-                <td class="fd-td py-1 px-1 text-center"></td>
-                <td class="fd-td py-1 px-1 text-center"></td>
-                <td class="fd-td py-1 px-1.5 text-right text-stone-400">0</td>
-                <td class="fd-td py-1 px-1 text-right text-stone-400">0</td>
-                <td class="fd-td py-1 px-1 text-center text-stone-400">0</td>
-                <td class="fd-td py-1 px-1.5 text-right text-stone-400">0</td>
-                <td class="fd-td py-1 px-1 text-center"></td>
-            </tr>
-        `;
-
-        entries.forEach(entry => {
             const ig = entry.ig;
             const scaledInputQty = (parseFloat(ig.qty ?? ig.weightG ?? 0) || 0) * parentScale;
             const scaledCost = entry.effCost * parentScale;
@@ -592,7 +566,6 @@ function renderNestedSubRecipeRowsHtml(subRc, parentScale, depth = 1, visited = 
                 `;
             }
         });
-    });
 
     return html;
 }
@@ -626,37 +599,16 @@ function renderRecipeDetailPanel() {
     const packDropdownList = packOnlyList.length > 0 ? packOnlyList : rawCatalog;
     const availableSubRecipes = (recipesData || []).filter(r => r.id !== rc.id);
 
-    const topProcGroups = {};
-    rc.activeProcesses.forEach(p => { topProcGroups[p] = []; });
-    m.itemBreakdown.forEach((entry, idx) => {
-        const p = entry.ig.process || rc.activeProcesses[0] || '제1공정';
-        if (!topProcGroups[p]) topProcGroups[p] = [];
-        topProcGroups[p].push({ ...entry, idx });
-    });
-
     let formulaRowsHtml = '';
-    Object.entries(topProcGroups).forEach(([procName, entries]) => {
+    if (m.itemBreakdown.length === 0) {
         formulaRowsHtml += `
-            <tr class="bg-stone-100/90">
-                <td class="fd-td py-1.5 px-2 font-black text-stone-900">
-                    <div class="flex items-center justify-between gap-1">
-                        <span class="truncate">${escapeHtml(procName)}</span>
-                        ${rc.activeProcesses.length > 1 ? `<button type="button" onclick="removeProcessFromRecipe('${escapeHtml(procName)}')" class="text-[10px] text-stone-400 hover:text-rose-600 cursor-pointer shrink-0" title="공정 제거">✕</button>` : ''}
-                    </div>
-                </td>
-                <td class="fd-td py-1.5 px-1 text-center"></td>
-                <td class="fd-td py-1.5 px-1 text-center"></td>
-                <td class="fd-td py-1.5 px-1.5 text-right text-stone-400 font-semibold">0</td>
-                <td class="fd-td py-1.5 px-1 text-right text-stone-400 font-semibold">0</td>
-                <td class="fd-td py-1.5 px-1 text-center text-stone-400 font-semibold">0</td>
-                <td class="fd-td py-1.5 px-1.5 text-right text-stone-400 font-semibold">0</td>
-                <td class="fd-td py-1.5 px-1 text-center"></td>
+            <tr>
+                <td colspan="8" class="fd-td py-6 text-center text-xs text-stone-400 font-bold">상단에서 원재료 또는 반제품·충전물을 선택해 투입해 주세요.</td>
             </tr>
         `;
-
-        entries.forEach(entry => {
+    }
+    m.itemBreakdown.forEach((entry, idx) => {
             const ig = entry.ig;
-            const idx = entry.idx;
             const topFlourG = m.itemBreakdown.reduce((acc, x) => acc + ((x.ig.isFlour || isFlourIngredientName(x.ig.item)) ? x.effWeightG : 0), 0);
             const topDenomG = (recipeRatioMode === 'BAKERS' && topFlourG > 0) ? topFlourG : m.weightTotalG;
             const pct = topDenomG > 0 ? ((entry.effWeightG / topDenomG) * 100) : 0;
@@ -728,7 +680,6 @@ function renderRecipeDetailPanel() {
                     </tr>
                 `;
             }
-        });
     });
 
     // 하단: 포장지(1EA제품기준) 섹션 (코드 입력칸 숨김, 깔끔 정렬)
@@ -793,11 +744,8 @@ function renderRecipeDetailPanel() {
         <div class="p-2.5 bg-amber-50/50 border-b border-stone-200 space-y-1.5 text-xs">
             <!-- 1열: 원재료 투입 -->
             <div class="flex items-center gap-1.5">
-                <div class="w-[132px] shrink-0 flex items-center gap-1">
-                    <select id="quickAddProcessSelect" class="flex-1 min-w-0 h-7 border border-stone-300 rounded-lg px-1.5 font-extrabold bg-white text-[11px]">
-                        ${rc.activeProcesses.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('')}
-                    </select>
-                    <button type="button" onclick="promptAddProcessName()" title="새 공정 추가" class="w-7 h-7 rounded-lg bg-white border border-stone-300 text-stone-700 hover:bg-stone-100 font-black text-xs cursor-pointer shrink-0">+</button>
+                <div class="w-[132px] shrink-0 h-7 px-2 rounded-lg bg-amber-100/80 border border-amber-300 flex items-center justify-center font-extrabold text-[11px] text-amber-950 whitespace-nowrap">
+                    원재료
                 </div>
                 <select id="quickAddRawSelect" class="flex-1 min-w-0 h-7 border border-amber-400 rounded-lg px-2 font-bold bg-white text-[11.5px] truncate">
                     <option value="">발주 원재료 선택 (${rawOnlyList.length}종)...</option>
@@ -1053,7 +1001,6 @@ function createNewRecipeItem(type = 'PRODUCT') {
         packQty: isSub ? 1 : 10,
         sellingPrice: 0,
         lossRatio: 0,
-        activeProcesses: ['제1공정'],
         ingredients: [],
         packagingList: [],
         bakingProcess: {},
@@ -1123,32 +1070,10 @@ function updateBakingProcess(key, val) {
     saveLocalCache();
 }
 
-function promptAddProcessName() {
-    const rc = recipesData.find(r => r.id === selectedRecipeId);
-    if (!rc) return;
-    const nextNum = (rc.activeProcesses?.length || 0) + 1;
-    const name = prompt('추가할 공정명을 입력하세요 (예: 제2공정, 탕종, 토핑, 필링)', `제${nextNum}공정`);
-    if (!name || !name.trim()) return;
-    const clean = name.trim();
-    if (!rc.activeProcesses.includes(clean)) rc.activeProcesses.push(clean);
-    saveLocalCache();
-    renderRecipeWorkspace();
-}
-
-function removeProcessFromRecipe(procName) {
-    const rc = recipesData.find(r => r.id === selectedRecipeId);
-    if (!rc || rc.activeProcesses.length <= 1) return;
-    const fallback = rc.activeProcesses.find(p => p !== procName) || '제1공정';
-    (rc.ingredients || []).forEach(ig => { if (ig.process === procName) ig.process = fallback; });
-    rc.activeProcesses = rc.activeProcesses.filter(p => p !== procName);
-    saveLocalCache();
-    renderRecipeWorkspace();
-}
 
 function addIngredientToRecipe() {
     const rc = recipesData.find(r => r.id === selectedRecipeId);
     if (!rc) return;
-    const proc = document.getElementById('quickAddProcessSelect')?.value || rc.activeProcesses[0] || '제1공정';
     const rawKey = document.getElementById('quickAddRawSelect')?.value;
     if (!rawKey) return showToast('발주 원재료 목록에서 품목을 선택해 주세요.', 'error');
     const found = getRawMaterialCatalogForRecipe().find(c => c.key === rawKey);
@@ -1157,7 +1082,6 @@ function addIngredientToRecipe() {
     rc.ingredients.push({
         rowId: 'ri_' + Date.now(),
         rowType: 'RAW',
-        process: proc,
         rawKey: found.rawKey,
         itemCode: found.itemCode,
         priceSource: 'RAW_DB',
@@ -1178,12 +1102,10 @@ function addIngredientToRecipe() {
 function addBlankIngredientToRecipe() {
     const rc = recipesData.find(r => r.id === selectedRecipeId);
     if (!rc) return;
-    const proc = document.getElementById('quickAddProcessSelect')?.value || rc.activeProcesses[0] || '제1공정';
     const defaultName = '식수(물)';
     rc.ingredients.push({
         rowId: 'ri_' + Date.now(),
         rowType: 'RAW',
-        process: proc,
         rawKey: `${defaultName}||1kg`,
         itemCode: generateInternalItemCode(defaultName, '1kg', 'RM'),
         priceSource: 'RAW_DB',
@@ -1204,7 +1126,6 @@ function addBlankIngredientToRecipe() {
 function addSubRecipeToFormula() {
     const rc = recipesData.find(r => r.id === selectedRecipeId);
     if (!rc) return;
-    const proc = document.getElementById('quickAddProcessSelect')?.value || rc.activeProcesses[0] || '제1공정';
     const subId = document.getElementById('quickAddSubRecipeSelect')?.value;
     if (!subId) return showToast('투입할 하위 반제품·충전물 레시피를 선택해 주세요.', 'error');
     const subRc = recipesData.find(r => r.id === subId);
@@ -1215,7 +1136,6 @@ function addSubRecipeToFormula() {
         rowId: 'ri_' + Date.now(),
         rowType: 'SUB_RECIPE',
         subRecipeId: subRc.id,
-        process: proc,
         item: subRc.productName,
         itemCode: subRc.productCode,
         origin: '',
@@ -1462,18 +1382,17 @@ function insertFoodDiscoverySampleSet() {
         packQty: 1,
         sellingPrice: 0,
         lossRatio: 0,
-        activeProcesses: ['제1공정'],
         ingredients: [
-            { rowId: 's91_1', rowType: 'RAW', process: '제1공정', item: 'T45(포리쉐)', itemCode: '500159', origin: '프랑스산', spec: '25kg', specGrams: 25000, unitPrice: 55000, unit: 'G', qty: 48115, seq: 0 },
-            { rowId: 's91_2', rowType: 'RAW', process: '제1공정', item: '에스500키모', itemCode: '500117', origin: '국내산', spec: '20kg', specGrams: 20000, unitPrice: 160000, unit: 'G', qty: 963.29, seq: 0 },
-            { rowId: 's91_3', rowType: 'RAW', process: '제1공정', item: '백설꽃소금', itemCode: '500176', origin: '', spec: '20kg', specGrams: 20000, unitPrice: 22626, unit: 'G', qty: 1203.37, seq: 0 },
-            { rowId: 's91_4', rowType: 'RAW', process: '제1공정', item: '하얀설탕(백설)', itemCode: '500152', origin: '국내산', spec: '15kg', specGrams: 15000, unitPrice: 20000, unit: 'G', qty: 7227.18, seq: 0 },
-            { rowId: 's91_5', rowType: 'RAW', process: '제1공정', item: '낙우밀', itemCode: '500042', origin: '국내산', spec: '1kg', specGrams: 1000, unitPrice: 5355, unit: 'G', qty: 1926.59, seq: 0 },
-            { rowId: 's91_6', rowType: 'RAW', process: '제1공정', item: '냉동이스트(고당)', itemCode: '500113', origin: '프랑스산', spec: '3.5kg', specGrams: 3500, unitPrice: 34720, unit: 'G', qty: 963.29, seq: 0 },
-            { rowId: 's91_7', rowType: 'RAW', process: '제1공정', item: '전란액(살균)', itemCode: '500036', origin: '국내산', spec: '5kg', specGrams: 5000, unitPrice: 26000, unit: 'G', qty: 2408.73, seq: 0 },
-            { rowId: 's91_8', rowType: 'RAW', process: '제1공정', item: '식수(물)', itemCode: '590001', origin: '', spec: '1kg', specGrams: 1000, unitPrice: 0, unit: 'G', qty: 20044, seq: 0 },
-            { rowId: 's91_9', rowType: 'RAW', process: '제1공정', item: '앵커버터', itemCode: '500029', origin: '뉴질랜드산', spec: '1kg', specGrams: 1000, unitPrice: 12660, unit: 'G', qty: 2408.73, seq: 0 },
-            { rowId: 's91_10', rowType: 'RAW', process: '제1공정', item: '파지', itemCode: '500171', origin: '', spec: '1kg', specGrams: 1000, unitPrice: 0, unit: 'G', qty: 7242.06, seq: 0 }
+            { rowId: 's91_1', rowType: 'RAW', item: 'T45(포리쉐)', itemCode: '500159', origin: '프랑스산', spec: '25kg', specGrams: 25000, unitPrice: 55000, unit: 'G', qty: 48115, seq: 0 },
+            { rowId: 's91_2', rowType: 'RAW', item: '에스500키모', itemCode: '500117', origin: '국내산', spec: '20kg', specGrams: 20000, unitPrice: 160000, unit: 'G', qty: 963.29, seq: 0 },
+            { rowId: 's91_3', rowType: 'RAW', item: '백설꽃소금', itemCode: '500176', origin: '', spec: '20kg', specGrams: 20000, unitPrice: 22626, unit: 'G', qty: 1203.37, seq: 0 },
+            { rowId: 's91_4', rowType: 'RAW', item: '하얀설탕(백설)', itemCode: '500152', origin: '국내산', spec: '15kg', specGrams: 15000, unitPrice: 20000, unit: 'G', qty: 7227.18, seq: 0 },
+            { rowId: 's91_5', rowType: 'RAW', item: '낙우밀', itemCode: '500042', origin: '국내산', spec: '1kg', specGrams: 1000, unitPrice: 5355, unit: 'G', qty: 1926.59, seq: 0 },
+            { rowId: 's91_6', rowType: 'RAW', item: '냉동이스트(고당)', itemCode: '500113', origin: '프랑스산', spec: '3.5kg', specGrams: 3500, unitPrice: 34720, unit: 'G', qty: 963.29, seq: 0 },
+            { rowId: 's91_7', rowType: 'RAW', item: '전란액(살균)', itemCode: '500036', origin: '국내산', spec: '5kg', specGrams: 5000, unitPrice: 26000, unit: 'G', qty: 2408.73, seq: 0 },
+            { rowId: 's91_8', rowType: 'RAW', item: '식수(물)', itemCode: '590001', origin: '', spec: '1kg', specGrams: 1000, unitPrice: 0, unit: 'G', qty: 20044, seq: 0 },
+            { rowId: 's91_9', rowType: 'RAW', item: '앵커버터', itemCode: '500029', origin: '뉴질랜드산', spec: '1kg', specGrams: 1000, unitPrice: 12660, unit: 'G', qty: 2408.73, seq: 0 },
+            { rowId: 's91_10', rowType: 'RAW', item: '파지', itemCode: '500171', origin: '', spec: '1kg', specGrams: 1000, unitPrice: 0, unit: 'G', qty: 7242.06, seq: 0 }
         ],
         packagingList: []
     });
@@ -1488,10 +1407,9 @@ function insertFoodDiscoverySampleSet() {
         packQty: 1,
         sellingPrice: 0,
         lossRatio: 0,
-        activeProcesses: ['제1공정'],
         ingredients: [
-            { rowId: 's92_1', rowType: 'SUB_RECIPE', subRecipeId: idBaseDough, process: '제1공정', item: '(공장)(반제품)패스츄리기본반죽', itemCode: '100091', unit: 'EA', qty: 25, seq: 0 },
-            { rowId: 's92_2', rowType: 'RAW', process: '제1공정', item: '플래차드 드라이 버터', itemCode: '500168', origin: '', spec: '10kg', specGrams: 10000, unitPrice: 167000, unit: 'G', qty: 25000, seq: 0 }
+            { rowId: 's92_1', rowType: 'SUB_RECIPE', subRecipeId: idBaseDough, item: '(공장)(반제품)패스츄리기본반죽', itemCode: '100091', unit: 'EA', qty: 25, seq: 0 },
+            { rowId: 's92_2', rowType: 'RAW', item: '플래차드 드라이 버터', itemCode: '500168', origin: '', spec: '10kg', specGrams: 10000, unitPrice: 167000, unit: 'G', qty: 25000, seq: 0 }
         ],
         packagingList: []
     });
@@ -1506,11 +1424,10 @@ function insertFoodDiscoverySampleSet() {
         packQty: 1,
         sellingPrice: 0,
         lossRatio: 0,
-        activeProcesses: ['제1공정'],
         ingredients: [
-            { rowId: 's93_1', rowType: 'RAW', process: '제1공정', item: '푸드림가는정백당(설탕)', itemCode: '500065', origin: '국내산', spec: '15kg', specGrams: 15000, unitPrice: 20900, unit: 'G', qty: 17500, seq: 0 },
-            { rowId: 's93_2', rowType: 'RAW', process: '제1공정', item: '백설꽃소금', itemCode: '500143', origin: '국내산', spec: '20kg', specGrams: 20000, unitPrice: 26900, unit: 'G', qty: 375, seq: 0 },
-            { rowId: 's93_3', rowType: 'RAW', process: '제1공정', item: '앵커버터', itemCode: '500029', origin: '뉴질랜드산', spec: '1kg', specGrams: 1000, unitPrice: 12660, unit: 'G', qty: 17500, seq: 0 }
+            { rowId: 's93_1', rowType: 'RAW', item: '푸드림가는정백당(설탕)', itemCode: '500065', origin: '국내산', spec: '15kg', specGrams: 15000, unitPrice: 20900, unit: 'G', qty: 17500, seq: 0 },
+            { rowId: 's93_2', rowType: 'RAW', item: '백설꽃소금', itemCode: '500143', origin: '국내산', spec: '20kg', specGrams: 20000, unitPrice: 26900, unit: 'G', qty: 375, seq: 0 },
+            { rowId: 's93_3', rowType: 'RAW', item: '앵커버터', itemCode: '500029', origin: '뉴질랜드산', spec: '1kg', specGrams: 1000, unitPrice: 12660, unit: 'G', qty: 17500, seq: 0 }
         ],
         packagingList: []
     });
@@ -1525,10 +1442,9 @@ function insertFoodDiscoverySampleSet() {
         packQty: 2,
         sellingPrice: 23157,
         lossRatio: 0,
-        activeProcesses: ['제1공정'],
         ingredients: [
-            { rowId: 'f148_1', rowType: 'SUB_RECIPE', subRecipeId: idButterDough, process: '제1공정', item: '(공장)(반제품)패스츄리버터반죽', itemCode: '100092', unit: 'EA', qty: 25, seq: 0 },
-            { rowId: 'f148_2', rowType: 'SUB_RECIPE', subRecipeId: idFilling, process: '제1공정', item: '(충전물)퀸아망필링', itemCode: '100093', unit: 'EA', qty: 35375, seq: 0 }
+            { rowId: 'f148_1', rowType: 'SUB_RECIPE', subRecipeId: idButterDough, item: '(공장)(반제품)패스츄리버터반죽', itemCode: '100092', unit: 'EA', qty: 25, seq: 0 },
+            { rowId: 'f148_2', rowType: 'SUB_RECIPE', subRecipeId: idFilling, item: '(충전물)퀸아망필링', itemCode: '100093', unit: 'EA', qty: 35375, seq: 0 }
         ],
         packagingList: [
             { rowId: 'pk148_1', name: '소비닐 45*70*0.05', code: '800002', unit: 'EA', purchasePrice: 100, specQty: 1, usedQty: 0.5 },
@@ -1612,7 +1528,6 @@ async function syncRecipesFromGoogleSheet(showMessage = false) {
                     try { parsedJson = typeof r.ingredientsJson === 'string' ? JSON.parse(r.ingredientsJson) : (r.ingredientsJson || {}); } catch (e) {}
                     const ings = Array.isArray(parsedJson) ? parsedJson : (parsedJson.ingredients || []);
                     const pkgs = parsedJson.packagingList || [];
-                    const procs = parsedJson.activeProcesses || ['제1공정'];
                     return ensureRecipeSchema({
                         id: r.id || ('rc_' + Date.now() + Math.random()),
                         recipeType: parsedJson.recipeType || undefined,
@@ -1623,7 +1538,6 @@ async function syncRecipesFromGoogleSheet(showMessage = false) {
                         packQty: parseFloat(r.packQty) || 1,
                         sellingPrice: parseFloat(r.sellingPrice) || 0,
                         lossRatio: parseFloat(r.lossRatio) || 0,
-                        activeProcesses: procs,
                         ingredients: ings,
                         packagingList: pkgs,
                         bakingProcess: parsedJson.bakingProcess || {},
@@ -1672,7 +1586,6 @@ async function pushRecipesToGoogleSheet(silent = false) {
             weightTotalG: Math.round(m.weightTotalG),
             ingredientsJson: JSON.stringify({
                 recipeType: rc.recipeType,
-                activeProcesses: rc.activeProcesses,
                 ingredients: rc.ingredients,
                 packagingList: rc.packagingList,
                 bakingProcess: rc.bakingProcess,
