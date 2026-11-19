@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: price.js v1.5 - 2026-11-19 상단 서브탭 및 본문 좌측 정렬선(max-w-[1600px] px-4 sm:px-6) 통일 · 원재료 서브탭과 동일한 버튼 크기 적용본]
+// [VERSION: price.js v1.6 - 2026-11-19 상단 DB 버튼 3종 UI/UX 통일 (DB 연동됨 · 초록 DB저장 · 회전 아이콘) 및 심플 URL 설정 팝업 적용]
 // 바로가 공장 통합 관리 시스템 - 제품단가 전용 모듈 (price.js)
 // ============================================================================
 (function () {
@@ -3145,74 +3145,100 @@
                           activeTab === 'MS_PRICE'
                             ? 'bg-amber-400 text-stone-950'
                             : 'bg-stone-100 text-stone-600'
-                        }` }, pkCostRows.length))), React.createElement("div", { className: "flex flex-wrap items-center gap-1.5 ml-auto text-xs" }, React.createElement("button", { type: "button", onClick: openPriceDbConfigModal, title: `현재 연결된 제품단가 DB URL:\n${priceGasUrl}`, className: `inline-flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-xl border text-xs font-bold transition cursor-pointer ${
-                      syncStatus === 'ERROR'
-                        ? 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100'
-                        : syncStatus === 'SAVING' || syncStatus === 'LOADING'
-                          ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
-                          : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
-                    }` }, React.createElement("span", { className: `w-2 h-2 rounded-full ${
-                      syncStatus === 'SAVING' || syncStatus === 'LOADING'
-                        ? 'bg-amber-500 animate-ping'
-                        : syncStatus === 'ERROR'
-                          ? 'bg-rose-500'
-                          : 'bg-emerald-500'
-                    }` }), React.createElement("span", null, syncStatus === 'SAVING'
-                      ? '단가 DB 저장중...'
-                      : syncStatus === 'LOADING'
-                        ? '단가 DB 동기화중...'
-                        : syncStatus === 'ERROR'
-                          ? '단가 DB 확인'
-                          : '단가 DB 연동됨'), React.createElement("span", { className: "text-[11px] opacity-75 ml-0.5" }, "⚙️")), React.createElement("button", { type: "button", onClick: () => handleLoadFromGoogleSheet(false), disabled: syncStatus === 'LOADING' || syncStatus === 'SAVING', className: "inline-flex items-center gap-1 px-3 py-1.5 h-9 rounded-xl bg-white hover:bg-stone-100 text-stone-700 border border-stone-200 font-bold transition cursor-pointer disabled:opacity-50" }, React.createElement("span", null, "🔄"), React.createElement("span", null, "불러오기")), React.createElement("button", { type: "button", onClick: () => handleSaveToGoogleSheet(null, false), disabled: syncStatus === 'LOADING' || syncStatus === 'SAVING', className: "inline-flex items-center gap-1.5 px-3.5 py-1.5 h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold shadow-2xs transition cursor-pointer disabled:opacity-50" }, React.createElement("span", null, "💾"), React.createElement("span", null, "구글시트 저장"))))), isPriceDbModalOpen && (
+                        }` }, pkCostRows.length))), React.createElement("div", { className: "flex items-center gap-1.5 ml-auto text-xs" },
+                    React.createElement("button", {
+                      type: "button",
+                      onClick: openPriceDbConfigModal,
+                      className: `flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-xl border text-xs font-bold transition cursor-pointer ${
+                        syncStatus === 'ERROR'
+                          ? 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100'
+                          : syncStatus === 'SAVING' || syncStatus === 'LOADING'
+                            ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
+                            : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                      }`
+                    },
+                      React.createElement("span", { className: `w-2 h-2 rounded-full ${
+                        syncStatus === 'SAVING' || syncStatus === 'LOADING'
+                          ? 'bg-amber-500 animate-pulse'
+                          : syncStatus === 'ERROR'
+                            ? 'bg-rose-500'
+                            : 'bg-emerald-500'
+                      }` }),
+                      React.createElement("span", null, syncStatus === 'SAVING'
+                        ? '저장중...'
+                        : syncStatus === 'LOADING'
+                          ? '동기화중...'
+                          : syncStatus === 'ERROR'
+                            ? 'DB 연결 확인'
+                            : `DB 연동됨 (${pkCostRows.length}종)`),
+                      React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", className: "w-3.5 h-3.5 ml-0.5 opacity-75" },
+                        React.createElement("path", { d: "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" }),
+                        React.createElement("circle", { cx: "12", cy: "12", r: "3" })
+                      )
+                    ),
+                    React.createElement("button", {
+                      type: "button",
+                      onClick: () => handleSaveToGoogleSheet(null, false),
+                      disabled: syncStatus === 'LOADING' || syncStatus === 'SAVING',
+                      className: "flex items-center gap-1.5 px-3.5 py-1.5 h-9 rounded-xl text-xs font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition cursor-pointer disabled:opacity-50"
+                    },
+                      React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", className: "w-3.5 h-3.5" },
+                        React.createElement("path", { d: "M12 13v8" }),
+                        React.createElement("path", { d: "M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" }),
+                        React.createElement("path", { d: "m8 17 4-4 4 4" })
+                      ),
+                      React.createElement("span", null, "DB 저장")
+                    ),
+                    React.createElement("button", {
+                      type: "button",
+                      onClick: () => handleLoadFromGoogleSheet(false),
+                      disabled: syncStatus === 'LOADING' || syncStatus === 'SAVING',
+                      title: "구글 시트 새로고침",
+                      className: "flex items-center justify-center w-9 h-9 rounded-xl border border-stone-200 bg-white hover:bg-stone-100 text-stone-700 transition cursor-pointer disabled:opacity-50"
+                    },
+                      React.createElement("span", { className: `inline-flex items-center justify-center ${syncStatus === 'LOADING' ? 'animate-spin' : ''}` },
+                        React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", className: "w-4 h-4" },
+                          React.createElement("path", { d: "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" }),
+                          React.createElement("path", { d: "M21 3v5h-5" }),
+                          React.createElement("path", { d: "M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" }),
+                          React.createElement("path", { d: "M8 16H3v5" })
+                        )
+                      )
+                    )
+                  ))), isPriceDbModalOpen && (
             React.createElement("div", { onClick: (e) => { if (e.target === e.currentTarget) closePriceDbConfigModal(); }, className: "fixed inset-0 bg-stone-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4" },
               React.createElement("div", { className: "bg-white rounded-2xl max-w-lg w-full p-5 shadow-xl border border-stone-200 text-xs" },
                 React.createElement("div", { className: "flex items-center justify-between pb-3 border-b border-stone-200" },
-                  React.createElement("div", null,
-                    React.createElement("h3", { className: "text-base font-extrabold text-stone-900" }, "제품단가 전용 구글 스프레드시트 DB 설정"),
-                    React.createElement("p", { className: "text-[11px] text-stone-500 mt-0.5" }, "PK단위 원가표 · 공정별 인건비 DB · 기본설정 · 엠즈 단가표를 저장하는 Apps Script URL입니다")
-                  ),
-                  React.createElement("button", { type: "button", onClick: closePriceDbConfigModal, className: "text-stone-400 hover:text-stone-700 text-base font-bold px-1 cursor-pointer" }, "✕")
+                  React.createElement("h3", { className: "text-base font-extrabold text-stone-900" }, "제품단가 구글 스프레드시트 DB 설정"),
+                  React.createElement("button", { type: "button", onClick: closePriceDbConfigModal, className: "text-stone-400 hover:text-stone-700 cursor-pointer" },
+                    React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", className: "w-5 h-5" },
+                      React.createElement("path", { d: "M18 6 6 18" }),
+                      React.createElement("path", { d: "m6 6 12 12" })
+                    )
+                  )
                 ),
                 React.createElement("div", { className: "mt-4 space-y-3" },
                   React.createElement("div", null,
-                    React.createElement("label", { className: "font-bold text-stone-700 block mb-1" }, "제품단가 Google Apps Script 웹 앱 URL"),
+                    React.createElement("label", { className: "font-bold text-stone-700 block mb-1" }, "Google Apps Script 웹 앱 URL"),
                     React.createElement("input", {
                       type: "text",
                       value: draftPriceGasUrl,
                       onChange: (e) => setDraftPriceGasUrl(e.target.value),
                       placeholder: "https://script.google.com/macros/s/.../exec",
-                      className: "w-full border border-stone-300 focus:border-emerald-600 focus:outline-none rounded-xl px-3 py-2 font-mono text-[11.5px] bg-stone-50 focus:bg-white text-stone-900"
+                      className: "w-full border border-stone-300 focus:border-emerald-600 focus:outline-none rounded-xl px-3 py-2 font-mono bg-stone-50 focus:bg-white text-stone-900"
                     })
                   ),
-                  React.createElement("div", { className: "p-2.5 rounded-xl bg-stone-50 border border-stone-200 text-[11px] text-stone-600 space-y-1" },
-                    React.createElement("div", { className: "font-bold text-stone-800" }, "• 동기화 점검 체크리스트"),
-                    React.createElement("div", null, "1. Apps Script 배포 시 [액세스 권한이 있는 사용자: 모든 사용자]로 설정되어 있어야 합니다."),
-                    React.createElement("div", null, "2. 새 시트로 변경한 경우 [현재 화면 데이터 강제 저장]을 누르면 현재 40종 데이터가 새 시트에 기록됩니다.")
-                  ),
-                  React.createElement("div", { className: "flex flex-wrap items-center justify-between gap-2 pt-1" },
+                  React.createElement("div", { className: "flex justify-end gap-2 pt-1" },
                     React.createElement("button", {
                       type: "button",
-                      onClick: handleResetDefaultPriceGasUrl,
-                      className: "px-3 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold cursor-pointer"
-                    }, "기본 URL 복원"),
-                    React.createElement("div", { className: "flex items-center gap-2" },
-                      React.createElement("button", {
-                        type: "button",
-                        onClick: () => {
-                          const nextUrl = (draftPriceGasUrl || '').trim() || DEFAULT_PRICE_GAS_WEB_APP_URL;
-                          setPriceGasUrl(nextUrl);
-                          try { localStorage.setItem(PRICE_GAS_URL_STORAGE_KEY, nextUrl); } catch (e) {}
-                          setIsPriceDbModalOpen(false);
-                          handleSaveToGoogleSheet(nextUrl, false);
-                        },
-                        className: "px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold cursor-pointer"
-                      }, "URL 저장 후 현재 데이터 업로드"),
-                      React.createElement("button", {
-                        type: "button",
-                        onClick: handleSavePriceGasUrlConfig,
-                        className: "px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold cursor-pointer"
-                      }, "URL 저장 및 불러오기")
-                    )
+                      onClick: closePriceDbConfigModal,
+                      className: "px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold cursor-pointer"
+                    }, "닫기"),
+                    React.createElement("button", {
+                      type: "button",
+                      onClick: handleSavePriceGasUrlConfig,
+                      className: "px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer"
+                    }, "URL 저장 및 동기화")
                   )
                 )
               )
