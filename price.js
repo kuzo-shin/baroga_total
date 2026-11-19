@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: price.js v1.0 - 2026-11-19 제품단가 통합 대시보드 모듈 이식 · 레시피 연동본]
+// [VERSION: price.js v1.1 - 2026-11-19 품목코드(레시피ID) 양방향 통일 · 1:1 원가연동 · 코드정렬 적용본]
 // 바로가 공장 통합 관리 시스템 - 제품단가 전용 모듈 (price.js)
 // ============================================================================
 (function () {
@@ -130,6 +130,7 @@
       const uid = `${categoryKey}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       return {
         id: uid,
+        productCode: '',
         productName: customName,
         batchOutputEa: 0,
         pkQuantityEa: 1,
@@ -1109,6 +1110,8 @@
         list.forEach((prod) => {
           rows.push({
             id: `pk-init-${seq++}`,
+            productId: prod.id,
+            productCode: prod.productCode || '',
             section: catLabel,
             productName: prod.productName,
             releasePriceEa: prod.productName === '크로와상' ? 1614 : 0,
@@ -1130,6 +1133,31 @@
       String(name || '')
         .trim()
         .replace(/\s+/g, '');
+
+    const normalizeCodeStr = (code) => String(code ?? '').trim();
+
+    const compareProductCodeOrder = (codeA, codeB) => {
+      const a = normalizeCodeStr(codeA);
+      const b = normalizeCodeStr(codeB);
+      if (a && !b) return -1;
+      if (!a && b) return 1;
+      if (!a && !b) return 0;
+      return a.localeCompare(b, 'ko', { numeric: true, sensitivity: 'base' });
+    };
+
+    const getLiveRecipesArray = () => {
+      if (typeof recipesData !== 'undefined' && Array.isArray(recipesData)) return recipesData;
+      if (typeof window !== 'undefined' && Array.isArray(window.recipesData)) return window.recipesData;
+      return [];
+    };
+
+    const evalLiveRecipeMetrics = (rc) => {
+      if (typeof calculateRecipeMetrics === 'function') return calculateRecipeMetrics(rc);
+      if (typeof window !== 'undefined' && typeof window.calculateRecipeMetrics === 'function') {
+        return window.calculateRecipeMetrics(rc);
+      }
+      return null;
+    };
 
     function computeProductLabor(product, jobMap, actualMonthlyWorkHours) {
       const computeStage = (rows) => {
@@ -1416,8 +1444,42 @@
             if (result.payload.settings) {
               setSettings(mergeSettingsWithDefaults(result.payload.settings));
             }
-            if (result.payload.categoryDbs) setCategoryDbs(result.payload.categoryDbs);
-            if (result.payload.pkCostRows) setPkCostRows(result.payload.pkCostRows);
+            const loadedCatDbs = result.payload.categoryDbs || null;
+            const loadedPkRows = result.payload.pkCostRows || null;
+            if (loadedCatDbs && loadedPkRows) {
+              // 양쪽 시트 간 품목코드(productCode) 및 productId 상호 보완 동기화
+              const codeByName = new Map();
+              loadedPkRows.forEach((r) => {
+                const c = normalizeCodeStr(r.productCode);
+                const nm = normalizeProductName(r.productName);
+                if (c && nm) codeByName.set(nm, c);
+              });
+              const reconciledDbs = {};
+              const dbInfoByName = new Map();
+              Object.keys(loadedCatDbs).forEach((ck) => {
+                reconciledDbs[ck] = (loadedCatDbs[ck] || []).map((p) => {
+                  const nm = normalizeProductName(p.productName);
+                  const mergedCode = normalizeCodeStr(p.productCode) || codeByName.get(nm) || '';
+                  const nextP = { ...p, productCode: mergedCode };
+                  if (nm) dbInfoByName.set(nm, nextP);
+                  return nextP;
+                });
+              });
+              const reconciledPkRows = loadedPkRows.map((r) => {
+                const nm = normalizeProductName(r.productName);
+                const dbHit = dbInfoByName.get(nm);
+                return {
+                  ...r,
+                  productId: r.productId || (dbHit ? dbHit.id : ''),
+                  productCode: normalizeCodeStr(r.productCode) || (dbHit ? normalizeCodeStr(dbHit.productCode) : ''),
+                };
+              });
+              setCategoryDbs(reconciledDbs);
+              setPkCostRows(reconciledPkRows);
+            } else {
+              if (loadedCatDbs) setCategoryDbs(loadedCatDbs);
+              if (loadedPkRows) setPkCostRows(loadedPkRows);
+            }
             if (result.payload.msUpdatedDate) {
               const rawDate = String(result.payload.msUpdatedDate).trim();
               const normalizedDate = /^\d{2}\.\d{2}\.\d{2}$/.test(rawDate)
@@ -1541,7 +1603,30 @@
         return result;
       }, [categoryDbs, jobMap, calc.actualMonthlyWorkHours]);
 
+      const [recipeRefreshTick, setRecipeRefreshTick] = useState(0);
+      useEffect(() => {
+        window.refreshProductPriceRecipeLinks = () => setRecipeRefreshTick((t) => t + 1);
+      }, []);
+
+      const liveRecipeLookup = useMemo(() => {
+        const list = getLiveRecipesArray();
+        const byCode = new Map();
+        const byName = new Map();
+        list.forEach((rc) => {
+          if (!rc) return;
+          const code = normalizeCodeStr(rc.productCode);
+          if (code) byCode.set(code, rc);
+          if (rc.recipeType !== 'SUB') {
+            const nm = normalizeProductName(rc.productName);
+            if (nm) byName.set(nm, rc);
+          }
+        });
+        return { list, byCode, byName };
+      }, [recipeRefreshTick, activeTab]);
+
       const laborDbByProductName = useMemo(() => {
+        const byIdMap = new Map();
+        const byCodeMap = new Map();
         const exactMap = new Map();
         const normalizedMap = new Map();
         const allRegisteredProducts = [];
@@ -1552,10 +1637,12 @@
           list.forEach(({ product, computed }) => {
             const rawName = String(product.productName || '').trim();
             if (!rawName) return;
+            const cleanCode = normalizeCodeStr(product.productCode);
             const entry = {
               catKey,
               catLabel,
               productId: product.id,
+              productCode: cleanCode,
               productName: rawName,
               batchOutputEa: computed.batchOutputEa,
               pkQuantityEa: computed.pkQuantityEa,
@@ -1565,6 +1652,8 @@
               laborCostPerPk: computed.laborCostPerPk,
               laborCostPerEa: computed.laborCostPerEa,
             };
+            byIdMap.set(product.id, entry);
+            if (cleanCode && !byCodeMap.has(cleanCode)) byCodeMap.set(cleanCode, entry);
             exactMap.set(rawName, entry);
             normalizedMap.set(normalizeProductName(rawName), entry);
             allRegisteredProducts.push(entry);
@@ -1572,10 +1661,22 @@
         });
 
         return {
-          findMatch: (name) => {
-            const trimmed = String(name || '').trim();
+          findMatch: (nameOrRow) => {
+            if (nameOrRow && typeof nameOrRow === 'object') {
+              if (nameOrRow.productId && byIdMap.has(nameOrRow.productId)) {
+                return byIdMap.get(nameOrRow.productId);
+              }
+              const rCode = normalizeCodeStr(nameOrRow.productCode);
+              if (rCode && byCodeMap.has(rCode)) {
+                return byCodeMap.get(rCode);
+              }
+              const rName = String(nameOrRow.productName || '').trim();
+              if (!rName) return null;
+              return exactMap.get(rName) || normalizedMap.get(normalizeProductName(rName)) || null;
+            }
+            const trimmed = String(nameOrRow || '').trim();
             if (!trimmed) return null;
-            return exactMap.get(trimmed) || normalizedMap.get(normalizeProductName(trimmed)) || null;
+            return byCodeMap.get(trimmed) || exactMap.get(trimmed) || normalizedMap.get(normalizeProductName(trimmed)) || null;
           },
           allRegisteredProducts,
         };
@@ -1583,9 +1684,32 @@
 
       useEffect(() => {
         setPkCostRows((prev) => {
-          const validExistingRows = prev.filter((r) =>
-            Boolean(laborDbByProductName.findMatch(r.productName))
-          );
+          let changed = false;
+          const validExistingRows = prev
+            .filter((r) => Boolean(laborDbByProductName.findMatch(r)))
+            .map((r) => {
+              const hit = laborDbByProductName.findMatch(r);
+              if (!hit) return r;
+              const nextCode = hit.productCode || normalizeCodeStr(r.productCode);
+              if (
+                r.productId !== hit.productId ||
+                r.productName !== hit.productName ||
+                normalizeCodeStr(r.productCode) !== nextCode ||
+                r.section !== hit.catLabel
+              ) {
+                changed = true;
+                return {
+                  ...r,
+                  productId: hit.productId,
+                  productCode: nextCode,
+                  productName: hit.productName,
+                  section: hit.catLabel,
+                };
+              }
+              return r;
+            });
+
+          const existingIds = new Set(validExistingRows.map((r) => r.productId).filter(Boolean));
           const existingNames = new Set(
             validExistingRows.map((r) => normalizeProductName(r.productName))
           );
@@ -1593,9 +1717,11 @@
 
           laborDbByProductName.allRegisteredProducts.forEach((dbItem) => {
             const norm = normalizeProductName(dbItem.productName);
-            if (!existingNames.has(norm)) {
+            if (!existingIds.has(dbItem.productId) && !existingNames.has(norm)) {
               addedRows.push({
                 id: `pk-auto-${dbItem.productId}-${Math.random().toString(36).slice(2, 5)}`,
+                productId: dbItem.productId,
+                productCode: dbItem.productCode || '',
                 section: dbItem.catLabel,
                 productName: dbItem.productName,
                 releasePriceEa: 0,
@@ -1609,7 +1735,7 @@
             }
           });
 
-          if (addedRows.length === 0 && validExistingRows.length === prev.length) {
+          if (!changed && addedRows.length === 0 && validExistingRows.length === prev.length) {
             return prev;
           }
           return [...validExistingRows, ...addedRows];
@@ -1624,6 +1750,8 @@
               const matched = laborDbByProductName.findMatch(value);
               return {
                 ...row,
+                productId: matched ? matched.productId : row.productId,
+                productCode: matched ? matched.productCode || '' : row.productCode,
                 productName: value,
                 section: matched ? matched.catLabel : row.section,
               };
@@ -1633,70 +1761,116 @@
         );
       };
 
-      const handleAddPkRow = () => {
-        const existingNames = new Set(pkCostRows.map((r) => normalizeProductName(r.productName)));
-        const nextDbItem =
-          laborDbByProductName.allRegisteredProducts.find(
-            (item) => !existingNames.has(normalizeProductName(item.productName))
-          ) || laborDbByProductName.allRegisteredProducts[0];
-
-        if (!nextDbItem) {
-          showToast('먼저 공정 DB(파이·알생지·파베이크·제과)에 품목을 등록해주세요.');
-          return;
+      // PK원가표·공정DB·엠즈단가표 품목코드 양방향 통합 변경 핸들러
+      const handleUpdateUnifiedProductCode = (rowId, matchedDb, rawCodeVal) => {
+        const cleanCode = String(rawCodeVal ?? '').trim();
+        setPkCostRows((prev) =>
+          prev.map((r) => (r.id === rowId ? { ...r, productCode: cleanCode } : r))
+        );
+        if (matchedDb && matchedDb.catKey && matchedDb.productId) {
+          setCategoryDbs((prev) => ({
+            ...prev,
+            [matchedDb.catKey]: (prev[matchedDb.catKey] || []).map((p) =>
+              p.id === matchedDb.productId ? { ...p, productCode: cleanCode } : p
+            ),
+          }));
         }
-
-        const newRow = {
-          id: `pk-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
-          section: nextDbItem.catLabel,
-          productName: nextDbItem.productName,
-          releasePriceEa: 0,
-          storeBuyPriceEa: 0,
-          gontranPriceEa: 0,
-          msBuyPricePk: 0,
-          msSellPricePk: 0,
-          msNote: '',
-          note: '',
-        };
-        setPkCostRows((prev) => [...prev, newRow]);
       };
 
-      const handleSyncMaterialCostsFromRecipeTab = () => {
-        const globalRecipes = Array.isArray(window.recipesData) ? window.recipesData : [];
-        if (globalRecipes.length === 0 || typeof window.calculateRecipeMetrics !== 'function') {
+      // 파트 내 품목코드 오름차순 일괄 정렬 (입력 중 커서 튕김 방지를 위해 버튼 클릭 시 실행)
+      const handleSortAllByProductCode = () => {
+        setCategoryDbs((prev) => {
+          const next = {};
+          Object.keys(prev).forEach((ck) => {
+            next[ck] = [...(prev[ck] || [])].sort((a, b) =>
+              compareProductCodeOrder(a.productCode, b.productCode)
+            );
+          });
+          return next;
+        });
+        setPkCostRows((prev) => {
+          return [...prev].sort((a, b) => {
+            const secOrder = ['파이', '알생지', '파베이크', '제과'];
+            const sa = secOrder.indexOf(a.section);
+            const sb = secOrder.indexOf(b.section);
+            if (sa !== sb) return (sa === -1 ? 99 : sa) - (sb === -1 ? 99 : sb);
+            const dbA = laborDbByProductName.findMatch(a);
+            const dbB = laborDbByProductName.findMatch(b);
+            const codeA = dbA?.productCode || a.productCode || '';
+            const codeB = dbB?.productCode || b.productCode || '';
+            return compareProductCodeOrder(codeA, codeB);
+          });
+        });
+        showToast('품목코드 오름차순으로 정렬되었습니다.');
+      };
+
+      // [핵심] 레시피 탭 원가·생산수량·PK입수량 연동 (1순위: 품목코드 일치 -> 2순위: 미입력 시 품목명 일치)
+      const handleSyncMaterialCostsFromRecipeTab = (targetProdId = null) => {
+        const globalRecipes = getLiveRecipesArray();
+        if (globalRecipes.length === 0) {
           showToast('레시피 탭에 등록된 레시피 데이터가 없습니다.');
           return;
         }
-        const recipeMap = new Map();
+        const byCode = new Map();
+        const byName = new Map();
         globalRecipes.forEach((rc) => {
-          if (!rc || rc.recipeType === 'SUB') return;
-          const norm = normalizeProductName(rc.productName);
-          if (!norm) return;
-          const m = window.calculateRecipeMetrics(rc);
-          recipeMap.set(norm, { rc, m });
+          if (!rc) return;
+          const m = evalLiveRecipeMetrics(rc);
+          if (!m) return;
+          const code = normalizeCodeStr(rc.productCode);
+          if (code) byCode.set(code, { rc, m });
+          if (rc.recipeType !== 'SUB') {
+            const norm = normalizeProductName(rc.productName);
+            if (norm) byName.set(norm, { rc, m });
+          }
         });
 
-        let matchedCount = 0;
+        const pkCodeByProdName = new Map();
+        pkCostRows.forEach((r) => {
+          const c = normalizeCodeStr(r.productCode);
+          const nm = normalizeProductName(r.productName);
+          if (c && nm) pkCodeByProdName.set(nm, c);
+        });
+
+        let codeMatchedCnt = 0;
+        let nameMatchedCnt = 0;
+        const codeUpdatesByProdId = new Map();
+
         setCategoryDbs((prev) => {
           const next = {};
           Object.keys(prev).forEach((catKey) => {
             next[catKey] = (prev[catKey] || []).map((prod) => {
-              const norm = normalizeProductName(prod.productName);
-              let hit = recipeMap.get(norm);
-              if (!hit) {
-                for (const [rNorm, val] of recipeMap.entries()) {
-                  if (rNorm.length >= 2 && norm.length >= 2 && (rNorm.includes(norm) || norm.includes(rNorm))) {
-                    hit = val;
-                    break;
-                  }
-                }
+              if (targetProdId && prod.id !== targetProdId) return prod;
+              const normName = normalizeProductName(prod.productName);
+              const curCode = normalizeCodeStr(prod.productCode) || pkCodeByProdName.get(normName) || '';
+
+              let hit = null;
+              if (curCode) {
+                // 품목코드가 지정된 품목은 오직 동일 품목코드 레시피와만 1:1 정확 매칭!
+                hit = byCode.get(curCode) || null;
+                if (hit) codeMatchedCnt += 1;
+              } else {
+                // 품목코드가 비어있는 품목만 보조로 품목명 일치 검색 후 코드 자동 부여
+                hit = byName.get(normName) || null;
+                if (hit) nameMatchedCnt += 1;
               }
-              if (!hit) return prod;
-              matchedCount += 1;
-              const nextOutEa = hit.m.productQty > 0 ? Math.round(hit.m.productQty * 10) / 10 : prod.batchOutputEa;
-              const nextPkEa = hit.rc.packQty > 0 ? Number(hit.rc.packQty) : prod.pkQuantityEa;
+
+              if (!hit) return curCode !== (prod.productCode || '') ? { ...prod, productCode: curCode } : prod;
+
+              const syncedCode = curCode || normalizeCodeStr(hit.rc.productCode);
+              if (syncedCode) codeUpdatesByProdId.set(prod.id, syncedCode);
+
+              const nextOutEa =
+                hit.m.productQty > 0
+                  ? Math.round(hit.m.productQty * 10) / 10
+                  : prod.batchOutputEa;
+              const nextPkEa =
+                hit.rc.packQty > 0 ? Number(hit.rc.packQty) : prod.pkQuantityEa;
               const nextBatchMatCost = Math.round(hit.m.productionCost || 0);
+
               return {
                 ...prod,
+                productCode: syncedCode,
                 batchOutputEa: nextOutEa,
                 pkQuantityEa: nextPkEa,
                 batchMaterialCost: nextBatchMatCost,
@@ -1706,19 +1880,37 @@
           return next;
         });
 
-        if (matchedCount > 0) {
-          showToast(`[레시피 탭]에서 일치하는 ${matchedCount}개 품목의 1배합 생산원가·수량을 연동했습니다! ([구글시트 저장]을 누르면 확정됩니다)`);
+        if (codeUpdatesByProdId.size > 0) {
+          setPkCostRows((prev) =>
+            prev.map((r) =>
+              r.productId && codeUpdatesByProdId.has(r.productId)
+                ? { ...r, productCode: codeUpdatesByProdId.get(r.productId) }
+                : r
+            )
+          );
+        }
+
+        const totalMatched = codeMatchedCnt + nameMatchedCnt;
+        if (totalMatched > 0) {
+          showToast(
+            `[레시피 연동 완료] 총 ${totalMatched}종 반영 (품목코드 일치 ${codeMatchedCnt}건 · 이름 일치 ${nameMatchedCnt}건) — [구글시트 저장]을 눌러 확정하세요!`
+          );
         } else {
-          showToast('레시피 탭의 완제품명과 일치하는 공정DB 품목이 없습니다. 품목명을 맞춰주세요.');
+          showToast(
+            targetProdId
+              ? '해당 품목코드(또는 품목명)와 일치하는 레시피가 없습니다. 레시피 탭의 품목코드를 확인해주세요.'
+              : '일치하는 레시피가 없습니다. 좌측 [품목코드] 칸에 레시피와 동일한 코드를 입력해주세요.'
+          );
         }
       };
 
       useEffect(() => {
         window.exportProductPriceCsv = () => {
           const fixedCostRatioDecimal = calc.fixedCostRatioPercent > 0 ? calc.fixedCostRatioPercent / 100 : 0;
-          let csv = '\uFEFF구분,제품명,PK입수량(ea),1배합PK수,1배합원재료비,1배합인건비,PK당원재료,PK당인건비,PK당고정비,PK총생산원가,1ea총생산원가,바로가출고가(1ea),생산원가비율(%),예상마진(1ea),매장매입가(VAT포함),곤트란판매가(1ea),엠즈매입가(PK),엠즈판매가(PK),비고\n';
+          let csv = '\uFEFF품목코드,구분,제품명,PK입수량(ea),1배합PK수,1배합원재료비,1배합인건비,PK당원재료,PK당인건비,PK당고정비,PK총생산원가,1ea총생산원가,바로가출고가(1ea),생산원가비율(%),예상마진(1ea),매장매입가(VAT포함),곤트란판매가(1ea),엠즈매입가(PK),엠즈판매가(PK),비고\n';
           pkCostRows.forEach((row) => {
-            const matchedDb = laborDbByProductName.findMatch(row.productName);
+            const matchedDb = laborDbByProductName.findMatch(row);
+            const pCode = matchedDb?.productCode || row.productCode || '';
             const pkEa = matchedDb ? matchedDb.pkQuantityEa : 0;
             const bPk = matchedDb ? matchedDb.batchOutputPk : 0;
             const bMat = matchedDb ? matchedDb.batchMaterialCost : 0;
@@ -1741,7 +1933,7 @@
             const ratio = relEa > 0 ? ((eaTot / relEa) * 100).toFixed(1) : '';
             const margin = relEa > 0 ? relEa - eaTot : '';
             const storeBuy = relEa > 0 ? Math.round(relEa * 1.085 * 1.1) : '';
-            csv += `"${row.section || ''}","${row.productName || ''}",${pkEa},${bPk},${bMat},${bLab},${pkMat},${pkLab},${pkFix},${pkTot},${eaTot},${relEa},"${ratio}","${margin}","${storeBuy}",${row.gontranPriceEa || 0},${row.msBuyPricePk || 0},${row.msSellPricePk || 0},"${(row.note || '').split('"').join('""')}"\n`;
+            csv += `"${pCode}","${row.section || ''}","${row.productName || ''}",${pkEa},${bPk},${bMat},${bLab},${pkMat},${pkLab},${pkFix},${pkTot},${eaTot},${relEa},"${ratio}","${margin}","${storeBuy}",${row.gontranPriceEa || 0},${row.msBuyPricePk || 0},${row.msSellPricePk || 0},"${(row.note || '').split('"').join('""')}"\n`;
           });
           if (typeof window.triggerCsvDownload === 'function') {
             const dStr = typeof window.getTodayStr === 'function' ? window.getTodayStr() : 'today';
@@ -1750,11 +1942,41 @@
         };
       }, [pkCostRows, laborDbByProductName, calc, settings]);
 
+      const handleAddPkRow = () => {
+        const existingNames = new Set(pkCostRows.map((r) => normalizeProductName(r.productName)));
+        const nextDbItem =
+          laborDbByProductName.allRegisteredProducts.find(
+            (item) => !existingNames.has(normalizeProductName(item.productName))
+          ) || laborDbByProductName.allRegisteredProducts[0];
+
+        if (!nextDbItem) {
+          showToast('먼저 공정 DB(파이·알생지·파베이크·제과)에 품목을 등록해주세요.');
+          return;
+        }
+
+        const newRow = {
+          id: `pk-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+          productId: nextDbItem.productId,
+          productCode: nextDbItem.productCode || '',
+          section: nextDbItem.catLabel,
+          productName: nextDbItem.productName,
+          releasePriceEa: 0,
+          storeBuyPriceEa: 0,
+          gontranPriceEa: 0,
+          msBuyPricePk: 0,
+          msSellPricePk: 0,
+          msNote: '',
+          note: '',
+        };
+        setPkCostRows((prev) => [...prev, newRow]);
+      };
+
       const handleLoadAllDbProductsToPkTable = () => {
         setPkCostRows((prev) => {
           const validExistingRows = prev.filter((r) =>
-            Boolean(laborDbByProductName.findMatch(r.productName))
+            Boolean(laborDbByProductName.findMatch(r))
           );
+          const existingIds = new Set(validExistingRows.map((r) => r.productId).filter(Boolean));
           const existingNames = new Set(
             validExistingRows.map((r) => normalizeProductName(r.productName))
           );
@@ -1762,9 +1984,11 @@
 
           laborDbByProductName.allRegisteredProducts.forEach((dbItem) => {
             const norm = normalizeProductName(dbItem.productName);
-            if (!existingNames.has(norm)) {
+            if (!existingIds.has(dbItem.productId) && !existingNames.has(norm)) {
               addedRows.push({
                 id: `pk-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                productId: dbItem.productId,
+                productCode: dbItem.productCode || '',
                 section: dbItem.catLabel,
                 productName: dbItem.productName,
                 releasePriceEa: 0,
@@ -1859,6 +2083,7 @@
         const cloned = {
           ...sourceProduct,
           id: uid,
+          productCode: '',
           productName: `${sourceProduct.productName} (복사본)`,
           stage1Rows: sourceProduct.stage1Rows.map((r, i) => ({ ...r, id: `${uid}-s1-${i}` })),
           stage2Rows: sourceProduct.stage2Rows.map((r, i) => ({ ...r, id: `${uid}-s2-${i}` })),
@@ -1889,12 +2114,29 @@
       };
 
       const handleUpdateProductMeta = (catKey, prodId, field, value) => {
+        const targetProd = (categoryDbs[catKey] || []).find((p) => p.id === prodId);
+        const oldName = targetProd ? targetProd.productName : '';
         setCategoryDbs((prev) => ({
           ...prev,
           [catKey]: (prev[catKey] || []).map((p) =>
             p.id === prodId ? { ...p, [field]: value } : p
           ),
         }));
+        if (field === 'productCode' || field === 'productName') {
+          setPkCostRows((prev) =>
+            prev.map((r) => {
+              if (r.productId === prodId || (oldName && r.productName === oldName)) {
+                return {
+                  ...r,
+                  productId: prodId,
+                  ...(field === 'productCode' ? { productCode: String(value ?? '').trim() } : {}),
+                  ...(field === 'productName' ? { productName: value } : {}),
+                };
+              }
+              return r;
+            })
+          );
+        }
       };
 
       const handleAddStageRow = (catKey, prodId, stageKey, defaultJobTypeId = '') => {
@@ -1964,12 +2206,29 @@
         sectionOrder.forEach((currentSection) => {
           const rowsInSection = groupedBySection.get(currentSection) || [];
           tableBodyElements.push(
-            React.createElement("tr", { key: `sec-${currentSection}`, className: "bg-slate-100 border-y border-slate-300" }, React.createElement("td", { className: "py-1.5 px-2 text-center text-[11px] font-bold text-slate-400 border-r border-slate-300" }, "-"), React.createElement("td", { colSpan: 21, className: "py-1.5 px-4 text-center text-xs font-extrabold text-slate-800 tracking-wide" }, "── ", currentSection, " ──"))
+            React.createElement("tr", { key: `sec-${currentSection}`, className: "bg-slate-100 border-y border-slate-300" }, React.createElement("td", { className: "py-1.5 px-2 text-center text-[11px] font-bold text-slate-400 border-r border-slate-300" }, "-"), React.createElement("td", { colSpan: 22, className: "py-1.5 px-4 text-center text-xs font-extrabold text-slate-800 tracking-wide" }, "── ", currentSection, " ──"))
           );
 
           rowsInSection.forEach((row) => {
             rowNumber += 1;
-            const matchedDb = laborDbByProductName.findMatch(row.productName);
+            const matchedDb = laborDbByProductName.findMatch(row);
+            const effectiveCode = matchedDb
+              ? matchedDb.productCode || normalizeCodeStr(row.productCode)
+              : normalizeCodeStr(row.productCode);
+            const linkedRecipe = effectiveCode ? liveRecipeLookup.byCode.get(effectiveCode) : null;
+            const tipRecipeCode = linkedRecipe
+              ? {
+                  title: `레시피 탭 연동됨 (코드: ${effectiveCode})`,
+                  formula: '레시피 품목코드 = 제품단가 품목코드 (1:1 매칭)',
+                  calc: `연결된 레시피: [${linkedRecipe.productCode}] ${linkedRecipe.productName}`,
+                }
+              : {
+                  title: '품목코드 (레시피 탭 ID와 통일)',
+                  formula: '레시피 탭의 [품목코드]와 동일한 번호 입력',
+                  calc: effectiveCode
+                    ? `현재 코드 [${effectiveCode}] — 레시피 탭에 동일 코드가 아직 없습니다.`
+                    : '코드를 입력하면 제품명이 달라도 레시피 원가가 100% 정확히 연동됩니다.',
+                };
 
             const autoPkQuantityEa = matchedDb ? matchedDb.pkQuantityEa : 0;
             const autoBatchPkCount = matchedDb ? matchedDb.batchOutputPk : 0;
@@ -2264,7 +2523,18 @@
             };
 
             tableBodyElements.push(
-              React.createElement("tr", { key: row.id, className: "border-b border-slate-200 hover:bg-slate-50/90 transition-colors text-[11.5px]" }, React.createElement("td", { className: "py-1.5 px-1 text-center text-[13px] font-normal text-slate-600 border-r border-slate-200 whitespace-nowrap tabular-nums" }, rowNumber), React.createElement("td", { className: "py-1 px-1.5 border-r border-slate-200 bg-white" }, React.createElement("select", { value: row.productName, onChange: (e) => handleUpdatePkRow(row.id, 'productName', e.target.value), className: "w-full bg-transparent text-[11.5px] font-normal text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500 rounded px-0.5 py-0.5 truncate" }, !matchedDb && (
+              React.createElement("tr", { key: row.id, className: "border-b border-slate-200 hover:bg-slate-50/90 transition-colors text-[11.5px]" }, React.createElement("td", { onMouseEnter: (e) => showFormulaTooltip(e, tipRecipeCode), onMouseLeave: hideFormulaTooltip, className: `py-1 px-1 text-center border-r border-slate-200 whitespace-nowrap ${
+                    linkedRecipe ? 'bg-emerald-50/60' : 'bg-amber-50/35'
+                  }` }, React.createElement("div", { className: "flex items-center justify-center gap-0.5" }, linkedRecipe && (
+                      React.createElement("span", { className: "w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" })
+                    ), React.createElement("input", { type: "text", list: "barogaRecipeCodeDatalist", value: effectiveCode, placeholder: String(rowNumber), onChange: (e) =>
+                        handleUpdateUnifiedProductCode(row.id, matchedDb, e.target.value), className: `w-full min-w-0 text-center font-mono text-xs bg-transparent focus:outline-none focus:bg-white focus:ring-1 focus:ring-amber-500 rounded px-0.5 py-0.5 tabular-nums ${
+                        effectiveCode
+                          ? linkedRecipe
+                            ? 'font-extrabold text-emerald-800'
+                            : 'font-extrabold text-amber-900'
+                          : 'font-normal text-slate-400'
+                      }` }))), React.createElement("td", { className: "py-1 px-1.5 border-r border-slate-200 bg-white" }, React.createElement("select", { value: row.productName, onChange: (e) => handleUpdatePkRow(row.id, 'productName', e.target.value), className: "w-full bg-transparent text-[11.5px] font-normal text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500 rounded px-0.5 py-0.5 truncate" }, !matchedDb && (
                       React.createElement("option", { value: row.productName }, row.productName, " (DB 미등록)")
                     ), Object.keys(PROCESS_CATEGORIES).map((catKey) => {
                       const catLabel = PROCESS_CATEGORIES[catKey].label;
@@ -2272,7 +2542,7 @@
                       if (list.length === 0) return null;
                       return (
                         React.createElement("optgroup", { key: catKey, label: `── ${catLabel} ──` }, list.map(({ product }) => (
-                            React.createElement("option", { key: product.id, value: product.productName }, product.productName)
+                            React.createElement("option", { key: product.id, value: product.productName }, product.productCode ? `[${product.productCode}] ` : '', product.productName)
                           )))
                       );
                     }))), React.createElement("td", { className: "py-1.5 px-1.5 text-right text-[13.5px] font-normal text-slate-900 bg-white border-r border-slate-200 tabular-nums whitespace-nowrap" }, matchedDb ? fmtQty(autoPkQuantityEa) : ''), React.createElement("td", { onMouseEnter: (e) => showFormulaTooltip(e, tipBatchPk), onMouseLeave: hideFormulaTooltip, className: "py-1.5 px-1.5 text-right text-[13.5px] font-normal text-slate-900 bg-white border-r border-slate-200 tabular-nums whitespace-nowrap cursor-help hover:bg-slate-50" }, matchedDb ? fmtDec(autoBatchPkCount, 1) : ''), React.createElement("td", { className: "py-1.5 px-1.5 text-right text-[13.5px] font-normal text-slate-900 bg-white border-r border-slate-200 tabular-nums whitespace-nowrap" }, matchedDb ? fmtInt(autoBatchMaterialCost) : ''), React.createElement("td", { onMouseEnter: (e) => showFormulaTooltip(e, tipBatchLabor), onMouseLeave: hideFormulaTooltip, className: "py-1.5 px-1.5 text-right text-[13.5px] font-normal text-slate-900 bg-white border-r border-slate-200 tabular-nums whitespace-nowrap cursor-help hover:bg-slate-50" }, matchedDb ? fmtInt(autoBatchLaborCost) : ''), React.createElement("td", { onMouseEnter: (e) => showFormulaTooltip(e, tipPkMaterial), onMouseLeave: hideFormulaTooltip, className: "py-1.5 px-1.5 text-right text-[13.5px] font-normal text-slate-800 bg-white border-r border-slate-200 tabular-nums whitespace-nowrap cursor-help hover:bg-slate-50" }, pkMaterialCost !== null ? fmtInt(pkMaterialCost) : ''), React.createElement("td", { onMouseEnter: (e) => showFormulaTooltip(e, tipPkLabor), onMouseLeave: hideFormulaTooltip, className: "py-1.5 px-1.5 text-right text-[13.5px] font-normal text-slate-800 bg-white border-r border-slate-200 tabular-nums whitespace-nowrap cursor-help hover:bg-slate-50" }, pkLaborCost !== null ? fmtInt(pkLaborCost) : ''), React.createElement("td", { onMouseEnter: (e) => showFormulaTooltip(e, tipPkFixed), onMouseLeave: hideFormulaTooltip, className: "py-1.5 px-1.5 text-right text-[13.5px] font-normal text-slate-800 bg-white border-r border-slate-200 tabular-nums whitespace-nowrap cursor-help hover:bg-slate-50" }, pkFixedCost !== null ? fmtInt(pkFixedCost) : ''), React.createElement("td", { onMouseEnter: (e) => showFormulaTooltip(e, tipPkTotal), onMouseLeave: hideFormulaTooltip, className: "py-1.5 px-1.5 text-right text-[13.5px] font-normal text-slate-900 bg-white border-r border-slate-200 tabular-nums whitespace-nowrap cursor-help hover:bg-slate-50" }, pkTotalProductionCost !== null ? fmtInt(pkTotalProductionCost) : ''), React.createElement("td", { onMouseEnter: (e) => showFormulaTooltip(e, tipEaTotal), onMouseLeave: hideFormulaTooltip, className: "py-1.5 px-1.5 text-right text-[13.5px] font-normal text-slate-900 bg-white border-r border-slate-200 tabular-nums whitespace-nowrap cursor-help hover:bg-slate-50" }, eaTotalProductionCost !== null ? fmtInt(eaTotalProductionCost) : ''), React.createElement("td", { className: "py-1 px-1 bg-slate-100/90 hover:bg-slate-200/70 transition-colors border-r border-slate-200" }, React.createElement(CommaNumberInput, { value: row.releasePriceEa === 0 ? '' : row.releasePriceEa, allowEmpty: true, placeholder: "입력", onChangeValue: (val) =>
@@ -2298,7 +2568,7 @@
                       calc: `${fmtInt(calc.totalMonthlyFixedCost)}원 ÷ ${fmtInt(settings.expectedTotalMonthlySales)}원 = ${calc.fixedCostRatioPercent.toFixed(4)}%`,
                     }), onMouseLeave: hideFormulaTooltip, className: "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-xs font-bold text-slate-700 cursor-help" }, React.createElement("span", null, "고정비 비율:"), React.createElement("span", { className: "text-blue-700 text-sm font-extrabold tabular-nums" }, calc.fixedCostRatioPercent.toFixed(4), "%")), React.createElement("span", { className: "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-xs font-bold text-amber-800" }, React.createElement("span", null, "가동률 보정계수:"), React.createElement("span", { className: "text-[13px] font-extrabold tabular-nums" }, settings.partAllocations
                       .map((p) => `${p.name} ${p.laborFactor}`)
-                      .join(' · '))), React.createElement("span", { className: "text-[11px] font-semibold text-slate-500" }, "💡 자동계산 셀에 마우스를 올리면 산출 수식과 계산 과정이 표시됩니다.")), React.createElement("div", { className: "flex flex-wrap items-center gap-2" }, React.createElement("button", { type: "button", onClick: handleSyncMaterialCostsFromRecipeTab, title: "레시피 탭에 등록된 동일 품목의 1배합 생산원가·생산수량·PK입수량을 공정DB로 자동 반영합니다", className: "px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold shadow-sm transition cursor-pointer" }, "🔗 레시피 탭 원가 연동"), React.createElement("button", { type: "button", onClick: handleLoadAllDbProductsToPkTable, className: "px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm transition" }, "⚡ 공정DB 전 품목(", laborDbByProductName.allRegisteredProducts.length, "종) 동기화"), React.createElement("button", { type: "button", onClick: handleAddPkRow, className: "px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold shadow-sm transition" }, "+ 품목 행 추가"))), React.createElement("div", { className: "bg-white rounded-xl border border-slate-300 shadow-sm overflow-auto max-h-[calc(100vh-145px)] relative" }, React.createElement("table", { className: "w-full border-collapse table-fixed" }, React.createElement("colgroup", null, React.createElement("col", { style: { width: '36px' } }), React.createElement("col", { style: { width: '175px' } }), React.createElement("col", { style: { width: '54px' } }), React.createElement("col", { style: { width: '56px' } }), React.createElement("col", { style: { width: '74px' } }), React.createElement("col", { style: { width: '72px' } }), React.createElement("col", { style: { width: '66px' } }), React.createElement("col", { style: { width: '66px' } }), React.createElement("col", { style: { width: '66px' } }), React.createElement("col", { style: { width: '74px' } }), React.createElement("col", { style: { width: '68px' } }), React.createElement("col", { style: { width: '68px' } }), React.createElement("col", { style: { width: '60px' } }), React.createElement("col", { style: { width: '56px' } }), React.createElement("col", { style: { width: '56px' } }), React.createElement("col", { style: { width: '56px' } }), React.createElement("col", { style: { width: '64px' } }), React.createElement("col", { style: { width: '58px' } }), React.createElement("col", { style: { width: '62px' } }), React.createElement("col", { style: { width: '70px' } }), React.createElement("col", { style: { width: '68px' } }), React.createElement("col", { style: { width: '60px' } }), React.createElement("col", { style: { width: '90px' } })), React.createElement("thead", { className: "sticky top-0 z-20 shadow-md" }, React.createElement("tr", { className: "text-white text-[11px] font-extrabold h-8" }, React.createElement("th", { rowSpan: 2, className: "bg-slate-800 py-2 px-1 text-center border-r border-b border-slate-600" }, "No"), React.createElement("th", { rowSpan: 2, className: "bg-slate-800 py-2 px-2 text-center border-r border-b border-slate-600" }, "제품명"), React.createElement("th", { colSpan: 3, className: "bg-orange-600 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, "◀ 1배합 기준 입력 ▶"), React.createElement("th", { colSpan: 5, className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, "◀ PK당 생산원가 ▶"), React.createElement("th", { colSpan: 3, className: "bg-red-800 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, "◀ 1개당 원가 vs 출고가 ▶"), React.createElement("th", { colSpan: 6, className: "bg-emerald-800 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, "◀ 출고가 대비 비율 · 예상마진 ▶"), React.createElement("th", { colSpan: 3, className: "bg-green-900 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, "◀ 곤트란 매장 마진 ▶"), React.createElement("th", { rowSpan: 2, className: "bg-slate-800 py-2 px-1 text-center border-b border-slate-600" }, "비고")), React.createElement("tr", { className: "bg-slate-700 text-white text-[10.5px] font-bold leading-tight" }, React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "PK입수량"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(ea)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "1배합"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "→ PK수")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "원재료비용"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(1배합, 원)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "1배합 인건비"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(원)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "PK당 원재료"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(원)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "PK당 인건비"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(원)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "PK당 고정비"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(원)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "PK 총생산원가"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(원)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "총생산원가"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(1ea, 원)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "바로가 출고가"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(1ea,원)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "생산원가비율")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "원재료 비율")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "인건비 비율")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "고정비 비율")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "예상마진"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(1ea,원)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "예상 마진율")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "인건비/마진"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(1ea)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "매장매입가"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(1ea,VAT포함)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "곤트란 판매가"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(1ea,원)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "매입원가비율")))), React.createElement("tbody", null, tableBodyElements))))
+                      .join(' · '))), React.createElement("span", { className: "text-[11px] font-semibold text-slate-500" }, "💡 자동계산 셀에 마우스를 올리면 산출 수식과 계산 과정이 표시됩니다.")), React.createElement("div", { className: "flex flex-wrap items-center gap-2" }, React.createElement("button", { type: "button", onClick: () => handleSyncMaterialCostsFromRecipeTab(null), title: "품목코드(1순위) 또는 품목명(2순위)이 일치하는 레시피 탭의 1배합 생산원가·수량·PK입수량을 일괄 연동합니다", className: "px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold shadow-sm transition cursor-pointer" }, "🔗 레시피 탭 원가 연동"), React.createElement("button", { type: "button", onClick: handleSortAllByProductCode, title: "각 파트 내에서 품목코드 오름차순(1001→1002...)으로 정렬합니다", className: "px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold shadow-sm transition cursor-pointer" }, "🔢 품목코드순 정렬"), React.createElement("button", { type: "button", onClick: handleLoadAllDbProductsToPkTable, className: "px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm transition" }, "⚡ 공정DB 전 품목(", laborDbByProductName.allRegisteredProducts.length, "종) 동기화"), React.createElement("button", { type: "button", onClick: handleAddPkRow, className: "px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold shadow-sm transition" }, "+ 품목 행 추가"))), React.createElement("div", { className: "bg-white rounded-xl border border-slate-300 shadow-sm overflow-auto max-h-[calc(100vh-145px)] relative" }, React.createElement("table", { className: "w-full border-collapse table-fixed" }, React.createElement("colgroup", null, React.createElement("col", { style: { width: '64px' } }), React.createElement("col", { style: { width: '170px' } }), React.createElement("col", { style: { width: '54px' } }), React.createElement("col", { style: { width: '56px' } }), React.createElement("col", { style: { width: '74px' } }), React.createElement("col", { style: { width: '72px' } }), React.createElement("col", { style: { width: '66px' } }), React.createElement("col", { style: { width: '66px' } }), React.createElement("col", { style: { width: '66px' } }), React.createElement("col", { style: { width: '74px' } }), React.createElement("col", { style: { width: '68px' } }), React.createElement("col", { style: { width: '68px' } }), React.createElement("col", { style: { width: '60px' } }), React.createElement("col", { style: { width: '56px' } }), React.createElement("col", { style: { width: '56px' } }), React.createElement("col", { style: { width: '56px' } }), React.createElement("col", { style: { width: '64px' } }), React.createElement("col", { style: { width: '58px' } }), React.createElement("col", { style: { width: '62px' } }), React.createElement("col", { style: { width: '70px' } }), React.createElement("col", { style: { width: '68px' } }), React.createElement("col", { style: { width: '60px' } }), React.createElement("col", { style: { width: '90px' } })), React.createElement("thead", { className: "sticky top-0 z-20 shadow-md" }, React.createElement("tr", { className: "text-white text-[11px] font-extrabold h-8" }, React.createElement("th", { rowSpan: 2, className: "bg-slate-800 py-2 px-1 text-center border-r border-b border-slate-600 whitespace-nowrap", title: "레시피 탭의 품목코드와 동일하게 입력하면 원가가 1:1 자동 연동됩니다" }, "품목코드"), React.createElement("th", { rowSpan: 2, className: "bg-slate-800 py-2 px-2 text-center border-r border-b border-slate-600" }, "제품명"), React.createElement("th", { colSpan: 3, className: "bg-orange-600 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, "◀ 1배합 기준 입력 ▶"), React.createElement("th", { colSpan: 5, className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, "◀ PK당 생산원가 ▶"), React.createElement("th", { colSpan: 3, className: "bg-red-800 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, "◀ 1개당 원가 vs 출고가 ▶"), React.createElement("th", { colSpan: 6, className: "bg-emerald-800 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, "◀ 출고가 대비 비율 · 예상마진 ▶"), React.createElement("th", { colSpan: 3, className: "bg-green-900 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, "◀ 곤트란 매장 마진 ▶"), React.createElement("th", { rowSpan: 2, className: "bg-slate-800 py-2 px-1 text-center border-b border-slate-600" }, "비고")), React.createElement("tr", { className: "bg-slate-700 text-white text-[10.5px] font-bold leading-tight" }, React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "PK입수량"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(ea)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "1배합"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "→ PK수")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "원재료비용"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(1배합, 원)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "1배합 인건비"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(원)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "PK당 원재료"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(원)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "PK당 인건비"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(원)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "PK당 고정비"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(원)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "PK 총생산원가"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(원)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "총생산원가"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(1ea, 원)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "바로가 출고가"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(1ea,원)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "생산원가비율")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "원재료 비율")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "인건비 비율")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "고정비 비율")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "예상마진"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(1ea,원)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "예상 마진율")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "인건비/마진"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(1ea)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "매장매입가"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(1ea,VAT포함)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "곤트란 판매가"), React.createElement("div", { className: "text-[9.5px] font-normal text-slate-300" }, "(1ea,원)")), React.createElement("th", { className: "bg-slate-700 py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, React.createElement("div", null, "매입원가비율")))), React.createElement("tbody", null, tableBodyElements))))
         );
       };
 
@@ -2324,12 +2594,15 @@
         sectionOrder.forEach((secName) => {
           const rows = groupedBySection.get(secName) || [];
           tableRows.push(
-            React.createElement("tr", { key: `ms-sec-${secName}`, className: "bg-slate-100 border-y border-slate-300" }, React.createElement("td", { colSpan: 9, className: "py-1.5 px-4 text-center text-xs font-extrabold text-slate-800 tracking-wide" }, "── ", secName, " ──"))
+            React.createElement("tr", { key: `ms-sec-${secName}`, className: "bg-slate-100 border-y border-slate-300" }, React.createElement("td", { colSpan: 10, className: "py-1.5 px-4 text-center text-xs font-extrabold text-slate-800 tracking-wide" }, "── ", secName, " ──"))
           );
 
           rows.forEach((row) => {
             seq += 1;
-            const matchedDb = laborDbByProductName.findMatch(row.productName);
+            const matchedDb = laborDbByProductName.findMatch(row);
+            const effectiveCode = matchedDb
+              ? matchedDb.productCode || normalizeCodeStr(row.productCode)
+              : normalizeCodeStr(row.productCode);
             const pkQuantityEa = matchedDb ? Number(matchedDb.pkQuantityEa) || 0 : 0;
             const releasePriceEa = Number(row.releasePriceEa) || 0;
             const releasePricePk =
@@ -2379,7 +2652,10 @@
               buyPriceErrorRate !== null && Math.abs(buyPriceErrorRate * 100) >= 0.05;
 
             tableRows.push(
-              React.createElement("tr", { key: `ms-row-${row.id}`, className: "border-b border-slate-200 hover:bg-slate-50/90 transition-colors" }, React.createElement("td", { className: "py-1.5 px-2 text-left text-xs font-normal text-slate-900 bg-white border-r border-slate-200 truncate" }, React.createElement("span", { className: "inline-block w-5 text-[11px] text-slate-400 tabular-nums" }, seq, "."), row.productName), React.createElement("td", { className: "py-1.5 px-2 text-right text-[13.5px] font-normal text-slate-900 bg-white border-r border-slate-200 tabular-nums" }, pkQuantityEa > 0 ? fmtQty(pkQuantityEa) : ''), React.createElement("td", { className: "py-1.5 px-2 text-right text-[13.5px] font-normal text-slate-900 bg-white border-r border-slate-200 tabular-nums" }, releasePriceEa > 0 ? fmtInt(releasePriceEa) : ''), React.createElement("td", { onMouseEnter: (e) => showFormulaTooltip(e, tipReleasePk), onMouseLeave: hideFormulaTooltip, className: "py-1.5 px-2 text-right text-[13.5px] font-normal text-slate-900 bg-white border-r border-slate-200 tabular-nums cursor-help hover:bg-slate-50" }, releasePricePk !== null ? fmtInt(releasePricePk) : ''), React.createElement("td", { className: "py-1 px-1.5 bg-slate-100/80 hover:bg-slate-200/60 border-r border-slate-200 transition-colors" }, React.createElement(CommaNumberInput, { value: !row.msBuyPricePk ? '' : row.msBuyPricePk, allowEmpty: true, placeholder: "입력", onChangeValue: (val) =>
+              React.createElement("tr", { key: `ms-row-${row.id}`, className: "border-b border-slate-200 hover:bg-slate-50/90 transition-colors" }, React.createElement("td", { className: "py-1 px-1 text-center bg-amber-50/35 border-r border-slate-200 whitespace-nowrap" }, React.createElement("input", { type: "text", list: "barogaRecipeCodeDatalist", value: effectiveCode, placeholder: String(seq), onChange: (e) =>
+                      handleUpdateUnifiedProductCode(row.id, matchedDb, e.target.value), className: `w-full min-w-0 text-center font-mono text-xs bg-transparent focus:outline-none focus:bg-white focus:ring-1 focus:ring-amber-500 rounded px-0.5 py-0.5 tabular-nums ${
+                      effectiveCode ? 'font-extrabold text-amber-900' : 'font-normal text-slate-400'
+                    }` })), React.createElement("td", { className: "py-1.5 px-2 text-left text-xs font-normal text-slate-900 bg-white border-r border-slate-200 truncate" }, row.productName), React.createElement("td", { className: "py-1.5 px-2 text-right text-[13.5px] font-normal text-slate-900 bg-white border-r border-slate-200 tabular-nums" }, pkQuantityEa > 0 ? fmtQty(pkQuantityEa) : ''), React.createElement("td", { className: "py-1.5 px-2 text-right text-[13.5px] font-normal text-slate-900 bg-white border-r border-slate-200 tabular-nums" }, releasePriceEa > 0 ? fmtInt(releasePriceEa) : ''), React.createElement("td", { onMouseEnter: (e) => showFormulaTooltip(e, tipReleasePk), onMouseLeave: hideFormulaTooltip, className: "py-1.5 px-2 text-right text-[13.5px] font-normal text-slate-900 bg-white border-r border-slate-200 tabular-nums cursor-help hover:bg-slate-50" }, releasePricePk !== null ? fmtInt(releasePricePk) : ''), React.createElement("td", { className: "py-1 px-1.5 bg-slate-100/80 hover:bg-slate-200/60 border-r border-slate-200 transition-colors" }, React.createElement(CommaNumberInput, { value: !row.msBuyPricePk ? '' : row.msBuyPricePk, allowEmpty: true, placeholder: "입력", onChangeValue: (val) =>
                       handleUpdatePkRow(row.id, 'msBuyPricePk', val === '' ? 0 : val), className: "w-full text-right text-[13.5px] font-bold text-blue-700 bg-transparent focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 rounded px-1 py-0.5 tabular-nums" })), React.createElement("td", { className: "py-1 px-1.5 bg-slate-100/80 hover:bg-slate-200/60 border-r border-slate-200 transition-colors" }, React.createElement(CommaNumberInput, { value: !row.msSellPricePk ? '' : row.msSellPricePk, allowEmpty: true, placeholder: "입력", onChangeValue: (val) =>
                       handleUpdatePkRow(row.id, 'msSellPricePk', val === '' ? 0 : val), className: "w-full text-right text-[13.5px] font-bold text-blue-700 bg-transparent focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 rounded px-1 py-0.5 tabular-nums" })), React.createElement("td", { onMouseEnter: (e) => showFormulaTooltip(e, tipBuyError), onMouseLeave: hideFormulaTooltip, className: `py-1.5 px-2 text-right text-[13.5px] font-normal border-r border-slate-200 tabular-nums cursor-help ${
                     buyErrorAlert
@@ -2393,9 +2669,9 @@
         });
 
         return (
-          React.createElement("div", { className: "max-w-7xl mx-auto space-y-3" }, React.createElement("div", { className: "bg-white rounded-xl border border-slate-200 shadow-sm p-3 flex flex-wrap items-center justify-between gap-3" }, React.createElement("div", { className: "space-y-1" }, React.createElement("div", { className: "flex flex-wrap items-center gap-3" }, React.createElement("span", { className: "text-sm font-extrabold text-slate-800" }, "■ 엠즈(M's) 등록 매입/판매가 및 수수료 검증표"), React.createElement("span", { className: "text-xs font-semibold text-slate-500" }, "• 제품명 · PK입수량 · 바로가 출고가(ea)는 [PK단위 원가표]와 실시간 연동됩니다.")), React.createElement("p", { className: "text-xs font-bold text-rose-600" }, "※ 엠즈의 현재 매입가는 담당자를 통해서만 확인 가능하여 확인 후 수기 입력 진행해야함.")), React.createElement("span", { className: "text-[11px] font-semibold text-slate-500" }, "💡 자동계산 셀에 마우스를 올리면 산출 수식과 원화 차액이 표시됩니다.")), React.createElement("div", { className: "bg-white rounded-xl border border-slate-300 shadow-sm overflow-y-auto overflow-x-hidden max-h-[calc(100vh-145px)] relative" }, React.createElement("table", { className: "w-full border-collapse table-fixed" }, React.createElement("colgroup", null, React.createElement("col", { style: { width: '18%' } }), React.createElement("col", { style: { width: '6.5%' } }), React.createElement("col", { style: { width: '9%' } }), React.createElement("col", { style: { width: '10%' } }), React.createElement("col", { style: { width: '10%' } }), React.createElement("col", { style: { width: '10%' } }), React.createElement("col", { style: { width: '8%' } }), React.createElement("col", { style: { width: '8.5%' } }), React.createElement("col", { style: { width: '20%' } })), React.createElement("thead", { className: "sticky top-0 z-20 shadow-sm" }, React.createElement("tr", { className: "text-white text-xs font-extrabold border-b border-slate-500" }, React.createElement("th", { className: "py-1 px-2 bg-slate-800 border-r border-slate-500" }, React.createElement("div", { className: "flex items-center justify-between gap-1.5" }, React.createElement("span", { className: "text-[11px] font-bold text-slate-200 shrink-0" }, "업데이트 날짜"), React.createElement("input", { type: "date", value: msUpdatedDate, onChange: (e) => setMsUpdatedDate(e.target.value), className: "w-[116px] text-center text-[11.5px] font-bold text-slate-900 bg-white hover:bg-amber-50 focus:outline-none focus:ring-1 focus:ring-blue-500 rounded-none border border-slate-400 px-1 py-0.5 tabular-nums cursor-pointer" }))), React.createElement("th", { colSpan: 3, className: "py-1 px-2 text-center bg-[#FDFBF7] border-r border-slate-400" }, React.createElement("div", { className: "flex items-center justify-center" }, React.createElement("svg", { viewBox: "18 6 204 48", className: "h-6 w-auto block", role: "img", "aria-label": "BAROGA" }, React.createElement("text", { x: "120", y: "35", textAnchor: "middle", fill: "#332415", fontFamily: "Georgia, 'Times New Roman', serif", fontWeight: "700", fontSize: "36", letterSpacing: "3" }, "BAROGA"), React.createElement("text", { x: "120", y: "51", textAnchor: "middle", fill: "#332415", fontFamily: "'Pretendard', 'Noto Sans KR', sans-serif", fontWeight: "600", fontSize: "10.5", letterSpacing: "1.4" }, "BAKERY MANUFACTURING")))), React.createElement("th", { colSpan: 2, className: "py-1 px-2 text-center bg-white border-r border-slate-400" }, React.createElement("div", { className: "flex items-center justify-center" }, React.createElement("svg", { viewBox: "0 0 218 62", className: "h-6 w-auto block", role: "img", "aria-label": "m's food" }, [0, 2.2, 4.4, 6.6, 8.8, 11].map((offset) => (
+          React.createElement("div", { className: "max-w-7xl mx-auto space-y-3" }, React.createElement("div", { className: "bg-white rounded-xl border border-slate-200 shadow-sm p-3 flex flex-wrap items-center justify-between gap-3" }, React.createElement("div", { className: "space-y-1" }, React.createElement("div", { className: "flex flex-wrap items-center gap-3" }, React.createElement("span", { className: "text-sm font-extrabold text-slate-800" }, "■ 엠즈(M's) 등록 매입/판매가 및 수수료 검증표"), React.createElement("span", { className: "text-xs font-semibold text-slate-500" }, "• 제품명 · PK입수량 · 바로가 출고가(ea)는 [PK단위 원가표]와 실시간 연동됩니다.")), React.createElement("p", { className: "text-xs font-bold text-rose-600" }, "※ 엠즈의 현재 매입가는 담당자를 통해서만 확인 가능하여 확인 후 수기 입력 진행해야함.")), React.createElement("span", { className: "text-[11px] font-semibold text-slate-500" }, "💡 자동계산 셀에 마우스를 올리면 산출 수식과 원화 차액이 표시됩니다.")), React.createElement("div", { className: "bg-white rounded-xl border border-slate-300 shadow-sm overflow-y-auto overflow-x-hidden max-h-[calc(100vh-145px)] relative" }, React.createElement("table", { className: "w-full border-collapse table-fixed" }, React.createElement("colgroup", null, React.createElement("col", { style: { width: '6%' } }), React.createElement("col", { style: { width: '16%' } }), React.createElement("col", { style: { width: '6.5%' } }), React.createElement("col", { style: { width: '8.5%' } }), React.createElement("col", { style: { width: '9.5%' } }), React.createElement("col", { style: { width: '9.5%' } }), React.createElement("col", { style: { width: '9.5%' } }), React.createElement("col", { style: { width: '8%' } }), React.createElement("col", { style: { width: '8.5%' } }), React.createElement("col", { style: { width: '18%' } })), React.createElement("thead", { className: "sticky top-0 z-20 shadow-sm" }, React.createElement("tr", { className: "text-white text-xs font-extrabold border-b border-slate-500" }, React.createElement("th", { colSpan: 2, className: "py-1 px-2 bg-slate-800 border-r border-slate-500" }, React.createElement("div", { className: "flex items-center justify-between gap-1.5" }, React.createElement("span", { className: "text-[11px] font-bold text-slate-200 shrink-0" }, "업데이트 날짜"), React.createElement("input", { type: "date", value: msUpdatedDate, onChange: (e) => setMsUpdatedDate(e.target.value), className: "w-[116px] text-center text-[11.5px] font-bold text-slate-900 bg-white hover:bg-amber-50 focus:outline-none focus:ring-1 focus:ring-blue-500 rounded-none border border-slate-400 px-1 py-0.5 tabular-nums cursor-pointer" }))), React.createElement("th", { colSpan: 3, className: "py-1 px-2 text-center bg-[#FDFBF7] border-r border-slate-400" }, React.createElement("div", { className: "flex items-center justify-center" }, React.createElement("svg", { viewBox: "18 6 204 48", className: "h-6 w-auto block", role: "img", "aria-label": "BAROGA" }, React.createElement("text", { x: "120", y: "35", textAnchor: "middle", fill: "#332415", fontFamily: "Georgia, 'Times New Roman', serif", fontWeight: "700", fontSize: "36", letterSpacing: "3" }, "BAROGA"), React.createElement("text", { x: "120", y: "51", textAnchor: "middle", fill: "#332415", fontFamily: "'Pretendard', 'Noto Sans KR', sans-serif", fontWeight: "600", fontSize: "10.5", letterSpacing: "1.4" }, "BAKERY MANUFACTURING")))), React.createElement("th", { colSpan: 2, className: "py-1 px-2 text-center bg-white border-r border-slate-400" }, React.createElement("div", { className: "flex items-center justify-center" }, React.createElement("svg", { viewBox: "0 0 218 62", className: "h-6 w-auto block", role: "img", "aria-label": "m's food" }, [0, 2.2, 4.4, 6.6, 8.8, 11].map((offset) => (
                             React.createElement("path", { key: offset, d: `M ${34 + offset * 0.35} ${28} A ${17 - offset * 0.5} ${17 - offset * 0.5} 0 0 1 ${72 - offset} 28 L ${72 - offset} 58`, fill: "none", stroke: "#B89B72", strokeWidth: "1.25" })
-                          )), React.createElement("path", { d: "M 7 58 L 7 29 A 15.5 15.5 0 0 1 38 29 L 38 58", fill: "none", stroke: "#009FE3", strokeWidth: "13", strokeLinecap: "butt" }), React.createElement("text", { x: "75", y: "23", fill: "#009FE3", fontFamily: "'Helvetica Neue', Arial, sans-serif", fontWeight: "700", fontSize: "26" }, "'s"), React.createElement("text", { x: "95", y: "57", fill: "#8C8C8C", fontFamily: "'Helvetica Neue', Arial, sans-serif", fontWeight: "300", fontSize: "44", letterSpacing: "-1" }, "food")))), React.createElement("th", { colSpan: 2, className: "py-1.5 px-2 text-center bg-rose-800/90 text-white border-r border-slate-500" }, "검증"), React.createElement("th", { rowSpan: 2, className: "py-1.5 px-2 text-center bg-slate-800 text-white border-b border-slate-500" }, "비고")), React.createElement("tr", { className: "bg-slate-700 text-white text-[11.5px] font-bold leading-tight" }, React.createElement("th", { className: "py-1.5 px-2 text-left border-r border-b border-slate-500" }, "제품명"), React.createElement("th", { className: "py-1.5 px-1 text-center border-r border-b border-slate-500" }, "pk입수량"), React.createElement("th", { className: "py-1.5 px-1 text-center border-r border-b border-slate-500" }, React.createElement("div", null, "출고가"), React.createElement("div", { className: "text-[10px] font-normal text-slate-300" }, "(ea)")), React.createElement("th", { className: "py-1.5 px-1 text-center border-r border-b border-slate-500" }, React.createElement("div", null, "출고가"), React.createElement("div", { className: "text-[10px] font-normal text-slate-300" }, "(pk)")), React.createElement("th", { className: "py-1.5 px-1 text-center border-r border-b border-slate-500" }, React.createElement("div", null, "매입가"), React.createElement("div", { className: "text-[10px] font-normal text-slate-300" }, "(pk)")), React.createElement("th", { className: "py-1.5 px-1 text-center border-r border-b border-slate-500" }, React.createElement("div", null, "판매가"), React.createElement("div", { className: "text-[10px] font-normal text-slate-300" }, "(pk)")), React.createElement("th", { className: "py-1.5 px-1 text-center border-r border-b border-slate-500" }, "매입가 오차"), React.createElement("th", { className: "py-1.5 px-1 text-center border-r border-b border-slate-500" }, "판매 수수료"))), React.createElement("tbody", null, tableRows))))
+                          )), React.createElement("path", { d: "M 7 58 L 7 29 A 15.5 15.5 0 0 1 38 29 L 38 58", fill: "none", stroke: "#009FE3", strokeWidth: "13", strokeLinecap: "butt" }), React.createElement("text", { x: "75", y: "23", fill: "#009FE3", fontFamily: "'Helvetica Neue', Arial, sans-serif", fontWeight: "700", fontSize: "26" }, "'s"), React.createElement("text", { x: "95", y: "57", fill: "#8C8C8C", fontFamily: "'Helvetica Neue', Arial, sans-serif", fontWeight: "300", fontSize: "44", letterSpacing: "-1" }, "food")))), React.createElement("th", { colSpan: 2, className: "py-1.5 px-2 text-center bg-rose-800/90 text-white border-r border-slate-500" }, "검증"), React.createElement("th", { rowSpan: 2, className: "py-1.5 px-2 text-center bg-slate-800 text-white border-b border-slate-500" }, "비고")), React.createElement("tr", { className: "bg-slate-700 text-white text-[11.5px] font-bold leading-tight" }, React.createElement("th", { className: "py-1.5 px-1 text-center border-r border-b border-slate-500 whitespace-nowrap" }, "품목코드"), React.createElement("th", { className: "py-1.5 px-2 text-left border-r border-b border-slate-500" }, "제품명"), React.createElement("th", { className: "py-1.5 px-1 text-center border-r border-b border-slate-500" }, "pk입수량"), React.createElement("th", { className: "py-1.5 px-1 text-center border-r border-b border-slate-500" }, React.createElement("div", null, "출고가"), React.createElement("div", { className: "text-[10px] font-normal text-slate-300" }, "(ea)")), React.createElement("th", { className: "py-1.5 px-1 text-center border-r border-b border-slate-500" }, React.createElement("div", null, "출고가"), React.createElement("div", { className: "text-[10px] font-normal text-slate-300" }, "(pk)")), React.createElement("th", { className: "py-1.5 px-1 text-center border-r border-b border-slate-500" }, React.createElement("div", null, "매입가"), React.createElement("div", { className: "text-[10px] font-normal text-slate-300" }, "(pk)")), React.createElement("th", { className: "py-1.5 px-1 text-center border-r border-b border-slate-500" }, React.createElement("div", null, "판매가"), React.createElement("div", { className: "text-[10px] font-normal text-slate-300" }, "(pk)")), React.createElement("th", { className: "py-1.5 px-1 text-center border-r border-b border-slate-500" }, "매입가 오차"), React.createElement("th", { className: "py-1.5 px-1 text-center border-r border-b border-slate-500" }, "판매 수수료"))), React.createElement("tbody", null, tableRows))))
         );
       };
 
@@ -2452,7 +2728,7 @@
         const catInfo = PROCESS_CATEGORIES[catKey];
         const computedList = computedCategoryDbs[catKey] || [];
         const filteredList = computedList.filter(({ product }) =>
-          String(product.productName || '')
+          `${product.productCode || ''} ${product.productName || ''}`
             .toLowerCase()
             .includes(productSearchQuery.trim().toLowerCase())
         );
@@ -2469,12 +2745,13 @@
                       categoryViewMode === 'SUMMARY'
                         ? 'bg-white text-slate-900 shadow-sm'
                         : 'text-slate-600 hover:text-slate-900'
-                    }` }, "📊 전체 품목 요약표 (", computedList.length, ")")), React.createElement("button", { type: "button", onClick: () => handleAddProduct(catKey, false), className: "px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold shadow-sm transition" }, "+ ", catInfo.label, " 신규 품목 추가"))), categoryViewMode === 'SUMMARY' ? (
-              React.createElement("div", { className: "bg-white rounded-xl border border-slate-200 shadow-sm overflow-auto max-h-[calc(100vh-155px)]" }, React.createElement("table", { className: "w-full text-xs border-collapse" }, React.createElement("thead", { className: "sticky top-0 z-20 shadow-sm" }, React.createElement("tr", { className: "bg-slate-800 text-white font-bold" }, React.createElement("th", { className: "bg-slate-800 py-2.5 px-3 text-center border-r border-slate-600 w-12" }, "No"), React.createElement("th", { className: "bg-slate-800 py-2.5 px-3 text-left border-r border-slate-600" }, "품목명"), React.createElement("th", { className: "bg-slate-800 py-2.5 px-3 text-right border-r border-slate-600" }, "1배합 실생산(ea)"), React.createElement("th", { className: "bg-slate-800 py-2.5 px-3 text-right border-r border-slate-600" }, "PK입수량(ea)"), React.createElement("th", { className: "bg-slate-800 py-2.5 px-3 text-right border-r border-slate-600" }, "1배합→PK수"), React.createElement("th", { className: "bg-slate-800 py-2.5 px-3 text-right border-r border-slate-600" }, "원재료비용(1배합, 원)"), React.createElement("th", { className: "bg-slate-800 py-2.5 px-3 text-right border-r border-slate-600" }, "총 투입시간(분)"), React.createElement("th", { className: "bg-slate-800 py-2.5 px-3 text-right border-r border-slate-600" }, "1배합 인건비(원)"), React.createElement("th", { className: "bg-slate-800 py-2.5 px-3 text-right border-r border-slate-600" }, "PK당 인건비(보정전)"), React.createElement("th", { className: "bg-slate-800 py-2.5 px-3 text-right border-r border-slate-600" }, "1ea 인건비(보정전)"), React.createElement("th", { className: "bg-slate-800 py-2.5 px-3 text-center w-24" }, "관리"))), React.createElement("tbody", null, computedList.map(({ product, computed }, idx) => (
+                    }` }, "📊 전체 품목 요약표 (", computedList.length, ")")), React.createElement("button", { type: "button", onClick: handleSortAllByProductCode, className: "px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold shadow-sm transition cursor-pointer" }, "🔢 품목코드순 정렬"), React.createElement("button", { type: "button", onClick: () => handleAddProduct(catKey, false), className: "px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold shadow-sm transition cursor-pointer" }, "+ ", catInfo.label, " 신규 품목 추가"))), categoryViewMode === 'SUMMARY' ? (
+              React.createElement("div", { className: "bg-white rounded-xl border border-slate-200 shadow-sm overflow-auto max-h-[calc(100vh-155px)]" }, React.createElement("table", { className: "w-full text-xs border-collapse" }, React.createElement("thead", { className: "sticky top-0 z-20 shadow-sm" }, React.createElement("tr", { className: "bg-slate-800 text-white font-bold" }, React.createElement("th", { className: "bg-slate-800 py-2.5 px-2 text-center border-r border-slate-600 w-20" }, "품목코드"), React.createElement("th", { className: "bg-slate-800 py-2.5 px-3 text-left border-r border-slate-600" }, "품목명"), React.createElement("th", { className: "bg-slate-800 py-2.5 px-3 text-right border-r border-slate-600" }, "1배합 실생산(ea)"), React.createElement("th", { className: "bg-slate-800 py-2.5 px-3 text-right border-r border-slate-600" }, "PK입수량(ea)"), React.createElement("th", { className: "bg-slate-800 py-2.5 px-3 text-right border-r border-slate-600" }, "1배합→PK수"), React.createElement("th", { className: "bg-slate-800 py-2.5 px-3 text-right border-r border-slate-600" }, "원재료비용(1배합, 원)"), React.createElement("th", { className: "bg-slate-800 py-2.5 px-3 text-right border-r border-slate-600" }, "총 투입시간(분)"), React.createElement("th", { className: "bg-slate-800 py-2.5 px-3 text-right border-r border-slate-600" }, "1배합 인건비(원)"), React.createElement("th", { className: "bg-slate-800 py-2.5 px-3 text-right border-r border-slate-600" }, "PK당 인건비(보정전)"), React.createElement("th", { className: "bg-slate-800 py-2.5 px-3 text-right border-r border-slate-600" }, "1ea 인건비(보정전)"), React.createElement("th", { className: "bg-slate-800 py-2.5 px-3 text-center w-24" }, "관리"))), React.createElement("tbody", null, computedList.map(({ product, computed }, idx) => (
                       React.createElement("tr", { key: product.id, onClick: () => {
                           setSelectedProductIds((prev) => ({ ...prev, [catKey]: product.id }));
                           setCategoryViewMode('SHEET');
-                        }, className: "border-b border-slate-200 hover:bg-blue-50/50 cursor-pointer transition-colors" }, React.createElement("td", { className: "py-2 px-3 text-center text-[13px] font-bold text-slate-500 border-r border-slate-200 tabular-nums" }, idx + 1), React.createElement("td", { className: "py-2 px-3 font-extrabold text-slate-900 border-r border-slate-200" }, product.productName), React.createElement("td", { className: "py-2 px-3 text-right text-sm font-semibold text-blue-700 border-r border-slate-200 tabular-nums" }, fmtQty(computed.batchOutputEa)), React.createElement("td", { className: "py-2 px-3 text-right text-sm font-semibold text-blue-700 border-r border-slate-200 tabular-nums" }, fmtQty(computed.pkQuantityEa)), React.createElement("td", { className: "py-2 px-3 text-right text-sm font-bold text-amber-800 bg-amber-50/40 border-r border-slate-200 tabular-nums" }, fmtDec(computed.batchOutputPk, 1)), React.createElement("td", { className: "py-2 px-3 text-right text-sm font-semibold text-blue-700 border-r border-slate-200 tabular-nums" }, fmtInt(computed.batchMaterialCost)), React.createElement("td", { className: "py-2 px-3 text-right text-sm font-semibold text-slate-700 border-r border-slate-200 tabular-nums" }, fmtInt(computed.totalMinutes), "분"), React.createElement("td", { className: "py-2 px-3 text-right text-sm font-extrabold text-emerald-700 bg-emerald-50/40 border-r border-slate-200 tabular-nums" }, fmtInt(computed.totalBatchLaborCost)), React.createElement("td", { className: "py-2 px-3 text-right text-sm font-bold text-slate-800 border-r border-slate-200 tabular-nums" }, fmtInt(computed.laborCostPerPk)), React.createElement("td", { className: "py-2 px-3 text-right text-sm font-bold text-slate-800 border-r border-slate-200 tabular-nums" }, fmtInt(computed.laborCostPerEa)), React.createElement("td", { className: "py-2 px-3 text-center", onClick: (e) => e.stopPropagation() }, React.createElement("button", { type: "button", onClick: () => handleDuplicateProduct(catKey, product), className: "text-xs font-bold text-indigo-600 hover:underline mr-2" }, "복제"), React.createElement("button", { type: "button", onClick: () =>
+                        }, className: "border-b border-slate-200 hover:bg-blue-50/50 cursor-pointer transition-colors" }, React.createElement("td", { className: "py-1.5 px-2 text-center border-r border-slate-200 bg-amber-50/40", onClick: (e) => e.stopPropagation() }, React.createElement("input", { type: "text", list: "barogaRecipeCodeDatalist", value: product.productCode || '', placeholder: String(idx + 1), onChange: (e) =>
+                              handleUpdateProductMeta(catKey, product.id, 'productCode', e.target.value), className: "w-full text-center font-mono text-xs font-extrabold text-amber-900 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded px-1 py-0.5 tabular-nums" })), React.createElement("td", { className: "py-2 px-3 font-extrabold text-slate-900 border-r border-slate-200" }, product.productName), React.createElement("td", { className: "py-2 px-3 text-right text-sm font-semibold text-blue-700 border-r border-slate-200 tabular-nums" }, fmtQty(computed.batchOutputEa)), React.createElement("td", { className: "py-2 px-3 text-right text-sm font-semibold text-blue-700 border-r border-slate-200 tabular-nums" }, fmtQty(computed.pkQuantityEa)), React.createElement("td", { className: "py-2 px-3 text-right text-sm font-bold text-amber-800 bg-amber-50/40 border-r border-slate-200 tabular-nums" }, fmtDec(computed.batchOutputPk, 1)), React.createElement("td", { className: "py-2 px-3 text-right text-sm font-semibold text-blue-700 border-r border-slate-200 tabular-nums" }, fmtInt(computed.batchMaterialCost)), React.createElement("td", { className: "py-2 px-3 text-right text-sm font-semibold text-slate-700 border-r border-slate-200 tabular-nums" }, fmtInt(computed.totalMinutes), "분"), React.createElement("td", { className: "py-2 px-3 text-right text-sm font-extrabold text-emerald-700 bg-emerald-50/40 border-r border-slate-200 tabular-nums" }, fmtInt(computed.totalBatchLaborCost)), React.createElement("td", { className: "py-2 px-3 text-right text-sm font-bold text-slate-800 border-r border-slate-200 tabular-nums" }, fmtInt(computed.laborCostPerPk)), React.createElement("td", { className: "py-2 px-3 text-right text-sm font-bold text-slate-800 border-r border-slate-200 tabular-nums" }, fmtInt(computed.laborCostPerEa)), React.createElement("td", { className: "py-2 px-3 text-center", onClick: (e) => e.stopPropagation() }, React.createElement("button", { type: "button", onClick: () => handleDuplicateProduct(catKey, product), className: "text-xs font-bold text-indigo-600 hover:underline mr-2" }, "복제"), React.createElement("button", { type: "button", onClick: () =>
                               setDeleteTargetProduct({
                                 catKey,
                                 prodId: product.id,
@@ -2482,7 +2759,7 @@
                               }), className: "text-xs font-bold text-rose-600 hover:underline" }, "삭제")))
                     )))))
             ) : (
-              React.createElement("div", { className: "grid grid-cols-1 lg:grid-cols-12 gap-4 items-start" }, React.createElement("aside", { className: "lg:col-span-3 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" }, React.createElement("div", { className: "p-3 bg-slate-800 text-white space-y-2" }, React.createElement("div", { className: "flex items-center justify-between" }, React.createElement("span", { className: "text-xs font-extrabold" }, "📂 ", catInfo.label, " 제품 리스트 (", filteredList.length, "/", computedList.length, ")"), React.createElement("button", { type: "button", onClick: () => handleAddProduct(catKey, false), className: "px-2 py-0.5 rounded bg-blue-500 hover:bg-blue-400 text-white text-[11px] font-bold transition" }, "+ 추가")), React.createElement("input", { type: "text", value: productSearchQuery, onChange: (e) => setProductSearchQuery(e.target.value), placeholder: "품목명 빠른 검색...", className: "w-full px-2.5 py-1.5 rounded-lg bg-slate-700 text-white placeholder-slate-400 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400" })), React.createElement("div", { className: "divide-y divide-slate-100 max-h-[720px] overflow-y-auto" }, filteredList.length > 0 ? (
+              React.createElement("div", { className: "grid grid-cols-1 lg:grid-cols-12 gap-4 items-start" }, React.createElement("aside", { className: "lg:col-span-3 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" }, React.createElement("div", { className: "p-3 bg-slate-800 text-white space-y-2" }, React.createElement("div", { className: "flex items-center justify-between" }, React.createElement("span", { className: "text-xs font-extrabold" }, "📂 ", catInfo.label, " 제품 리스트 (", filteredList.length, "/", computedList.length, ")"), React.createElement("button", { type: "button", onClick: () => handleAddProduct(catKey, false), className: "px-2 py-0.5 rounded bg-blue-500 hover:bg-blue-400 text-white text-[11px] font-bold transition" }, "+ 추가")), React.createElement("input", { type: "text", value: productSearchQuery, onChange: (e) => setProductSearchQuery(e.target.value), placeholder: "품목코드 · 품목명 검색...", className: "w-full px-2.5 py-1.5 rounded-lg bg-slate-700 text-white placeholder-slate-400 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400" })), React.createElement("div", { className: "divide-y divide-slate-100 max-h-[720px] overflow-y-auto" }, filteredList.length > 0 ? (
                       filteredList.map(({ product, computed }, idx) => {
                         const isSelected = selectedEntry?.product.id === product.id;
                         return (
@@ -2491,11 +2768,13 @@
                               isSelected
                                 ? 'bg-blue-50/90 border-l-4 border-l-blue-600'
                                 : 'hover:bg-slate-50'
-                            }` }, React.createElement("div", { className: "min-w-0" }, React.createElement("div", { className: "flex items-center gap-1.5" }, React.createElement("span", { className: `text-[11px] font-extrabold px-1.5 py-0.5 rounded tabular-nums ${
+                            }` }, React.createElement("div", { className: "min-w-0" }, React.createElement("div", { className: "flex items-center gap-1.5" }, React.createElement("span", { className: `text-[10.5px] font-mono font-extrabold px-1.5 py-0.5 rounded tabular-nums shrink-0 ${
                                     isSelected
                                       ? 'bg-blue-600 text-white'
-                                      : 'bg-slate-200 text-slate-600'
-                                  }` }, idx + 1), React.createElement("span", { className: `text-xs truncate ${
+                                      : product.productCode
+                                        ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                                        : 'bg-slate-200 text-slate-600'
+                                  }` }, product.productCode || idx + 1), React.createElement("span", { className: `text-xs truncate ${
                                     isSelected
                                       ? 'font-extrabold text-blue-950'
                                       : 'font-bold text-slate-800'
@@ -2505,12 +2784,18 @@
                     ) : (
                       React.createElement("div", { className: "p-6 text-center text-xs text-slate-400" }, "검색 조건에 맞는 품목이 없습니다.")
                     ))), React.createElement("div", { className: "lg:col-span-9" }, selectedEntry ? (
-                    React.createElement("div", { className: "bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4" }, React.createElement("div", { className: "flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200" }, React.createElement("div", { className: "flex items-center gap-2" }, React.createElement("span", { className: "px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs font-extrabold" }, "선택 품목"), React.createElement("h3", { className: "text-base font-extrabold text-slate-900" }, selectedEntry.product.productName)), React.createElement("div", { className: "flex items-center gap-2" }, React.createElement("button", { type: "button", onClick: () => handleDuplicateProduct(catKey, selectedEntry.product), className: "px-2.5 py-1 rounded-lg border border-slate-300 hover:bg-slate-100 text-xs font-bold text-slate-700 transition" }, "📋 이 품목 복제"), React.createElement("button", { type: "button", onClick: () =>
+                    React.createElement("div", { className: "bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4" }, React.createElement("div", { className: "flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200" }, React.createElement("div", { className: "flex items-center gap-2" }, React.createElement("span", { className: "px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs font-extrabold" }, "선택 품목"), React.createElement("h3", { className: "text-base font-extrabold text-slate-900" }, selectedEntry.product.productName)), React.createElement("div", { className: "flex flex-wrap items-center gap-2" }, React.createElement("button", { type: "button", onClick: () => handleSyncMaterialCostsFromRecipeTab(selectedEntry.product.id), title: "레시피 탭에서 동일 품목코드(또는 품목명)의 생산원가·수량·PK입수량을 이 품목으로 가져옵니다", className: "px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold transition cursor-pointer" }, "🔗 이 품목 레시피 원가 가져오기"), React.createElement("button", { type: "button", onClick: () => handleDuplicateProduct(catKey, selectedEntry.product), className: "px-2.5 py-1 rounded-lg border border-slate-300 hover:bg-slate-100 text-xs font-bold text-slate-700 transition" }, "📋 이 품목 복제"), React.createElement("button", { type: "button", onClick: () =>
                               setDeleteTargetProduct({
                                 catKey,
                                 prodId: selectedEntry.product.id,
                                 prodName: selectedEntry.product.productName,
-                              }), className: "px-2.5 py-1 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-xs font-bold text-rose-700 transition" }, "🗑 품목 삭제"))), React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-9 gap-2 text-xs" }, React.createElement("div", { className: "p-2.5 rounded-lg bg-slate-50 border border-slate-200" }, React.createElement("div", { className: "font-bold text-slate-600 whitespace-nowrap" }, "품목명", React.createElement("span", { className: "block text-[10px] text-slate-400" }, "(이름수정)")), React.createElement("input", { type: "text", value: selectedEntry.product.productName, onChange: (e) =>
+                              }), className: "px-2.5 py-1 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-xs font-bold text-rose-700 transition" }, "🗑 품목 삭제"))), React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-5 xl:grid-cols-10 gap-2 text-xs" }, React.createElement("div", { className: "p-2.5 rounded-lg bg-amber-50/70 border border-amber-300" }, React.createElement("div", { className: "font-bold text-amber-950 whitespace-nowrap" }, "품목코드", React.createElement("span", { className: "block text-[10px] text-amber-700" }, "(레시피ID 통일)")), React.createElement("input", { type: "text", list: "barogaRecipeCodeDatalist", placeholder: "예: 1001", value: selectedEntry.product.productCode || '', onChange: (e) =>
+                              handleUpdateProductMeta(
+                                catKey,
+                                selectedEntry.product.id,
+                                'productCode',
+                                e.target.value
+                              ), className: "mt-1 w-full font-mono font-extrabold text-amber-950 bg-white border border-amber-400 rounded px-1.5 py-0.5 text-center tabular-nums" })), React.createElement("div", { className: "p-2.5 rounded-lg bg-slate-50 border border-slate-200" }, React.createElement("div", { className: "font-bold text-slate-600 whitespace-nowrap" }, "품목명", React.createElement("span", { className: "block text-[10px] text-slate-400" }, "(이름수정)")), React.createElement("input", { type: "text", value: selectedEntry.product.productName, onChange: (e) =>
                               handleUpdateProductMeta(
                                 catKey,
                                 selectedEntry.product.id,
@@ -2598,7 +2883,11 @@
       };
 
       return (
-        React.createElement("div", { className: "w-full text-slate-900 flex flex-col" }, formulaTooltip && (
+        React.createElement("div", { className: "w-full text-slate-900 flex flex-col" }, React.createElement("datalist", { id: "barogaRecipeCodeDatalist" }, liveRecipeLookup.list.map((rc) =>
+              rc && rc.productCode ? (
+                React.createElement("option", { key: rc.id || rc.productCode, value: String(rc.productCode).trim() }, `${rc.recipeType === 'SUB' ? '[반제품]' : '[완제품]'} ${rc.productName || ''}`)
+              ) : null
+            )), formulaTooltip && (
             React.createElement("div", { style: {
                 left: `${Math.min(Math.max(formulaTooltip.x, 160), typeof window !== 'undefined' ? window.innerWidth - 160 : 800)}px`,
                 top:
@@ -2663,6 +2952,8 @@
       if (!_barogaPriceRoot) {
         _barogaPriceRoot = ReactDOM.createRoot(container);
         _barogaPriceRoot.render(React.createElement(App, null));
+      } else if (typeof window.refreshProductPriceRecipeLinks === 'function') {
+        window.refreshProductPriceRecipeLinks();
       }
     };
     if (document.readyState === 'loading') {
