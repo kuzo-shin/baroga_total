@@ -75,7 +75,7 @@ function getRawMaterialCatalogForRecipe() {
         const u = parseFloat(o.amount) || 0;
         const itemName = String(o.colB || '').trim();
         const specName = String(o.colC || '').trim();
-        if (u <= 0 || !itemName) return;
+        if (u < 0 || !itemName) return;
         const rawKey = `${itemName}||${specName}`;
         const isPack = /비닐|박스|유포지|노루지|롤백|트레이|패드|스티커|테이프|봉투|랩|카톤/.test(itemName);
         const internalCode = generateInternalItemCode(itemName, specName, isPack ? 'PK' : 'RM');
