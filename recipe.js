@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: v3.5 - 2026-11-19 포장 부자재 원재료DB 연동 시 품명 괄호매수(200매 등) 중복나눗셈 제거 · 규격칸(1EA=1) 기준 원가 보정본]
+// [VERSION: v3.6 - 2026-11-19 포장 부자재 원재료DB 연동 시 규격/품명 매수 자동나눗셈 전면 해제(1EA 단가 그대로 반영) 및 기존 0.4원 행 강제복원본]
 // 바로가 공장 통합 관리 시스템 - 레시피 전용 모듈 (recipe.js)
 // ============================================================================
 
@@ -58,17 +58,10 @@ function parseSpecToGrams(specStr) {
     return 1000;
 }
 
-function parsePackagingSpecQty(specStr) {
-    // 품명(예: `롤재단 4*60*45(200매)`)에 적힌 매수는 단순 명칭이고 발주단가는 이미 1EA(80원) 기준인 경우가 많으므로,
-    // 반드시 규격(spec) 열에 명시된 수량(예: `1,000매` -> 1000, `EA`/`1EA`/공란 -> 1)만 입수량으로 반영합니다.
-    const s = String(specStr || '').toLowerCase().replace(/,/g, '').trim();
-    if (!s) return 1;
-    const parenM = s.match(/\(\s*(\d+(?:\.\d+)?)\s*(매|장|ea|개|입)\s*\)/);
-    if (parenM) return parseFloat(parenM[1]) || 1;
-    const multUnitFirst = s.match(/(\d+(?:\.\d+)?)\s*(매|장|ea|개|입)\s*[*x×]\s*(\d+(?:\.\d+)?)/);
-    if (multUnitFirst) return (parseFloat(multUnitFirst[1]) || 1) * (parseFloat(multUnitFirst[3]) || 1);
-    const m = s.match(/(\d+(?:\.\d+)?)\s*(매|장|ea|개|입)/);
-    if (m) return parseFloat(m[1]) || 1;
+function parsePackagingSpecQty() {
+    // 원재료 발주서(ordersData)의 포장 부자재 발주단가(amount)는 모두 1EA(낱장/낱개) 단가로 입력되어 있으므로,
+    // 품명이나 규격 칸에 `200매` 등이 적혀 있어도 다시 나누지 않고 항상 1EA 기준(1)으로 그대로 반영합니다.
+    // (묶음 단가를 직접 나누고 싶을 때만 재료원가 클릭 -> 수동 설정 사용)
     return 1;
 }
 
@@ -174,13 +167,19 @@ function syncPackagingWithRawCatalog(pk, lookup) {
         else if (lookup.byName.has(String(pk.name).trim())) matched = lookup.byName.get(String(pk.name).trim());
     }
 
+    // 기존에 1EA 단가(예: 80원)가 200매 등으로 중복 나눗셈되어 개당 5원 미만(0.4원 등)으로 잘못 저장된 항목 자동 복원
+    if ((parseFloat(pk.specQty) || 1) > 1 && (parseFloat(pk.purchasePrice) || 0) > 0 && ((parseFloat(pk.purchasePrice) || 0) / (parseFloat(pk.specQty) || 1)) < 5) {
+        pk.specQty = 1;
+        if (pk.priceSource === 'MANUAL') pk.priceSource = 'RAW_DB';
+    }
+
     if (matched) {
         pk.rawKey = matched.rawKey;
         if (!pk.code) pk.code = matched.itemCode;
         if (pk.priceSource !== 'MANUAL') {
             pk.purchasePrice = matched.unitPrice;
             pk.spec = matched.spec || '';
-            pk.specQty = matched.specPackQty || 1;
+            pk.specQty = 1;
         }
         return matched;
     } else {
