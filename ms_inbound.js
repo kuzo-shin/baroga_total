@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: ms_inbound.js v1.1 - 2026-11-19 본문 가독성 최적화 (좌우 폭 max-w-6xl 원본 복원 + 상단바 전폭 유지)]
+// [VERSION: ms_inbound.js v1.2 - 2026-11-19 30초 주기 반복 자동동기화 제거 · 액션 기반 동기화 전환본]
 // 바로가 공장 통합 관리 시스템 - 엠즈 입고 전용 모듈 (ms_inbound.js)
 // ============================================================================
 (function () {
@@ -62,7 +62,6 @@
     }
 
     let _msInboundMounted = false;
-    let _msInboundTimer = null;
 
     function mountMsInboundApp() {
       const rootEl = document.getElementById('msInboundRoot');
@@ -76,11 +75,7 @@
         loadFromStorage();
         setupDragAndDrop();
         checkCloudBadge();
-        if (!_msInboundTimer) {
-          _msInboundTimer = setInterval(() => {
-            if (getActiveCloudUrl()) pullFromCloud(true);
-          }, 30000);
-        }
+        // 최초 접속 시 loadFromStorage()에서 1회만 자동 불러오기 수행 (이후에는 등록/수정/삭제 액션 또는 [불러오기] 클릭 시에만 동기화)
       } else {
         renderAll();
       }
