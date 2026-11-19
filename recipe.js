@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: v3.3 - 2026-11-19 용어통일(원재료비용·PK입수) 및 판매금액(바로가출고가×PK입수) 자동계산 적용본]
+// [VERSION: v3.4 - 2026-11-19 1배합 pk수량(생산수량÷PK입수) 적용 · 포장지 0/단가설정 정리 · 롤재단 등 포장부자재 인식 확장본]
 // 바로가 공장 통합 관리 시스템 - 레시피 전용 모듈 (recipe.js)
 // ============================================================================
 
@@ -58,13 +58,20 @@ function parseSpecToGrams(specStr) {
     return 1000;
 }
 
-function parsePackagingSpecQty(specStr) {
-    const s = String(specStr || '').toLowerCase().replace(/,/g, '').trim();
-    if (!s) return 1;
-    const mult = s.match(/(\d+(?:\.\d+)?)\s*[*x×]\s*(\d+(?:\.\d+)?)\s*(매|장|ea|개|입)/);
-    if (mult) return (parseFloat(mult[1]) || 1) * (parseFloat(mult[2]) || 1);
-    const m = s.match(/(\d+(?:\.\d+)?)\s*(매|장|ea|개|입)/);
-    if (m) return parseFloat(m[1]) || 1;
+function parsePackagingSpecQty(specStr, itemName = '') {
+    const candidates = [specStr, itemName];
+    for (const raw of candidates) {
+        const s = String(raw || '').toLowerCase().replace(/,/g, '').trim();
+        if (!s) continue;
+        // 예: `롤재단 4*60*45(200매)`처럼 치수 뒤에 괄호로 적힌 매수 우선 추출
+        const parenM = s.match(/\(\s*(\d+(?:\.\d+)?)\s*(매|장|ea|개|입)\s*\)/);
+        if (parenM) return parseFloat(parenM[1]) || 1;
+        // 예: `100매*10` 형태 추출
+        const multUnitFirst = s.match(/(\d+(?:\.\d+)?)\s*(매|장|ea|개|입)\s*[*x×]\s*(\d+(?:\.\d+)?)/);
+        if (multUnitFirst) return (parseFloat(multUnitFirst[1]) || 1) * (parseFloat(multUnitFirst[3]) || 1);
+        const m = s.match(/(\d+(?:\.\d+)?)\s*(매|장|ea|개|입)/);
+        if (m) return parseFloat(m[1]) || 1;
+    }
     return 1;
 }
 
@@ -80,8 +87,11 @@ function getRawMaterialCatalogForRecipe() {
         const specName = String(o.colC || '').trim();
         if (u < 0 || !itemName) return;
         const rawKey = `${itemName}||${specName}`;
-        const isPack = /비닐|카톤박스|외포장|내포장|유포지|노루지|롤백|트레이|패드|스티커|테이프|봉투|^랩|박스\(외포장\)/.test(itemName)
-            && !/버터|치즈|초콜릿|다이스|앙금|필링|생크림|우유|설탕|밀가루/.test(itemName);
+        const combinedText = `${itemName} ${specName}`;
+        const isPack = (
+            /비닐|카톤|박스|외포장|내포장|유포지|노루지|유산지|시트지|종이호일|롤백|롤재단|재단|트레이|패드|스티커|라벨|테이프|봉투|실링|필름|용기|슬리브|간지|^랩/.test(combinedText)
+            || /\(\s*\d+[\d,]*\s*(매|장)\s*\)/.test(combinedText)
+        ) && !/버터|치즈|초콜릿|다이스|앙금|필링|생크림|우유|설탕|밀가루|강력분|박력분|중력분|이스트|소금|전란|난황|난백/.test(itemName);
         const internalCode = generateInternalItemCode(itemName, specName, isPack ? 'PK' : 'RM');
         map[rawKey] = {
             key: rawKey,
@@ -93,7 +103,7 @@ function getRawMaterialCatalogForRecipe() {
             latestDate: o.date || '',
             unitPrice: u,
             specGrams: parseSpecToGrams(specName),
-            specPackQty: parsePackagingSpecQty(specName),
+            specPackQty: parsePackagingSpecQty(specName, itemName),
             isPackaging: isPack
         };
     });
@@ -390,6 +400,7 @@ function calculateRecipeMetrics(rc) {
     });
 
     const packQty = Math.max(1, parseFloat(rc.packQty) || 1);
+    const batchPkQty = prodQty > 0 ? (prodQty / packQty) : 0;
     const packCount = productQty > 0 ? (productQty / packQty) : 0;
     const totalPackCost = packCount * unitPackCost;
 
@@ -416,6 +427,7 @@ function calculateRecipeMetrics(rc) {
         lossAppliedQty: productQty,
         prodQty,
         packQty,
+        batchPkQty,
         sellPrice: sellingPrice,
         unitRawCost: productQty > 0 ? (rawMaterialCost / productQty) : 0,
         onePkRawCost: productQty > 0 ? (rawMaterialCost / productQty) * packQty : 0,
@@ -825,16 +837,16 @@ function renderRecipeDetailPanel() {
             }
     });
 
-    // 하단: 포장지(1EA제품기준) 섹션 (코드 입력칸 숨김, 깔끔 정렬)
+    // 하단: 포장지(1EA제품기준) 섹션 (불필요한 0 표기 및 단가설정 문구 제거, 재료원가 클릭 시 단가 수정 유지)
     formulaRowsHtml += `
         <tr class="bg-stone-100/90">
             <td class="fd-td py-1.5 px-2 font-black text-stone-900 truncate">포장지(1EA제품기준)</td>
             <td class="fd-td py-1.5 px-1"></td>
             <td class="fd-td py-1.5 px-1"></td>
-            <td class="fd-td py-1.5 px-1.5 text-right text-stone-400 font-semibold">0</td>
-            <td class="fd-td py-1.5 px-1 text-right text-stone-400 font-semibold">0</td>
-            <td class="fd-td py-1.5 px-1 text-center text-stone-400 font-semibold">0</td>
-            <td class="fd-td py-1.5 px-1.5 text-right text-stone-400 font-semibold">0</td>
+            <td class="fd-td py-1.5 px-1.5"></td>
+            <td class="fd-td py-1.5 px-1"></td>
+            <td class="fd-td py-1.5 px-1"></td>
+            <td class="fd-td py-1.5 px-1.5"></td>
             <td class="fd-td py-1.5 px-1"></td>
         </tr>
     `;
@@ -854,14 +866,14 @@ function renderRecipeDetailPanel() {
                         <input type="text" value="${escapeHtml(pk.name || '')}" onchange="updateRecipePackaging(${idx}, 'name', this.value)" class="w-full min-w-0 font-bold text-rose-600 bg-transparent focus:bg-white truncate">
                     </div>
                 </td>
-                <td class="fd-td py-1 px-1 text-center text-[10px] text-stone-400 cursor-pointer hover:text-stone-700" onclick="promptPackagingPrice(${idx})" title="클릭하여 구매단가/입수량 수정">단가설정</td>
+                <td class="fd-td py-1 px-1"></td>
                 <td class="fd-td py-1 px-0.5 text-center font-semibold text-stone-700">${escapeHtml(pk.unit || 'EA')}</td>
                 <td class="fd-td py-1 px-1 text-right bg-amber-50/40">
                     <input type="text" value="${fmtDec(uQty, 3)}" onchange="updateRecipePackaging(${idx}, 'usedQty', this.value)" class="w-full min-w-0 text-right font-extrabold text-stone-900 bg-transparent focus:bg-white">
                 </td>
-                <td class="fd-td py-1 px-1 text-right text-stone-400">0</td>
-                <td class="fd-td py-1 px-0.5 text-center text-stone-400">0</td>
-                <td class="fd-td py-1 px-1.5 text-right font-bold text-stone-900 cursor-pointer hover:bg-rose-50" onclick="promptPackagingPrice(${idx})" title="구매가 ${formatCurrency(pPrice)} / 입수 ${sQty}개 (1개당 ${fmtDec(pPrice / sQty, 1)}원)">${fmtDec(rowPackCost, 1)}</td>
+                <td class="fd-td py-1 px-1"></td>
+                <td class="fd-td py-1 px-0.5"></td>
+                <td class="fd-td py-1 px-1.5 text-right font-bold text-stone-900 cursor-pointer hover:bg-rose-50" onclick="promptPackagingPrice(${idx})" title="클릭하여 구매단가/입수량 수정 — 현재 구매가 ${formatCurrency(pPrice)} / 입수 ${sQty}개 (1개당 ${fmtDec(pPrice / sQty, 1)}원)">${fmtDec(rowPackCost, 1)}</td>
                 <td class="fd-td py-1 px-0.5 text-center">
                     <button type="button" onclick="removeRecipePackaging(${idx})" class="text-stone-400 hover:text-rose-600 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                 </td>
@@ -985,10 +997,10 @@ function renderRecipeDetailPanel() {
                 <div class="sm:col-span-8 overflow-x-auto">
                     <table class="w-full table-fixed border-collapse">
                         <colgroup>
-                            <col class="w-[24%]">
-                            <col class="w-[26%]">
-                            <col class="w-[24%]">
-                            <col class="w-[26%]">
+                            <col class="w-[23%]">
+                            <col class="w-[25%]">
+                            <col class="w-[27%]">
+                            <col class="w-[25%]">
                         </colgroup>
                         <tbody>
                             <tr>
@@ -1017,8 +1029,8 @@ function renderRecipeDetailPanel() {
                             <tr>
                                 <td class="fd-kv-label">손실중량(G)</td>
                                 <td class="fd-kv-val">${fmtDec(m.lossWeightG, 1)}</td>
-                                <td class="fd-kv-label">제품수량</td>
-                                <td class="fd-kv-val font-extrabold text-stone-900">${fmtDec(m.productQty, 1)}</td>
+                                <td class="fd-kv-label" title="자동계산 = 생산수량 ÷ PK입수 (${fmtDec(m.prodQty, 1)} ÷ ${fmtDec(m.packQty, 1)})">1배합 pk수량</td>
+                                <td class="fd-kv-val font-extrabold text-stone-900" title="생산수량(${fmtDec(m.prodQty, 1)}) ÷ PK입수(${fmtDec(m.packQty, 1)}) = ${fmtDec(m.batchPkQty, 2)} PK">${fmtDec(m.batchPkQty, 1)}</td>
                             </tr>
                             <tr>
                                 <td class="fd-kv-label">개당원가</td>
@@ -1105,7 +1117,7 @@ function renderRecipeDetailPanel() {
                             <td class="fd-td p-1"><input type="text" value="${escapeHtml(bp.ferm2Temp)}" onchange="updateBakingProcess('ferm2Temp', this.value)" class="w-full min-w-0 text-center font-bold focus:outline-amber-500"></td>
                             <td rowspan="6" class="fd-kv-label">메모</td>
                             <td rowspan="6" class="fd-td p-1.5 align-top">
-                                <textarea onchange="updateBakingProcess('memo', this.value)" placeholder="성형 · 충전 · 분할 · 굽기 특이사항 메모 입력..." class="w-full h-36 resize-none text-xs font-semibold text-stone-800 leading-relaxed focus:outline-none">${escapeHtml(bp.memo)}</textarea>
+                                <textarea onchange="updateBakingProcess('memo', this.value)" placeholder="특이사항 작성" class="w-full h-36 resize-none text-xs font-semibold text-stone-800 leading-relaxed focus:outline-none">${escapeHtml(bp.memo)}</textarea>
                             </td>
                         </tr>
                         <tr>
@@ -1982,11 +1994,11 @@ async function pushRecipesToGoogleSheet(silent = false) {
 }
 
 function exportRecipesCsv() {
-    let csv = '\uFEFF구분,품목코드,품목명,분할중량(G),생산수량,PK입수,판매금액,원가비율(%),개당원가,판매원가,개별포장,총포장가,원재료비용,중량합계(G),충전합계(G)\n';
+    let csv = '\uFEFF구분,품목코드,품목명,분할중량(G),생산수량,PK입수,1배합pk수량,판매금액,원가비율(%),개당원가,판매원가,개별포장,총포장가,원재료비용,중량합계(G),충전합계(G)\n';
     [...(recipesData || [])].sort(compareRecipeProductCode).forEach(rc => {
         const m = calculateRecipeMetrics(rc);
         const typeLabel = rc.recipeType === 'SUB' ? '반제품/충전물' : '완제품';
-        csv += `"${typeLabel}","${rc.productCode}","${rc.productName}",${rc.divisionWeight},${m.productQty.toFixed(1)},${rc.packQty},${m.sellPrice},${m.costRatioPct.toFixed(2)},${m.unitCost.toFixed(2)},${Math.round(m.salesCost)},${Math.round(m.unitPackCost)},${Math.round(m.totalPackCost)},${m.productionCost.toFixed(2)},${Math.round(m.weightTotalG)},${Math.round(m.fillingWeightG)}\n`;
+        csv += `"${typeLabel}","${rc.productCode}","${rc.productName}",${rc.divisionWeight},${m.prodQty.toFixed(1)},${rc.packQty},${m.batchPkQty.toFixed(1)},${m.sellPrice},${m.costRatioPct.toFixed(2)},${m.unitCost.toFixed(2)},${Math.round(m.salesCost)},${Math.round(m.unitPackCost)},${Math.round(m.totalPackCost)},${m.productionCost.toFixed(2)},${Math.round(m.weightTotalG)},${Math.round(m.fillingWeightG)}\n`;
     });
     triggerCsvDownload(csv, `바로가공장_배합비원가표_${getTodayStr()}.csv`);
 }
