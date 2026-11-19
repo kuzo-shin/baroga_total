@@ -1,4 +1,4 @@
-<!-- [VERSION: index.html v2.3 - 2026-11-19 원재료 탭 주기적/포커스 자동동기화 제거 · 액션 기반 동기화 전환본] -->
+<!-- [VERSION: index.html v2.4 - 2026-11-19 거래처비중 도넛차트 % 표기 · 소비기한 네모칸 전체 클릭 달력오픈 · 거래처별 발주현황 헤더 중앙정렬/명칭변경] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -22,9 +22,10 @@
         .baroga-serif { font-family: 'Georgia', 'Times New Roman', 'Batang', serif; letter-spacing: 0.06em; }
         input.no-spinner::-webkit-outer-spin-button, input.no-spinner::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input.no-spinner[type=number] { -moz-appearance: textfield; }
-        input[type="date"].expiry-input { text-align: right; }
-        input[type="date"].expiry-input::-webkit-datetime-edit { display: inline-flex; justify-content: flex-end; text-align: right; width: 100%; }
-        input[type="date"].expiry-input::-webkit-datetime-edit-fields-wrapper { display: inline-flex; justify-content: flex-end; }
+        input[type="date"].expiry-input { position: relative; text-align: center; cursor: pointer; }
+        input[type="date"].expiry-input::-webkit-datetime-edit { display: inline-flex; justify-content: center; text-align: center; width: 100%; cursor: pointer; }
+        input[type="date"].expiry-input::-webkit-datetime-edit-fields-wrapper { display: inline-flex; justify-content: center; }
+        input[type="date"].expiry-input::-webkit-calendar-picker-indicator { cursor: pointer; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -38,7 +39,7 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-base sm:text-lg font-extrabold tracking-tight text-stone-900">바로가 공장 통합 관리 시스템</h1>
-                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.3.0</span>
+                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.4.0</span>
                     </div>
                     <p class="text-xs text-stone-500 hidden sm:block">원재료 발주/재고 · 엠즈 입고/회송 · 레시피 배합비 · 제품단가 출고마진 통합 관리</p>
                 </div>
@@ -350,7 +351,7 @@
                     <div><label class="font-bold text-stone-600 block mb-1">개당단가(공급가)</label><input type="number" step="any" id="m_unitPrice" class="w-full border border-stone-300 rounded-xl px-3 py-1.5 font-bold"></div>
                 </div>
                 <div class="grid grid-cols-2 gap-2">
-                    <div><label class="font-bold text-stone-600 block mb-1">소비기한</label><input type="date" id="m_expiry" class="w-full border border-stone-300 rounded-xl px-3 py-1.5"></div>
+                    <div><label class="font-bold text-stone-600 block mb-1">소비기한</label><input type="date" id="m_expiry" onclick="openDatePickerBox(this)" class="w-full border border-stone-300 rounded-xl px-3 py-1.5 cursor-pointer"></div>
                     <div><label class="font-bold text-stone-600 block mb-1">제조원</label><input type="text" id="m_mfg" class="w-full border border-stone-300 rounded-xl px-3 py-1.5"></div>
                 </div>
                 <div><label class="font-bold text-stone-600 block mb-1">비고</label><input type="text" id="m_note" class="w-full border border-stone-300 rounded-xl px-3 py-1.5"></div>
@@ -388,7 +389,7 @@
                     <div><label class="font-bold text-stone-600 block mb-1">개당단가(공급가)</label><input type="number" step="any" id="e_unitPrice" class="w-full border border-stone-300 rounded-xl px-3 py-1.5 font-bold"></div>
                 </div>
                 <div class="grid grid-cols-2 gap-2">
-                    <div><label class="font-bold text-stone-600 block mb-1">소비기한</label><input type="date" id="e_expiry" class="w-full border border-stone-300 rounded-xl px-3 py-1.5"></div>
+                    <div><label class="font-bold text-stone-600 block mb-1">소비기한</label><input type="date" id="e_expiry" onclick="openDatePickerBox(this)" class="w-full border border-stone-300 rounded-xl px-3 py-1.5 cursor-pointer"></div>
                     <div><label class="font-bold text-stone-600 block mb-1">제조원</label><input type="text" id="e_mfg" class="w-full border border-stone-300 rounded-xl px-3 py-1.5"></div>
                 </div>
                 <div><label class="font-bold text-stone-600 block mb-1">비고 (환불·미입고 사유 등)</label><input type="text" id="e_note" placeholder="예: 2개 파손 반품 / 1박스 미입고" class="w-full border border-stone-300 rounded-xl px-3 py-1.5"></div>
@@ -1069,7 +1070,7 @@
                             <td class="py-2 px-2 text-right font-bold text-stone-800 whitespace-nowrap">${diffArrow}${formatCurrency(unitAmt)}</td>
                             <td class="py-2 px-2 text-right font-extrabold text-amber-900 whitespace-nowrap">${formatCurrency(totalAmt)}</td>
                             <td class="py-2 px-1.5 text-center">
-                                <input type="date" value="${escapeHtml(expVal)}" onchange="updateOrderExpiry('${escapeHtml(o.id)}', this.value)" class="expiry-input text-right text-[11px] font-semibold border border-stone-200 rounded-lg px-1.5 py-0.5 bg-white text-stone-700 focus:border-amber-500 focus:outline-none w-[108px]">
+                                <input type="date" value="${escapeHtml(expVal)}" onclick="openDatePickerBox(this)" onchange="updateOrderExpiry('${escapeHtml(o.id)}', this.value)" class="expiry-input text-[11px] font-semibold border border-stone-200 hover:border-amber-500 rounded-lg px-1.5 py-0.5 bg-white text-stone-700 focus:border-amber-500 focus:outline-none w-[108px]">
                             </td>
                             <td class="py-2 px-1.5 text-center text-stone-700 truncate" title="${escapeHtml(mfgText || '-')}">${mfgCell}</td>
                             <td class="py-2 px-1 text-center">
@@ -1144,7 +1145,7 @@
                 if (taxType === '과세') map[v].taxable += totalAmt; else map[v].taxFree += totalAmt;
             });
             const list = Object.values(map).sort((a, b) => b.supply - a.supply);
-            container.innerHTML = `<div class="overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b border-stone-200 font-extrabold text-stone-600"><th class="py-2.5 px-3">순위</th><th class="py-2.5 px-3">거래처명</th><th class="py-2.5 px-3 text-right">발주건수</th><th class="py-2.5 px-3 text-center">총 수량</th><th class="py-2.5 px-3 text-right">과세 공급가</th><th class="py-2.5 px-3 text-right">면세 합계</th><th class="py-2.5 px-3 text-right">총 공급가</th><th class="py-2.5 px-3 text-right">부가세 포함</th></tr></thead><tbody>${list.map((r, i) => `<tr class="border-b border-stone-100 hover:bg-stone-50"><td class="py-2.5 px-3 font-bold text-stone-500">${i + 1}</td><td class="py-2.5 px-3 font-extrabold text-stone-900">${escapeHtml(r.vendor)}</td><td class="py-2.5 px-3 text-right font-bold">${formatNumber(r.count)}건</td><td class="py-2.5 px-3 text-center font-extrabold">${formatNumber(r.qty)}</td><td class="py-2.5 px-3 text-right text-blue-700 font-semibold">${formatCurrency(r.taxable)}</td><td class="py-2.5 px-3 text-right text-emerald-700 font-semibold">${formatCurrency(r.taxFree)}</td><td class="py-2.5 px-3 text-right font-extrabold">${formatCurrency(r.supply)}</td><td class="py-2.5 px-3 text-right font-extrabold text-amber-800">${formatCurrency(r.supply + Math.round(r.taxable * 0.1))}</td></tr>`).join('')}</tbody></table></div>`;
+            container.innerHTML = `<div class="overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b border-stone-200 font-extrabold text-stone-600"><th class="py-2.5 px-3 text-center">순위</th><th class="py-2.5 px-3 text-center">거래처명</th><th class="py-2.5 px-3 text-center">발주건수</th><th class="py-2.5 px-3 text-center">총 수량</th><th class="py-2.5 px-3 text-center">과세 공급가 합계</th><th class="py-2.5 px-3 text-center">면세 공급가 합계</th><th class="py-2.5 px-3 text-center">총 공급가</th><th class="py-2.5 px-3 text-center">부가세 포함</th></tr></thead><tbody>${list.map((r, i) => `<tr class="border-b border-stone-100 hover:bg-stone-50"><td class="py-2.5 px-3 text-center font-bold text-stone-500">${i + 1}</td><td class="py-2.5 px-3 text-center font-extrabold text-stone-900">${escapeHtml(r.vendor)}</td><td class="py-2.5 px-3 text-center font-bold">${formatNumber(r.count)}건</td><td class="py-2.5 px-3 text-center font-extrabold">${formatNumber(r.qty)}</td><td class="py-2.5 px-3 text-right text-blue-700 font-semibold">${formatCurrency(r.taxable)}</td><td class="py-2.5 px-3 text-right text-emerald-700 font-semibold">${formatCurrency(r.taxFree)}</td><td class="py-2.5 px-3 text-right font-extrabold">${formatCurrency(r.supply)}</td><td class="py-2.5 px-3 text-right font-extrabold text-amber-800">${formatCurrency(r.supply + Math.round(r.taxable * 0.1))}</td></tr>`).join('')}</tbody></table></div>`;
         }
         function renderItemSummaryTable(container, filtered) {
             const map = {};
@@ -1282,7 +1283,7 @@
             document.getElementById('footerSupplyTotal').textContent = formatCurrency(stockSupply);
             document.getElementById('footerVatIncludedTotal').textContent = formatCurrency(stockSupply + Math.round(stockTaxable * 0.1));
             const container = document.getElementById('mainContentContainer');
-            container.innerHTML = list.length === 0 ? `<div class="py-16 text-center text-stone-400 text-sm font-bold">재고 내역이 없습니다.</div>` : `<div class="overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b font-extrabold text-stone-600"><th class="py-2.5 px-3">거래처</th><th class="py-2.5 px-3">원재료명</th><th class="py-2.5 px-2 text-center">규격</th><th class="py-2.5 px-2 text-center bg-emerald-100/70">현재고 조정</th><th class="py-2.5 px-2 text-center">구분</th><th class="py-2.5 px-2.5 text-right">단가</th><th class="py-2.5 px-2.5 text-right">재고금액</th><th class="py-2.5 px-2.5 text-center">소비기한</th></tr></thead><tbody>${list.map(o => { const rem = getOrderRemainQty(o), { unitAmt, taxType } = getOrderLineAmounts(o), expStr = getOrderExpiryDate(o), expInfo = getExpiryStatusInfo(expStr); return `<tr class="border-b hover:bg-stone-50"><td class="py-2 px-3 font-bold">${escapeHtml(o.colA)}</td><td class="py-2 px-3 font-extrabold">${escapeHtml(o.colB)} <span class="text-[10px] text-stone-400 block">발주: ${escapeHtml(o.date)}</span></td><td class="py-2 px-2 text-center">${escapeHtml(o.colC)}</td><td class="py-2 px-2 text-center"><div class="flex items-center justify-center gap-1"><button type="button" onclick="adjustRemainQty('${escapeHtml(o.id)}', -1)" class="w-6 h-6 rounded border bg-white font-bold cursor-pointer">-</button><input type="number" step="any" value="${rem}" onchange="setRemainQty('${escapeHtml(o.id)}', this.value)" class="no-spinner w-12 text-center font-extrabold border rounded py-1"><button type="button" onclick="adjustRemainQty('${escapeHtml(o.id)}', 1)" class="w-6 h-6 rounded border bg-white font-bold cursor-pointer">+</button></div></td><td class="py-2 px-2 text-center"><span class="px-2 py-0.5 rounded text-[11px] font-bold ${taxType === '과세' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-800'}">${taxType}</span></td><td class="py-2 px-2.5 text-right font-bold">${formatCurrency(unitAmt)}</td><td class="py-2 px-2.5 text-right font-extrabold text-emerald-900">${formatCurrency(Math.round(rem * unitAmt))}</td><td class="py-2 px-2 text-center"><div class="inline-flex flex-col items-center w-[114px] gap-1"><input type="date" value="${escapeHtml(expStr)}" onchange="updateOrderExpiry('${escapeHtml(o.id)}', this.value)" class="expiry-input text-[11px] border rounded px-1.5 py-0.5 w-full"><span class="block w-full py-0.5 rounded text-[10px] border ${expInfo.badgeClass}">${expInfo.label}</span></div></td></tr>`; }).join('')}</tbody></table></div>`;
+            container.innerHTML = list.length === 0 ? `<div class="py-16 text-center text-stone-400 text-sm font-bold">재고 내역이 없습니다.</div>` : `<div class="overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b font-extrabold text-stone-600"><th class="py-2.5 px-3">거래처</th><th class="py-2.5 px-3">원재료명</th><th class="py-2.5 px-2 text-center">규격</th><th class="py-2.5 px-2 text-center bg-emerald-100/70">현재고 조정</th><th class="py-2.5 px-2 text-center">구분</th><th class="py-2.5 px-2.5 text-right">단가</th><th class="py-2.5 px-2.5 text-right">재고금액</th><th class="py-2.5 px-2.5 text-center">소비기한</th></tr></thead><tbody>${list.map(o => { const rem = getOrderRemainQty(o), { unitAmt, taxType } = getOrderLineAmounts(o), expStr = getOrderExpiryDate(o), expInfo = getExpiryStatusInfo(expStr); return `<tr class="border-b hover:bg-stone-50"><td class="py-2 px-3 font-bold">${escapeHtml(o.colA)}</td><td class="py-2 px-3 font-extrabold">${escapeHtml(o.colB)} <span class="text-[10px] text-stone-400 block">발주: ${escapeHtml(o.date)}</span></td><td class="py-2 px-2 text-center">${escapeHtml(o.colC)}</td><td class="py-2 px-2 text-center"><div class="flex items-center justify-center gap-1"><button type="button" onclick="adjustRemainQty('${escapeHtml(o.id)}', -1)" class="w-6 h-6 rounded border bg-white font-bold cursor-pointer">-</button><input type="number" step="any" value="${rem}" onchange="setRemainQty('${escapeHtml(o.id)}', this.value)" class="no-spinner w-12 text-center font-extrabold border rounded py-1"><button type="button" onclick="adjustRemainQty('${escapeHtml(o.id)}', 1)" class="w-6 h-6 rounded border bg-white font-bold cursor-pointer">+</button></div></td><td class="py-2 px-2 text-center"><span class="px-2 py-0.5 rounded text-[11px] font-bold ${taxType === '과세' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-800'}">${taxType}</span></td><td class="py-2 px-2.5 text-right font-bold">${formatCurrency(unitAmt)}</td><td class="py-2 px-2.5 text-right font-extrabold text-emerald-900">${formatCurrency(Math.round(rem * unitAmt))}</td><td class="py-2 px-2 text-center"><div class="inline-flex flex-col items-center w-[114px] gap-1"><input type="date" value="${escapeHtml(expStr)}" onclick="openDatePickerBox(this)" onchange="updateOrderExpiry('${escapeHtml(o.id)}', this.value)" class="expiry-input text-[11px] border hover:border-amber-500 rounded px-1.5 py-0.5 w-full"><span class="block w-full py-0.5 rounded text-[10px] border ${expInfo.badgeClass}">${expInfo.label}</span></div></td></tr>`; }).join('')}</tbody></table></div>`;
         }
         function getFilteredPriceCatalogList() {
             const q = (document.getElementById('priceSearchInput')?.value || '').trim().toLowerCase(), cf = document.getElementById('priceChangeFilterSelect')?.value || 'ALL';
@@ -1377,10 +1378,84 @@
                 const pts = ordersData.filter(o => o.colB === targetItem).sort((a, b) => String(a.date).localeCompare(String(b.date)));
                 mainChartInstance = new Chart(ctx, { type: 'line', data: { labels: pts.map(p => (p.date || '').slice(5)), datasets: [{ label: '단가(원)', data: pts.map(p => parseFloat(p.amount) || 0), borderColor: '#d97706', fill: true, backgroundColor: 'rgba(217,119,6,0.12)' }] }, options: { responsive: true, maintainAspectRatio: false } });
             } else if (activeChartMode === 'VENDOR_PIE') {
-                titleEl.textContent = '거래처별 발주 비중'; subEl.textContent = '공급가 기준 상위 거래처';
-                const map = {}; getFilteredOrders(false).forEach(o => { const v = o.colA || '기타'; map[v] = (map[v] || 0) + getOrderLineAmounts(o).totalAmt; });
-                const entries = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 6);
-                mainChartInstance = new Chart(ctx, { type: 'doughnut', data: { labels: entries.map(e => e[0]), datasets: [{ data: entries.map(e => e[1]), backgroundColor: ['#d97706','#292524','#059669','#2563eb','#7c3aed','#a8a29e'] }] }, options: { responsive: true, maintainAspectRatio: false } });
+                titleEl.textContent = '거래처별 발주 비중'; subEl.textContent = '공급가 기준 상위 거래처 (%)';
+                const map = {};
+                let grandTotal = 0;
+                getFilteredOrders(false).forEach(o => {
+                    const v = o.colA || '기타';
+                    const amt = getOrderLineAmounts(o).totalAmt;
+                    map[v] = (map[v] || 0) + amt;
+                    grandTotal += amt;
+                });
+                const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]);
+                const topEntries = sorted.slice(0, 6);
+                const etcSum = sorted.slice(6).reduce((acc, cur) => acc + cur[1], 0);
+                const entries = etcSum > 0 ? [...topEntries, ['기타 거래처', etcSum]] : topEntries;
+                const pieColors = ['#d97706', '#292524', '#059669', '#2563eb', '#7c3aed', '#0d9488', '#a8a29e'];
+                const doughnutPctPlugin = {
+                    id: 'doughnutPctLabels',
+                    afterDatasetsDraw(chart) {
+                        const { ctx: c } = chart;
+                        const meta = chart.getDatasetMeta(0);
+                        const ds = chart.data.datasets[0];
+                        if (!meta || !ds) return;
+                        const sum = ds.data.reduce((a, b) => a + (Number(b) || 0), 0);
+                        if (sum <= 0) return;
+                        c.save();
+                        c.font = '800 11.5px Pretendard, sans-serif';
+                        c.textAlign = 'center';
+                        c.textBaseline = 'middle';
+                        meta.data.forEach((arc, idx) => {
+                            if (arc.hidden) return;
+                            const val = Number(ds.data[idx]) || 0;
+                            const pct = (val / sum) * 100;
+                            if (pct < 3.5) return;
+                            const pos = arc.tooltipPosition();
+                            const text = `${pct.toFixed(1)}%`;
+                            c.lineWidth = 3;
+                            c.strokeStyle = 'rgba(28, 25, 23, 0.55)';
+                            c.strokeText(text, pos.x, pos.y);
+                            c.fillStyle = '#ffffff';
+                            c.fillText(text, pos.x, pos.y);
+                        });
+                        c.restore();
+                    }
+                };
+                mainChartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: entries.map(([name, val]) => {
+                            const p = grandTotal > 0 ? ((val / grandTotal) * 100).toFixed(1) : '0.0';
+                            return `${name} (${p}%)`;
+                        }),
+                        datasets: [{
+                            data: entries.map(e => e[1]),
+                            backgroundColor: pieColors.slice(0, entries.length),
+                            borderWidth: 2,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: { boxWidth: 12, padding: 10, font: { size: 11, weight: '700', family: 'Pretendard, sans-serif' } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const val = Number(context.raw) || 0;
+                                        const p = grandTotal > 0 ? ((val / grandTotal) * 100).toFixed(1) : '0.0';
+                                        return ` ${formatCurrency(val)} (${p}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    plugins: [doughnutPctPlugin]
+                });
             } else {
                 titleEl.textContent = '원재료 발주 TOP 10'; subEl.textContent = '누적 공급가 상위 품목';
                 const map = {}; getFilteredOrders(false).forEach(o => { const k = o.colB || '기타'; map[k] = (map[k] || 0) + getOrderLineAmounts(o).totalAmt; });
@@ -1400,6 +1475,7 @@
         }
         function adjustRemainQty(id, d) { const t = ordersData.find(o => o.id === id); if (!t) return; t.remainQty = Math.max(0, Number((getOrderRemainQty(t) + d).toFixed(2))); t.id = buildIdWithMeta(t); renderDashboard(); pushAllToGoogleSheet(true); }
         function setRemainQty(id, v) { const t = ordersData.find(o => o.id === id); if (!t) return; t.remainQty = Math.max(0, parseFloat(v) || 0); t.id = buildIdWithMeta(t); renderDashboard(); pushAllToGoogleSheet(true); }
+        function openDatePickerBox(el) { if (el && typeof el.showPicker === 'function') { try { el.showPicker(); } catch (e) {} } }
         function updateOrderExpiry(id, d) { const t = ordersData.find(o => o.id === id); if (!t) return; t.expiryDate = d || ''; t.id = buildIdWithMeta(t); renderDashboard(); pushAllToGoogleSheet(true); }
         function toggleOrderTaxType(id) { const t = ordersData.find(o => o.id === id); if (!t) return; t.taxType = getOrderLineAmounts(t).taxType === '과세' ? '면세' : '과세'; t.id = buildIdWithMeta(t); renderDashboard(); pushAllToGoogleSheet(true); }
         function toggleHideZeroStock() { hideZeroStock = Boolean(document.getElementById('hideZeroStockChk')?.checked); renderDashboard(); }
