@@ -1,3 +1,4 @@
+<!-- [VERSION: index.html v2.1 - 2026-11-19 원재료 · 레시피 · 제품단가(price.js) 3대 도메인 통합본] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -9,6 +10,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <style>
         body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; background-color: #f5f3ef; color: #1c1917; }
@@ -35,9 +38,9 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-base sm:text-lg font-extrabold tracking-tight text-stone-900">바로가 공장 통합 관리 시스템</h1>
-                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.0.0</span>
+                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.1.0</span>
                     </div>
-                    <p class="text-xs text-stone-500 hidden sm:block">원재료 발주 · 일일 사용 보고 · 실사 재고 · 단가 트래킹 · 레시피 원가 관리</p>
+                    <p class="text-xs text-stone-500 hidden sm:block">원재료 발주 · 일일 사용 보고 · 실사 재고 · 레시피 배합비 · 제품단가 출고마진 통합 관리</p>
                 </div>
             </div>
             <div class="flex flex-wrap items-center gap-2">
@@ -58,6 +61,9 @@
                     </button>
                     <button type="button" onclick="switchMasterDomain('RECIPE')" id="masterTab_RECIPE" class="flex items-center gap-2 px-5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition cursor-pointer text-stone-300 hover:text-white hover:bg-stone-800">
                         <i data-lucide="chef-hat" class="w-4 h-4"></i><span>레시피</span>
+                    </button>
+                    <button type="button" onclick="switchMasterDomain('PRODUCT_PRICE')" id="masterTab_PRODUCT_PRICE" class="flex items-center gap-2 px-5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition cursor-pointer text-stone-300 hover:text-white hover:bg-stone-800">
+                        <i data-lucide="calculator" class="w-4 h-4"></i><span>제품단가</span>
                     </button>
                 </div>
                 <span class="text-[11px] text-stone-400 hidden sm:inline">모바일 · PC 구글 시트 실시간 동기화</span>
@@ -285,6 +291,10 @@
             </div>
         </section>
     </main>
+    <!-- [C] 제품단가 메인 영역 (price.js 마운트 컨테이너) -->
+    <main id="productPriceMainSection" class="hidden w-full flex-1 flex-col">
+        <div id="productPriceRoot" class="w-full flex-1"></div>
+    </main>
     <!-- 모달 1: 엑셀 업로드 -->
     <div id="uploadModal" class="fixed inset-0 bg-stone-950/60 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-lg w-full p-5 shadow-xl border border-stone-200">
@@ -460,7 +470,7 @@
     <div id="toastContainer" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
     <script>
         const DEFAULT_GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzY2ycdFr7UMpNwOL4XshXx2l8pk47xR1U2I79fiagUbv3WMWEq48nAqO5jl4dGp_QP/exec";
-        const DEFAULT_RECIPE_GAS_URL = "https://script.google.com/macros/s/AKfycbxR8N2mP9vL4kQ7wT1yU5iO3pA6sD8fG0hJ2kL5zX9cV4bN7mM1qW6eR8tY/exec";
+        const DEFAULT_RECIPE_GAS_URL = "https://script.google.com/macros/s/AKfycbw9zwUi9b7sNkdu4IVqIy0386ZkPLFe4cwqiZIb0qTkLLdq0mFWr2aHQvANPF2VOS4paw/exec";
         const GAS_URL_STORAGE_KEYS = ['baroga_gas_url', 'baroga_gas_webapp_url', 'gasWebAppUrl', 'GOOGLE_SHEET_WEBAPP_URL'];
         const RECIPE_PROCESS_PRESETS = ['반죽', '탕종', '르방', '폴리쉬', '토핑', '크림', '필링', '앙금', '시럽', '기타'];
         function loadSavedGasUrl() {
@@ -629,6 +639,7 @@
             return parseMetaFromId(rawId).baseId.startsWith('sample_') || rawId.startsWith('sample_');
         }
         function saveLocalCache() {
+            window.recipesData = recipesData;
             try {
                 localStorage.setItem('baroga_orders_cache_v18', JSON.stringify(ordersData));
                 localStorage.setItem('baroga_snapshots_cache_v18', JSON.stringify(monthlySnapshots));
@@ -672,6 +683,7 @@
             } else if (!selectedRecipeId && recipesData.length > 0) {
                 selectedRecipeId = recipesData[0].id;
             }
+            window.recipesData = recipesData;
         }
         function normalizeDateStr(val) {
             if (!val) return getTodayStr();
@@ -819,21 +831,36 @@
         }
         function switchMasterDomain(domain) {
             activeMasterDomain = domain;
-            const btnRaw = document.getElementById('masterTab_RAW'), btnRec = document.getElementById('masterTab_RECIPE');
-            const rawBar = document.getElementById('rawSubWorkspaceBar'), recBar = document.getElementById('recipeSubHeaderBar');
-            const rawMain = document.getElementById('rawMaterialMainSection'), recMain = document.getElementById('recipeMainSection');
+            window.activeMasterDomain = domain;
+            const activeCls = 'flex items-center gap-2 px-5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition cursor-pointer bg-amber-500 text-stone-950 shadow-xs';
+            const idleCls = 'flex items-center gap-2 px-5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition cursor-pointer text-stone-300 hover:text-white hover:bg-stone-800';
+            const btnRaw = document.getElementById('masterTab_RAW');
+            const btnRec = document.getElementById('masterTab_RECIPE');
+            const btnPrice = document.getElementById('masterTab_PRODUCT_PRICE');
+            const rawBar = document.getElementById('rawSubWorkspaceBar');
+            const recBar = document.getElementById('recipeSubHeaderBar');
+            const rawMain = document.getElementById('rawMaterialMainSection');
+            const recMain = document.getElementById('recipeMainSection');
+            const priceMain = document.getElementById('productPriceMainSection');
+
+            if (btnRaw) btnRaw.className = domain === 'RAW' ? activeCls : idleCls;
+            if (btnRec) btnRec.className = domain === 'RECIPE' ? activeCls : idleCls;
+            if (btnPrice) btnPrice.className = domain === 'PRODUCT_PRICE' ? activeCls : idleCls;
+
+            [rawBar, recBar].forEach(el => { if (el) el.classList.add('hidden'); });
+            [rawMain, recMain, priceMain].forEach(el => { if (el) { el.classList.add('hidden'); el.classList.remove('flex'); } });
+
             if (domain === 'RAW') {
-                btnRaw.className = 'flex items-center gap-2 px-5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition cursor-pointer bg-amber-500 text-stone-950 shadow-xs';
-                btnRec.className = 'flex items-center gap-2 px-5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition cursor-pointer text-stone-300 hover:text-white hover:bg-stone-800';
-                rawBar.classList.remove('hidden'); recBar.classList.add('hidden');
-                rawMain.classList.remove('hidden'); recMain.classList.add('hidden'); recMain.classList.remove('flex');
+                if (rawBar) rawBar.classList.remove('hidden');
+                if (rawMain) { rawMain.classList.remove('hidden'); rawMain.classList.add('flex'); }
                 renderDashboard();
-            } else {
-                btnRec.className = 'flex items-center gap-2 px-5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition cursor-pointer bg-amber-500 text-stone-950 shadow-xs';
-                btnRaw.className = 'flex items-center gap-2 px-5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition cursor-pointer text-stone-300 hover:text-white hover:bg-stone-800';
-                rawBar.classList.add('hidden'); recBar.classList.remove('hidden');
-                rawMain.classList.add('hidden'); recMain.classList.remove('hidden'); recMain.classList.add('flex');
-                renderRecipeWorkspace();
+            } else if (domain === 'RECIPE') {
+                if (recBar) recBar.classList.remove('hidden');
+                if (recMain) { recMain.classList.remove('hidden'); recMain.classList.add('flex'); }
+                if (typeof renderRecipeWorkspace === 'function') renderRecipeWorkspace();
+            } else if (domain === 'PRODUCT_PRICE') {
+                if (priceMain) { priceMain.classList.remove('hidden'); priceMain.classList.add('flex'); }
+                if (typeof window.mountProductPriceApp === 'function') window.mountProductPriceApp();
             }
             if (window.lucide) lucide.createIcons();
         }
@@ -1572,7 +1599,11 @@
         }
 
         function triggerCsvDownload(csv, name) { const b = new Blob([csv], { type: 'text/csv;charset=utf-8;' }), u = URL.createObjectURL(b), a = document.createElement('a'); a.href = u; a.download = name; a.click(); URL.revokeObjectURL(u); }
-        function exportCurrentMasterCsv() { if (activeMasterDomain === 'RECIPE' && typeof exportRecipesCsv === 'function') exportRecipesCsv(); else exportFilteredCsv(); }
+        function exportCurrentMasterCsv() {
+            if (activeMasterDomain === 'RECIPE' && typeof exportRecipesCsv === 'function') exportRecipesCsv();
+            else if (activeMasterDomain === 'PRODUCT_PRICE' && typeof window.exportProductPriceCsv === 'function') window.exportProductPriceCsv();
+            else exportFilteredCsv();
+        }
         function exportFilteredCsv() {
             const list = getFilteredOrders(activeWorkspace !== 'ORDER'); if (list.length === 0) return showToast('내보낼 데이터가 없습니다.', 'error');
             let csv = '\uFEFF발주일자,거래처,원재료명,규격,발주수량,현재고,과세구분,개당단가,합산금액,소비기한,제조원,비고\n';
@@ -1607,5 +1638,6 @@
         };
     </script>
     <script src="./recipe.js"></script>
+    <script src="./price.js"></script>
 </body>
 </html>
