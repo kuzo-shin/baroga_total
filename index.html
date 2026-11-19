@@ -1,4 +1,4 @@
-<!-- [VERSION: index.html v2.4 - 2026-11-19 거래처비중 도넛차트 % 표기 · 소비기한 네모칸 전체 클릭 달력오픈 · 거래처별 발주현황 헤더 중앙정렬/명칭변경] -->
+<!-- [VERSION: index.html v2.5 - 2026-11-19 4대 도메인 DB 버튼 UI/UX 통일 (DB설정 · 초록 DB저장 · 회전동기화 아이콘 + 심플 URL 팝업)] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -39,7 +39,7 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-base sm:text-lg font-extrabold tracking-tight text-stone-900">바로가 공장 통합 관리 시스템</h1>
-                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.4.0</span>
+                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.5.0</span>
                     </div>
                     <p class="text-xs text-stone-500 hidden sm:block">원재료 발주/재고 · 엠즈 입고/회송 · 레시피 배합비 · 제품단가 출고마진 통합 관리</p>
                 </div>
@@ -96,6 +96,10 @@
                         <span id="dbStatusText">DB 연동됨</span>
                         <i data-lucide="settings" class="w-3.5 h-3.5 ml-0.5 opacity-75"></i>
                     </button>
+                    <button type="button" onclick="pushAllToGoogleSheet(false)" class="flex items-center gap-1.5 px-3.5 py-1.5 h-9 rounded-xl text-xs font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition cursor-pointer">
+                        <i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i>
+                        <span>DB 저장</span>
+                    </button>
                     <button type="button" onclick="syncFromGoogleSheet(true)" id="manualSyncBtn" title="구글 시트 새로고침" class="flex items-center justify-center w-9 h-9 rounded-xl border border-stone-200 bg-white hover:bg-stone-100 text-stone-700 transition cursor-pointer">
                         <span id="syncSpinWrap" class="inline-flex items-center justify-center"><i data-lucide="refresh-cw" class="w-4 h-4"></i></span>
                     </button>
@@ -110,16 +114,17 @@
                     <span>제품별 표준 배합비(g / %) · 공정 프리셋 · 포장 부자재 · 1PK 판매원가율 자동 산출</span>
                 </div>
                 <div class="flex items-center gap-1.5 ml-auto">
-                    <button type="button" onclick="openRecipeDbModal()" id="recipeDbStatusBadge" class="flex items-center gap-1.5 px-3 py-1.5 h-8 rounded-xl text-xs font-bold border bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100 transition cursor-pointer">
-                        <span id="recipeDbStatusDot" class="w-2 h-2 rounded-full bg-amber-500"></span>
-                        <span id="recipeDbStatusText">레시피 DB 설정</span>
-                        <i data-lucide="database" class="w-3.5 h-3.5 ml-0.5 opacity-75"></i>
+                    <button type="button" onclick="openRecipeDbModal()" id="recipeDbStatusBadge" class="flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-xl text-xs font-bold border bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100 transition cursor-pointer">
+                        <span id="recipeDbStatusDot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span id="recipeDbStatusText">DB 연동됨</span>
+                        <i data-lucide="settings" class="w-3.5 h-3.5 ml-0.5 opacity-75"></i>
                     </button>
-                    <button type="button" onclick="syncRecipesFromGoogleSheet(true)" class="px-2.5 py-1.5 h-8 rounded-xl text-xs font-bold bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 flex items-center gap-1 cursor-pointer">
-                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i><span>불러오기</span>
+                    <button type="button" onclick="pushRecipesToGoogleSheet(false)" class="flex items-center gap-1.5 px-3.5 py-1.5 h-9 rounded-xl text-xs font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition cursor-pointer">
+                        <i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i>
+                        <span>DB 저장</span>
                     </button>
-                    <button type="button" onclick="pushRecipesToGoogleSheet(false)" class="px-3 py-1.5 h-8 rounded-xl text-xs font-extrabold bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-1 cursor-pointer shadow-2xs">
-                        <i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i><span>레시피 DB 저장</span>
+                    <button type="button" onclick="syncRecipesFromGoogleSheet(true)" title="구글 시트 새로고침" class="flex items-center justify-center w-9 h-9 rounded-xl border border-stone-200 bg-white hover:bg-stone-100 text-stone-700 transition cursor-pointer">
+                        <span id="recipeSyncSpinWrap" class="inline-flex items-center justify-center"><i data-lucide="refresh-cw" class="w-4 h-4"></i></span>
                     </button>
                 </div>
             </div>
@@ -402,18 +407,17 @@
     </div>
 
     <!-- 모달 3: 원재료 DB 설정 -->
-    <div id="dbConfigModal" class="fixed inset-0 bg-stone-950/60 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+    <div id="dbConfigModal" onclick="if(event.target===this) closeDbConfigModal()" class="fixed inset-0 bg-stone-950/60 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-lg w-full p-5 shadow-xl border border-stone-200 text-xs">
             <div class="flex items-center justify-between pb-3 border-b border-stone-200">
                 <h3 class="text-base font-extrabold text-stone-900">원재료 구글 스프레드시트 DB 설정</h3>
                 <button type="button" onclick="closeDbConfigModal()" class="text-stone-400 hover:text-stone-700 cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             <div class="mt-4 space-y-3">
-                <div><label class="font-bold text-stone-700 block mb-1">원재료 Google Apps Script 웹 앱 URL</label><input type="text" id="gasUrlInput" class="w-full border border-stone-300 rounded-xl px-3 py-2 font-mono bg-stone-50"></div>
-                <div class="flex flex-wrap gap-2">
-                    <button type="button" onclick="saveGasUrlConfig()" class="px-3.5 py-2 rounded-xl bg-emerald-600 text-white font-bold cursor-pointer">URL 저장 및 동기화</button>
-                    <button type="button" onclick="reclassifyAllTaxTypesAndSave()" class="px-3 py-2 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-300 font-bold cursor-pointer">면세/과세 자동 보정</button>
-                    <button type="button" onclick="confirmResetAllData()" class="px-3 py-2 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 font-bold cursor-pointer">전체 초기화</button>
+                <div><label class="font-bold text-stone-700 block mb-1">Google Apps Script 웹 앱 URL</label><input type="text" id="gasUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full border border-stone-300 focus:border-emerald-600 focus:outline-none rounded-xl px-3 py-2 font-mono bg-stone-50 focus:bg-white text-stone-900"></div>
+                <div class="flex justify-end gap-2 pt-1">
+                    <button type="button" onclick="closeDbConfigModal()" class="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold cursor-pointer">닫기</button>
+                    <button type="button" onclick="saveGasUrlConfig()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer">URL 저장 및 동기화</button>
                 </div>
             </div>
         </div>
@@ -460,17 +464,17 @@
         </div>
     </div>
     <!-- 모달 7: 레시피 전용 DB 설정 -->
-    <div id="recipeDbModal" class="fixed inset-0 bg-stone-950/60 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+    <div id="recipeDbModal" onclick="if(event.target===this) closeRecipeDbModal()" class="fixed inset-0 bg-stone-950/60 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-lg w-full p-5 shadow-xl border border-stone-200 text-xs">
             <div class="flex items-center justify-between pb-3 border-b border-stone-200">
-                <h3 class="text-base font-extrabold text-stone-900">레시피 전용 구글 스프레드시트 DB 설정</h3>
+                <h3 class="text-base font-extrabold text-stone-900">레시피 구글 스프레드시트 DB 설정</h3>
                 <button type="button" onclick="closeRecipeDbModal()" class="text-stone-400 hover:text-stone-700 cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             <div class="mt-4 space-y-3">
-                <div><label class="font-bold text-stone-700 block mb-1">레시피 Google Apps Script 웹 앱 URL</label><input type="text" id="recipeGasUrlInput" class="w-full border border-stone-300 rounded-xl px-3 py-2 font-mono bg-stone-50"></div>
-                <div class="flex gap-2">
-                    <button type="button" onclick="saveRecipeGasUrlConfig()" class="px-4 py-2 rounded-xl bg-amber-600 text-white font-bold cursor-pointer">URL 저장 및 동기화</button>
-                    <button type="button" onclick="closeRecipeDbModal()" class="px-4 py-2 rounded-xl bg-stone-100 text-stone-700 font-bold cursor-pointer">닫기</button>
+                <div><label class="font-bold text-stone-700 block mb-1">Google Apps Script 웹 앱 URL</label><input type="text" id="recipeGasUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full border border-stone-300 focus:border-emerald-600 focus:outline-none rounded-xl px-3 py-2 font-mono bg-stone-50 focus:bg-white text-stone-900"></div>
+                <div class="flex justify-end gap-2 pt-1">
+                    <button type="button" onclick="closeRecipeDbModal()" class="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold cursor-pointer">닫기</button>
+                    <button type="button" onclick="saveRecipeGasUrlConfig()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer">URL 저장 및 동기화</button>
                 </div>
             </div>
         </div>
@@ -765,10 +769,15 @@
             return rows;
         }
         function updateDbStatusUI(state, text) {
-            const dot = document.getElementById('dbStatusDot'), label = document.getElementById('dbStatusText'), spin = document.getElementById('syncSpinWrap');
+            const dot = document.getElementById('dbStatusDot'), label = document.getElementById('dbStatusText'), spin = document.getElementById('syncSpinWrap'), badge = document.getElementById('dbStatusBadge');
             if (spin) { if (state === 'syncing') spin.classList.add('animate-spin'); else spin.classList.remove('animate-spin'); }
             if (label) label.textContent = text;
             if (dot) dot.className = state === 'syncing' ? 'w-2 h-2 rounded-full bg-amber-500 animate-pulse' : (state === 'error' ? 'w-2 h-2 rounded-full bg-rose-500' : 'w-2 h-2 rounded-full bg-emerald-500');
+            if (badge) badge.className = state === 'syncing'
+                ? 'flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-xl text-xs font-bold border bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100 transition cursor-pointer'
+                : (state === 'error'
+                    ? 'flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-xl text-xs font-bold border bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100 transition cursor-pointer'
+                    : 'flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-xl text-xs font-bold border bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100 transition cursor-pointer');
         }
         async function fetchWithTimeout(url, options = {}, timeoutMs = 14000) {
             const ctrl = new AbortController();
