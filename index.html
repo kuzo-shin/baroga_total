@@ -214,7 +214,7 @@
                                 <span class="w-7 h-7 rounded-lg bg-amber-600 text-white flex items-center justify-center"><i data-lucide="clipboard-check" class="w-4 h-4"></i></span>
                                 <div>
                                     <h3 class="text-sm font-extrabold text-stone-900">생산시설 일일 원재료 사용 보고서 작성</h3>
-                                    <p class="text-[11px] text-stone-500">사용수량 입력 후 [일일 사용 보고 확정]을 누르면 현재고에서 먼저 발주한 로트부터 선입선출로 자동 차감됩니다 (같은 발주일이면 소비기한 빠른 순)</p>
+                                    <p class="hidden sm:block text-[11px] text-stone-500">사용수량 입력 후 [일일 사용 보고 확정]을 누르면 현재고에서 먼저 발주한 로트부터 선입선출로 자동 차감됩니다 (같은 발주일이면 소비기한 빠른 순)</p>
                                 </div>
                             </div>
                             <div class="flex flex-wrap items-center gap-2">
@@ -223,11 +223,11 @@
                                     <input type="date" id="usageReportDate" onchange="renderDashboard()" class="text-xs font-extrabold text-stone-900 bg-transparent focus:outline-none">
                                 </div>
                                 <input type="text" id="usageReportMemo" placeholder="담당자" class="text-xs border border-stone-300 rounded-xl px-3 py-1.5 w-36 bg-white focus:outline-none">
-                                <button type="button" onclick="submitDailyBatchUsage()" class="px-4 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-xs transition cursor-pointer"><i data-lucide="check-circle-2" class="w-4 h-4"></i><span>일일 사용 보고 확정</span></button>
+                                <button type="button" onclick="submitDailyBatchUsage()" class="hidden sm:flex px-4 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold items-center gap-1.5 shadow-xs transition cursor-pointer"><i data-lucide="check-circle-2" class="w-4 h-4"></i><span>일일 사용 보고 확정</span></button>
                             </div>
                         </div>
                         <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-stone-100">
-                            <div class="flex items-center gap-1.5">
+                            <div class="m-scroll-row flex items-center gap-1.5">
                                 <button type="button" onclick="switchUsageSubTab('SHEET')" id="usageSubTab_SHEET" class="px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer bg-stone-900 text-white shadow-xs">1일 사용량 일괄 입력표</button>
                                 <button type="button" onclick="switchUsageSubTab('HISTORY')" id="usageSubTab_HISTORY" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer bg-stone-100 text-stone-700 hover:bg-stone-200">일자별 사용 보고 이력 · 취소(원복)</button>
                             </div>
