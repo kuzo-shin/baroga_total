@@ -1,4 +1,4 @@
-<!-- [VERSION: index.html v2.10 - 2026-11-20 모바일 UI: 일일 사용 보고 카드형 입력·하단 확정 바, 상단 탭 한 줄 가로 스크롤, 헤더 고정 해제, KPI 2열 / v2.9 - 2026-11-20 원재료 업로드 양식(매입처·과세구분) 인식, 과세구분 열 그대로 사용, 수량 없는 양식 등록 차단 / v2.8 - 2026-11-20 3~5단계 정확성 (발주서 동일 줄·업로드 오류 표시·로트별 소진금액·월말 기준 재고 역산·제조원 추정 표시·재고 변동 이력·부가세 줄별 통일·CSV 안전 처리) / v2.7 2단계 보안 (DB 접속 코드 인증 · SRM 계정정보 삭제 · 급여/고정비 기본값 제거 · 화면 출력 이스케이프) / v2.6.1 DB 주소 4종 새 배포로 교체 · 각 기기 저장 주소 일괄 초기화 / v2.6 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 스냅샷 분할 저장 · 샘플 레시피 제거)] -->
+<!-- [VERSION: index.html v2.11 - 2026-11-20 저장 안전: 4개 탭 저장 상태 문구 통일(저장됨 HH:MM), 미저장 변경 시 창 닫기 경고, 공통 입력창(openFormModal) / v2.10 - 2026-11-20 모바일 UI: 일일 사용 보고 카드형 입력·하단 확정 바, 상단 탭 한 줄 가로 스크롤, 헤더 고정 해제, KPI 2열 / v2.9 - 2026-11-20 원재료 업로드 양식(매입처·과세구분) 인식, 과세구분 열 그대로 사용, 수량 없는 양식 등록 차단 / v2.8 - 2026-11-20 3~5단계 정확성 (발주서 동일 줄·업로드 오류 표시·로트별 소진금액·월말 기준 재고 역산·제조원 추정 표시·재고 변동 이력·부가세 줄별 통일·CSV 안전 처리) / v2.7 2단계 보안 (DB 접속 코드 인증 · SRM 계정정보 삭제 · 급여/고정비 기본값 제거 · 화면 출력 이스케이프) / v2.6.1 DB 주소 4종 새 배포로 교체 · 각 기기 저장 주소 일괄 초기화 / v2.6 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 스냅샷 분할 저장 · 샘플 레시피 제거)] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -57,7 +57,7 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-base sm:text-lg font-extrabold tracking-tight text-stone-900">바로가 공장 통합 관리 시스템</h1>
-                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.10.0</span>
+                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.11.0</span>
                     </div>
                     <p class="text-xs text-stone-500 hidden sm:block">원재료 발주/재고 · 엠즈 입고/회송 · 레시피 배합비 · 제품단가 출고마진 통합 관리</p>
                 </div>
@@ -729,6 +729,41 @@
             m.classList.remove('hidden'); m.classList.add('flex');
             document.getElementById('confirmModalOkBtn').onclick = () => { const cb = confirmCallback; closeConfirmModal(); if (typeof cb === 'function') cb(); };
         }
+        // [A3] 공통 입력창 (브라우저 기본 prompt 대체) — 확인 전에 값 검사
+        //  opts: { title, desc, fields:[{key,label,value,placeholder,hint,numeric}], submitLabel, extra:{label,onClick}, onSubmit(values) → 오류 문구 또는 null }
+        function openFormModal(opts) {
+            closeFormModal();
+            const wrap = document.createElement('div');
+            wrap.id = 'barogaFormModal';
+            wrap.className = 'fixed inset-0 z-[70] bg-stone-900/50 flex items-center justify-center p-4';
+            wrap.innerHTML = `<form class="bg-white rounded-2xl shadow-xl border border-stone-200 w-full max-w-md p-5 space-y-4" novalidate>
+                <div><h3 class="text-base font-bold text-stone-900">${escapeHtml(opts.title || '')}</h3>${opts.desc ? `<p class="mt-1 text-[13px] text-stone-600 whitespace-pre-line">${escapeHtml(opts.desc)}</p>` : ''}</div>
+                ${(opts.fields || []).map((f, i) => `<label class="block"><span class="text-[13px] font-semibold text-stone-700">${escapeHtml(f.label)}</span>
+                    <input name="${escapeHtml(f.key)}" ${f.numeric ? 'inputmode="decimal"' : ''} value="${escapeHtml(f.value ?? '')}" placeholder="${escapeHtml(f.placeholder || '')}" class="mt-1 w-full h-10 px-3 rounded-lg border border-stone-300 text-sm text-stone-900 ${f.numeric ? 'text-right tabular-nums' : ''} focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-500" ${i === 0 ? 'autofocus' : ''}>
+                    ${f.hint ? `<span class="mt-1 block text-[12px] text-stone-500">${escapeHtml(f.hint)}</span>` : ''}</label>`).join('')}
+                <p data-err class="hidden text-[13px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></p>
+                <div class="flex items-center justify-between gap-2 pt-1">
+                    <div>${opts.extra ? `<button type="button" data-extra class="h-9 px-3 rounded-lg text-[13px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 cursor-pointer">${escapeHtml(opts.extra.label)}</button>` : ''}</div>
+                    <div class="flex gap-2"><button type="button" data-cancel class="h-9 px-4 rounded-lg text-[13px] font-semibold text-stone-700 bg-white border border-stone-300 hover:bg-stone-50 cursor-pointer">취소</button>
+                    <button type="submit" class="h-9 px-4 rounded-lg text-[13px] font-bold text-white bg-amber-600 hover:bg-amber-700 cursor-pointer">${escapeHtml(opts.submitLabel || '적용')}</button></div>
+                </div></form>`;
+            document.body.appendChild(wrap);
+            const form = wrap.querySelector('form'), err = wrap.querySelector('[data-err]');
+            const showErr = (m) => { err.textContent = m; err.classList.remove('hidden'); };
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const values = {}; (opts.fields || []).forEach(f => { values[f.key] = String(form.elements[f.key].value || '').trim(); });
+                const msg = typeof opts.onSubmit === 'function' ? opts.onSubmit(values) : null;
+                if (msg) showErr(msg); else closeFormModal();
+            });
+            wrap.querySelector('[data-cancel]').onclick = closeFormModal;
+            const ex = wrap.querySelector('[data-extra]'); if (ex) ex.onclick = () => { closeFormModal(); opts.extra.onClick(); };
+            wrap.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeFormModal(); });
+            wrap.addEventListener('mousedown', (e) => { if (e.target === wrap) closeFormModal(); });
+            setTimeout(() => { const first = form.querySelector('input'); if (first) { first.focus(); first.select(); } }, 30);
+        }
+        function closeFormModal() { const w = document.getElementById('barogaFormModal'); if (w) w.remove(); }
+        window.openFormModal = openFormModal;
         function closeConfirmModal() { const m = document.getElementById('confirmModal'); m.classList.add('hidden'); m.classList.remove('flex'); confirmCallback = null; }
         function isSampleDummyOrder(o) {
             if (!o) return true;
