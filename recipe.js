@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: v3.14 - 2026-11-20 3~5단계 (단가 일괄적용 시 기존 연결·수동고정 보존·포장재 5원 자동보정 제거·규격 인식 경고·반제품 손실률·품목코드 중복 방지·CSV 안전 처리·원가 계산 캐시) / v3.13 2단계 보안 (DB 요청에 접속 코드 첨부) / v3.12 1단계 데이터 손실 방지 (자동 저장 · 저장 응답 확인 · 리비전 충돌 방지 · 사진 분리 저장 · 미저장 수정분 보호 · 샘플추가 버튼 제거)]
+// [VERSION: v3.15 - 2026-11-20 ⚠규격 경고는 단가 있는 재료만 · 원가 캐시 키를 발주내역 지문으로 / v3.14 3~5단계 (단가 일괄적용 시 기존 연결·수동고정 보존·포장재 5원 자동보정 제거·규격 인식 경고·반제품 손실률·품목코드 중복 방지·CSV 안전 처리·원가 계산 캐시) / v3.13 2단계 보안 (DB 요청에 접속 코드 첨부) / v3.12 1단계 데이터 손실 방지 (자동 저장 · 저장 응답 확인 · 리비전 충돌 방지 · 사진 분리 저장 · 미저장 수정분 보호 · 샘플추가 버튼 제거)]
 // 바로가 공장 통합 관리 시스템 - 레시피 전용 모듈 (recipe.js)
 // ============================================================================
 
@@ -170,13 +170,13 @@ function getRawMaterialCatalogForRecipe() {
 //  (엠즈 화면이 품목마다 레시피 원가를 계산하며 매번 전체 발주내역을 다시 훑던 문제)
 let _rawCatalogCache = null;
 function buildRawCatalogLookupMaps() {
-    const ver = window.__rawDataVersion || 0;
-    const src = Array.isArray(ordersData) ? ordersData : null;
-    if (_rawCatalogCache && _rawCatalogCache.ver === ver && _rawCatalogCache.src === src && _rawCatalogCache.len === (src ? src.length : -1)) {
-        return _rawCatalogCache.maps;
-    }
+    // 캐시 키 = 발주내역의 품목·규격·단가·날짜 지문 (화면에서 바로 고친 값도 즉시 반영되도록)
+    const src = Array.isArray(ordersData) ? ordersData : [];
+    let fp = String(src.length);
+    for (let i = 0; i < src.length; i++) { const o = src[i]; fp += '|' + o.date + '~' + o.colB + '~' + o.colC + '~' + o.amount + '~' + o.colA; }
+    if (_rawCatalogCache && _rawCatalogCache.fp === fp) return _rawCatalogCache.maps;
     const maps = buildRawCatalogLookupMapsUncached();
-    _rawCatalogCache = { ver, src, len: src ? src.length : -1, maps };
+    _rawCatalogCache = { fp, maps };
     return maps;
 }
 function buildRawCatalogLookupMapsUncached() {
@@ -1015,7 +1015,7 @@ function renderRecipeDetailPanel() {
                 const perGramPrice = specGVal > 0 ? ((parseFloat(ig.unitPrice) || 0) / specGVal) : 0;
                 const isLinked = Boolean(entry.linkedRaw && ig.priceSource !== 'MANUAL');
                 const unitUpperStr = String(ig.unit || 'G').toUpperCase();
-                const specWarn = unitUpperStr !== 'EA' && ig.priceSource !== 'MANUAL' && !isSpecWeightParseable(ig.spec);
+                const specWarn = unitUpperStr !== 'EA' && ig.priceSource !== 'MANUAL' && (parseFloat(ig.unitPrice) || 0) > 0 && !isSpecWeightParseable(ig.spec); // 단가 0원(물·파지 등)은 원가 영향 없어 경고 안 함
                 const specWarnHtml = specWarn ? `<span class="shrink-0 px-1 rounded bg-rose-100 text-rose-700 text-[9.5px] font-extrabold" title="규격 '${escapeHtml(ig.spec || '없음')}'에서 중량을 읽지 못해 1kg(1,000g)으로 가정해 계산 중입니다. 원재료 발주서 규격을 '20kg', '500g×10'처럼 입력하거나 재료원가를 눌러 직접 설정하세요.">⚠규격</span>` : '';
                 const costCalcLine = unitUpperStr === 'EA'
                     ? `${formatCurrency(ig.unitPrice)} × ${fmtDec(ig.qty, 2)}EA = ${fmtDec(entry.effCost, 1)}원`
