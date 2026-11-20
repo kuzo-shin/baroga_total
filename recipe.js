@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: v3.9 - 2026-11-20 한화면 세로 높이 여백 미세조정(하단 잘림 해소) 및 우측 제빵공정 카드 자연 높이 복원]
+// [VERSION: v3.10 - 2026-11-20 원재료 검색창에서 0원 품목(식수·얼음·파지 등) 누락 버그 수정 및 유상원재료 증정(0원) 단가 보호 적용]
 // 바로가 공장 통합 관리 시스템 - 레시피 전용 모듈 (recipe.js)
 // ============================================================================
 
@@ -108,9 +108,14 @@ function getRawMaterialCatalogForRecipe() {
         const u = parseFloat(o.amount) || 0;
         const itemName = String(o.colB || '').trim();
         const specName = String(o.colC || '').trim();
-        // 4. 제품단가·변동이력(getFilteredPriceCatalogList)과 동일하게 0원 초과 유효 단가 기준 최신값 적용
-        if (u <= 0 || !itemName) return;
+        if (u < 0 || !itemName) return;
         const rawKey = `${itemName}||${specName}`;
+        const prevEntry = map[rawKey];
+        const isZeroCostItem = /^(식수|물|정제수|수돗물|얼음|파지)/.test(itemName);
+        // 기존 유상 원재료가 서비스/증정(0원)으로 입고된 경우에는 직전 유효 현재단가를 보존하고, 식수 등 0원 품목은 그대로 등록
+        if (u === 0 && prevEntry && prevEntry.unitPrice > 0 && !isZeroCostItem) {
+            return;
+        }
         const combinedText = `${itemName} ${specName}`;
         const isPack = (
             /비닐|카톤|박스|외포장|내포장|유포지|노루지|유산지|시트지|종이호일|롤백|롤재단|재단|트레이|패드|스티커|라벨|테이프|봉투|실링|필름|용기|슬리브|간지|^랩/.test(combinedText)
@@ -131,6 +136,28 @@ function getRawMaterialCatalogForRecipe() {
             isPackaging: isPack
         };
     });
+
+    // 발주 내역에 식수가 별도 등록되지 않은 경우에도 항상 검색·선택 가능하도록 기본 '식수(물)' 보장
+    const hasWater = Object.values(map).some(x => /^(식수|정제수)/.test(x.item));
+    if (!hasWater) {
+        const wName = '식수(물)';
+        const wSpec = '1kg';
+        const wKey = `${wName}||${wSpec}`;
+        map[wKey] = {
+            key: wKey,
+            rawKey: wKey,
+            itemCode: generateInternalItemCode(wName, wSpec, 'RM'),
+            item: wName,
+            spec: wSpec,
+            vendor: '자체(공장)',
+            latestDate: '',
+            unitPrice: 0,
+            specGrams: 1000,
+            specPackQty: 1,
+            isPackaging: false
+        };
+    }
+
     return Object.values(map).sort((a, b) => a.item.localeCompare(b.item, 'ko'));
 }
 
@@ -171,7 +198,7 @@ function buildRawCatalogLookupMaps() {
     // 스마트 품목명 매칭 (정확 일치 -> 공백/기호 무시 일치 -> 핵심 토큰 모두 포함 일치)
     const findBestByName = (rawName, specHint = '') => {
         const clean = String(rawName || '').trim();
-        if (!clean || /^(식수|물|정제수|수돗물|얼음|파지)/.test(clean)) return null;
+        if (!clean) return null;
         const exactKey = `${clean}||${String(specHint || '').trim()}`;
         if (byKey.has(exactKey)) return byKey.get(exactKey);
         if (byName.has(clean)) return byName.get(clean);
@@ -181,6 +208,9 @@ function buildRawCatalogLookupMaps() {
 
         const alpha = normalizeRawItemAlphaNum(clean);
         if (alpha && byAlphaNum.has(alpha)) return byAlphaNum.get(alpha);
+
+        // 식수·얼음·파지 등은 정확/정규화 일치만 허용하고 부분 문자열 추정 매칭(예: 물 -> 물엿)은 방지
+        if (/^(식수|물|정제수|수돗물|얼음|파지)/.test(clean)) return null;
 
         // 토큰 순서 무관 매칭 (예: 'T45(포리쉐)' ↔ '포리쉐 T45', '냉동이스트(고당)' ↔ '하이룬델)고당냉동이스트')
         const tokens = extractRawItemTokens(clean);
