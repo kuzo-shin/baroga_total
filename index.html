@@ -196,7 +196,7 @@
                                 <span class="w-7 h-7 rounded-lg bg-amber-600 text-white flex items-center justify-center"><i data-lucide="clipboard-check" class="w-4 h-4"></i></span>
                                 <div>
                                     <h3 class="text-sm font-extrabold text-stone-900">생산시설 일일 원재료 사용 보고서 작성</h3>
-                                    <p class="text-[11px] text-stone-500">사용수량 입력 후 [일일 사용 보고 확정]을 누르면 현재고에서 소비기한이 빠른 로트부터 자동 차감됩니다 (소비기한 미입력 로트는 맨 마지막, 같은 소비기한은 발주일 순)</p>
+                                    <p class="text-[11px] text-stone-500">사용수량 입력 후 [일일 사용 보고 확정]을 누르면 현재고에서 먼저 발주한 로트부터 선입선출로 자동 차감됩니다 (같은 발주일이면 소비기한 빠른 순)</p>
                                 </div>
                             </div>
                             <div class="flex flex-wrap items-center gap-2">
@@ -1343,7 +1343,8 @@
         }
         function getAggregatedStockItemsForUsage() {
             const map = {};
-            const sortedLots = [...ordersData].sort((a, b) => (getOrderExpiryDate(a) || '9999-12-31').localeCompare(getOrderExpiryDate(b) || '9999-12-31') || String(a.date || '').localeCompare(String(b.date || '')));
+            // [R4 결정 2026-11-20] 발주일 순 선입선출(FIFO): 먼저 발주한 로트부터 차감, 같은 날은 소비기한 빠른 순
+            const sortedLots = [...ordersData].sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')) || (getOrderExpiryDate(a) || '9999-12-31').localeCompare(getOrderExpiryDate(b) || '9999-12-31') || String(a.id).localeCompare(String(b.id)));
             sortedLots.forEach(o => {
                 const rem = getOrderRemainQty(o); if (rem <= 0) return;
                 const key = `${o.colB || ''}||${o.colC || ''}`, { unitAmt, taxType } = getOrderLineAmounts(o), exp = getOrderExpiryDate(o);
@@ -1440,7 +1441,7 @@
             document.getElementById('kpi3Sub').textContent = `가용 품목 ${stockItems.length}종`;
             document.getElementById('kpi4Title').textContent = '당월 누적 소진액';
             document.getElementById('kpi4Value').textContent = formatCurrency(monthLogs.reduce((a, c) => a + (parseFloat(c.totalAmt) || 0), 0));
-            document.getElementById('kpi4Sub').textContent = '소비기한 빠른 순 자동 차감';
+            document.getElementById('kpi4Sub').textContent = '발주일 순 선입선출 자동 차감';
             document.getElementById('footerSummaryLabel').textContent = '현재 입력 중인 일일 사용 예정 합계';
             document.getElementById('footerCountBadge').textContent = `${pendingCnt}종 선택됨`;
             document.getElementById('footerSupplyTotal').textContent = formatCurrency(pendingAmt);
