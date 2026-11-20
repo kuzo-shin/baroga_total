@@ -1946,6 +1946,7 @@
     }
 
     function showToast(msg) {
+      if (typeof window.barogaToast === 'function') return window.barogaToast(msg); // [B] 공통 알림 사용
       const toast = document.getElementById('msi_toast');
       document.getElementById('msi_toastMsg').textContent = msg;
       toast.classList.remove('opacity-0');
