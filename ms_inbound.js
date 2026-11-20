@@ -7,7 +7,7 @@
     // ★ [팀원 전체 자동 동기화용 고정 URL 설정] ★
     // 발급받으신 Google Apps Script 웹앱 URL이 기본값으로 영구 탑재되었습니다.
     // 이제 다른 팀원들이 노션에 접속할 때 아무 설정 없이도 100% 자동으로 같은 데이터를 공유합니다!
-    const DEFAULT_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbzSnAs6JUJqwMqVWZdiskEPlf6jv5YRwBYRspriTLolFsmPHwqJUZNF3o8TjAWzZjVD/exec';
+    const DEFAULT_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbxT64_EgYAeUHQntHumeeoAnVnc05uuehhD09kCMUiQInfZDegdrY0FnFTEjzaJSaJf/exec';
     // =========================================================================
 
     // 로컬 스토리지 키 정의

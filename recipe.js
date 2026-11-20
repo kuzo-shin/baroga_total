@@ -3,7 +3,7 @@
 // 바로가 공장 통합 관리 시스템 - 레시피 전용 모듈 (recipe.js)
 // ============================================================================
 
-const BAROGA_DEFAULT_RECIPE_GAS_URL = "https://script.google.com/macros/s/AKfycbw9zwUi9b7sNkdu4IVqIy0386ZkPLFe4cwqiZIb0qTkLLdq0mFWr2aHQvANPF2VOS4paw/exec";
+const BAROGA_DEFAULT_RECIPE_GAS_URL = "https://script.google.com/macros/s/AKfycbycrRwFx0Ixcj8-xBY7m-IiowUqZ1ByKoqhn5x43IMYDXF1FlsF8tQmIbAaOz6SSbtdVg/exec";
 const LEGACY_DUMMY_RECIPE_URL_PART = "AKfycbxR8N2mP9vL4kQ7wT1yU5iO3pA6sD8fG0hJ2kL5zX9cV4bN7mM1qW6eR8tY";
 
 let collapsedSubRecipeNodes = new Set();

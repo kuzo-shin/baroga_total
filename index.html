@@ -1,4 +1,4 @@
-<!-- [VERSION: index.html v2.6 - 2026-11-20 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 스냅샷 분할 저장 · 샘플 레시피 제거)] -->
+<!-- [VERSION: index.html v2.6.1 - 2026-11-20 DB 주소 4종 새 배포로 교체 · 각 기기 저장 주소 일괄 초기화 / v2.6 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 스냅샷 분할 저장 · 샘플 레시피 제거)] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -39,7 +39,7 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-base sm:text-lg font-extrabold tracking-tight text-stone-900">바로가 공장 통합 관리 시스템</h1>
-                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.6.0</span>
+                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.6.1</span>
                     </div>
                     <p class="text-xs text-stone-500 hidden sm:block">원재료 발주/재고 · 엠즈 입고/회송 · 레시피 배합비 · 제품단가 출고마진 통합 관리</p>
                 </div>
@@ -481,9 +481,20 @@
     </div>
     <div id="toastContainer" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
     <script>
-        const DEFAULT_GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzY2ycdFr7UMpNwOL4XshXx2l8pk47xR1U2I79fiagUbv3WMWEq48nAqO5jl4dGp_QP/exec";
-        const DEFAULT_RECIPE_GAS_URL = "https://script.google.com/macros/s/AKfycbw9zwUi9b7sNkdu4IVqIy0386ZkPLFe4cwqiZIb0qTkLLdq0mFWr2aHQvANPF2VOS4paw/exec";
+        const DEFAULT_GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwDZDxhGuHRXobrud2_FaMeuIEXdXN-wdKn8MHxk2pyEMGxLTeXKD_uBokhTLw_Yfhc/exec";
+        const DEFAULT_RECIPE_GAS_URL = "https://script.google.com/macros/s/AKfycbycrRwFx0Ixcj8-xBY7m-IiowUqZ1ByKoqhn5x43IMYDXF1FlsF8tQmIbAaOz6SSbtdVg/exec";
         const GAS_URL_STORAGE_KEYS = ['baroga_gas_url', 'baroga_gas_webapp_url', 'gasWebAppUrl', 'GOOGLE_SHEET_WEBAPP_URL'];
+        // [DB 주소 일괄 전환 2026-11-20] 각 기기 브라우저에 저장돼 있던 예전 DB 주소를 한 번 지워서
+        // 모든 자리(PC·모바일)가 위의 새 기본 주소를 바라보도록 함. 이후 DB 설정 창에서 바꾼 주소는 그대로 유지됨.
+        const DB_URL_CONFIG_VERSION = '2026-11-20-v2-deploy';
+        (function migrateDbUrlsToNewDefaults() {
+            try {
+                if (localStorage.getItem('baroga_db_url_config_version') === DB_URL_CONFIG_VERSION) return;
+                [...GAS_URL_STORAGE_KEYS, 'baroga_recipe_gas_url', 'ms_inbound_cloud_url_v3', 'baroga_product_price_gas_url']
+                    .forEach(k => localStorage.removeItem(k));
+                localStorage.setItem('baroga_db_url_config_version', DB_URL_CONFIG_VERSION);
+            } catch (e) {}
+        })();
         const RECIPE_PROCESS_PRESETS = ['반죽', '탕종', '르방', '폴리쉬', '토핑', '크림', '필링', '앙금', '시럽', '기타'];
         function loadSavedGasUrl() {
             try {

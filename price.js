@@ -1301,7 +1301,7 @@
     }
 
     const DEFAULT_PRICE_GAS_WEB_APP_URL =
-      'https://script.google.com/macros/s/AKfycbyDgXS0bpuOs-VA4BgiTyRBnB2KsXQXd43-BKA8bIsjWB7KcKDQ8v7kR4r1e_b3o9Q-Pw/exec';
+      'https://script.google.com/macros/s/AKfycbw4zdcL2yjESq8G2_889Oz3pzdAuYJm-DjzEwMNUp4t0NjuRVcWaSnMdxTYD_9RrciZ_Q/exec';
     const LEGACY_PRICE_GAS_URL_PART = 'AKfycbyxvi_Xp6HasU8GA1t5Av6CDqeM4pAUkB8Y7YSxUo_c2hTRvxNxWhNWEMBwWBCX2lnDIg';
     const PRICE_GAS_URL_STORAGE_KEY = 'baroga_product_price_gas_url';
 
