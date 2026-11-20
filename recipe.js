@@ -1878,13 +1878,8 @@ function promptIngredientUnitPrice(idx) {
     const lookup = buildRawCatalogLookupMaps();
     const matched = lookup.byKey.get(ig.rawKey) || lookup.byName.get(String(ig.item || '').trim());
 
-    const guideMsg = matched
-        ? `[${ig.item}] 현재 원재료 페이지 발주단가(${matched.spec} · ${formatCurrency(matched.unitPrice)})와 연동 가능\n기준 규격을 입력하세요 (빈칸 입력 시 원재료DB 자동연동 복원):`
-        : `[${ig.item}] 기준 구매규격을 입력하세요 (예: 25kg, 20kg, 15kg, 1kg):`;
-
-    const newSpec = prompt(guideMsg, ig.spec || '1kg');
-    if (newSpec === null) return;
-    if (newSpec.trim() === '' && matched) {
+    // [A3] 브라우저 기본 입력창 2번 → 한 화면에서 규격·단가를 함께 입력하고 값 검사
+    const restoreRawDb = () => {
         ig.priceSource = 'RAW_DB';
         ig.rawKey = matched.rawKey;
         ig.itemCode = matched.itemCode;
@@ -1893,17 +1888,33 @@ function promptIngredientUnitPrice(idx) {
         ig.unitPrice = matched.unitPrice;
         persistRecipeChange();
         renderRecipeWorkspace();
-        return showToast('원재료 페이지 최신 단가 자동연동으로 복원되었습니다.', 'success');
-    }
-
-    const newPrice = prompt(`[${ig.item}] (${newSpec}) 구매단가(원)를 입력하세요:`, String(ig.unitPrice || 0));
-    if (newPrice === null) return;
-    ig.spec = newSpec.trim() || '1kg';
-    ig.specGrams = parseSpecToGrams(ig.spec);
-    ig.unitPrice = parseNumericCell(newPrice);
-    ig.priceSource = 'MANUAL';
-    persistRecipeChange();
-    renderRecipeWorkspace();
+        showToast('원재료 페이지 최신 단가 자동연동으로 복원되었습니다.', 'success');
+    };
+    openFormModal({
+        title: `${ig.item} · 단가 직접 입력`,
+        desc: matched
+            ? `원재료 페이지 최근 발주: ${matched.spec} · ${formatCurrency(matched.unitPrice)}\n직접 입력하면 이 레시피에서는 원재료 단가 자동연동이 해제됩니다.`
+            : '원재료 페이지에서 같은 품목을 찾지 못했습니다. 구매 규격과 그 규격의 구매단가를 입력하세요.',
+        fields: [
+            { key: 'spec', label: '구매 규격', value: ig.spec || '', placeholder: '예: 20kg, 500g, 1L, 1box(10kg)', hint: '무게·용량(kg·g·L·ml)이 들어가야 g당 원가를 계산할 수 있습니다.' },
+            { key: 'price', label: '이 규격의 구매단가 (원, 부가세 제외)', value: ig.unitPrice ? String(ig.unitPrice) : '', placeholder: '예: 24700', numeric: true }
+        ],
+        submitLabel: '적용',
+        extra: matched ? { label: '원재료 자동연동으로 복원', onClick: restoreRawDb } : null,
+        onSubmit: (v) => {
+            if (!v.spec) return '구매 규격을 입력하세요.';
+            if (!isSpecWeightParseable(v.spec)) return `"${v.spec}"에서 무게·용량을 읽을 수 없습니다. 예: 20kg, 500g, 1L, 1box(10kg)`;
+            const price = parseNumericCell(v.price);
+            if (!/^[\d,]+(\.\d+)?$/.test(v.price)) return '구매단가를 숫자로 입력하세요. (물처럼 무료면 0)';
+            ig.spec = v.spec;
+            ig.specGrams = parseSpecToGrams(ig.spec);
+            ig.unitPrice = price;
+            ig.priceSource = 'MANUAL';
+            persistRecipeChange();
+            renderRecipeWorkspace();
+            return null;
+        }
+    });
 }
 
 function removeRecipeIngredient(idx) {
@@ -1992,15 +2003,27 @@ function promptPackagingPrice(idx) {
     const rc = recipesData.find(r => r.id === selectedRecipeId);
     if (!rc || !rc.packagingList[idx]) return;
     const pk = rc.packagingList[idx];
-    const p = prompt(`[${pk.name}] 구매단가(원)를 입력하세요:`, String(pk.purchasePrice || 0));
-    if (p === null) return;
-    const s = prompt(`[${pk.name}] 구매규격 내 입수량(매/개)을 입력하세요 (1매 단가일 경우 1 입력):`, String(pk.specQty || 1));
-    if (s === null) return;
-    pk.purchasePrice = parseNumericCell(p);
-    pk.specQty = Math.max(1, parseNumericCell(s));
-    pk.priceSource = 'MANUAL';
-    persistRecipeChange();
-    renderRecipeWorkspace();
+    // [A3] 브라우저 기본 입력창 2번 → 한 화면 입력 + 값 검사
+    openFormModal({
+        title: `${pk.name} · 포장재 단가 직접 입력`,
+        desc: '구매단가와 그 구매 단위에 든 수량을 입력하면 1개 단가로 나눠 계산합니다.',
+        fields: [
+            { key: 'price', label: '구매단가 (원, 부가세 제외)', value: pk.purchasePrice ? String(pk.purchasePrice) : '', placeholder: '예: 7920', numeric: true },
+            { key: 'qty', label: '구매 단위 안의 입수량 (매·개)', value: String(pk.specQty || 1), placeholder: '1개 단가면 1', numeric: true, hint: '예: 500매 1박스를 7,920원에 사면 500' }
+        ],
+        submitLabel: '적용',
+        onSubmit: (v) => {
+            const price = parseNumericCell(v.price), qty = parseNumericCell(v.qty);
+            if (!/^[\d,]+(\.\d+)?$/.test(v.price)) return '구매단가를 숫자로 입력하세요.';
+            if (!/^[\d,]+(\.\d+)?$/.test(v.qty) || !(qty >= 1)) return '입수량은 1 이상의 숫자로 입력하세요.';
+            pk.purchasePrice = price;
+            pk.specQty = qty;
+            pk.priceSource = 'MANUAL';
+            persistRecipeChange();
+            renderRecipeWorkspace();
+            return null;
+        }
+    });
 }
 
 function removeRecipePackaging(idx) {
@@ -2362,13 +2385,10 @@ function persistRecipeChange() {
     if (typeof window.refreshProductPriceRecipeLinks === 'function') window.refreshProductPriceRecipeLinks(); // [3단계 Q4] 제품단가 재료비 실시간 반영
 }
 
-window.addEventListener('beforeunload', (e) => {
-    if (recipeSaveTimer || recipeIsSaving || recipeSavePending) {
-        e.preventDefault();
-        e.returnValue = '레시피 저장이 아직 끝나지 않았습니다.';
-        return e.returnValue;
-    }
-});
+// [A1] 창 닫기 경고는 index.html 공통 처리기에 등록 (저장 대기·저장 중·저장 실패로 남은 변경 포함)
+window.barogaUnsavedCheckers = window.barogaUnsavedCheckers || {};
+window.barogaUnsavedCheckers.recipe = () => Boolean(recipeSaveTimer || recipeIsSaving || recipeSavePending || readRecipeDirty());
+const recipeNowHm = () => (typeof window.barogaNowHm === 'function' ? window.barogaNowHm() : new Date().toTimeString().slice(0, 5));
 
 function mapRecipeRowFromDb(r, lookup) {
     let parsedJson = {};
@@ -2401,7 +2421,7 @@ async function syncRecipesFromGoogleSheet(showMessage = false) {
         if (showMessage) showToast('레시피 저장이 진행 중입니다. 저장이 끝난 뒤 다시 새로고침해 주세요.', 'error');
         return;
     }
-    updateRecipeDbStatusUI('syncing', '동기화중...');
+    updateRecipeDbStatusUI('syncing', '불러오는 중...');
     try {
         const json = await barogaApi(recipeGasWebAppUrl, { action: 'getAll' }, 20000);
         if (json && (json.ok === false || json.status === 'error')) throw new Error(json.error || json.message || '서버 오류');
@@ -2450,7 +2470,7 @@ async function syncRecipesFromGoogleSheet(showMessage = false) {
         recipeDbBlockReason = revision === null ? '레시피 GAS 스크립트가 구버전입니다 (v2.0 업데이트 필요)' : '';
         if (activeMasterDomain === 'RECIPE') renderRecipeWorkspace();
         if (revision === null) updateRecipeDbStatusUI('error', '저장 중지 (GAS 업데이트 필요)');
-        else updateRecipeDbStatusUI('connected', `DB 연동됨 (${recipesData.length}종)`);
+        else updateRecipeDbStatusUI('connected', `불러옴 ${recipeNowHm()} · ${recipesData.length}종`);
     } catch (e) {
         if (e && e.unauthorized) {
             recipeDbBlockReason = '접속 코드가 필요합니다';
@@ -2479,7 +2499,7 @@ async function pushRecipesToGoogleSheet(silent = false) {
     }
     if (recipeIsSaving) { recipeSavePending = true; return; }
     recipeIsSaving = true;
-    updateRecipeDbStatusUI('syncing', '저장중...');
+    updateRecipeDbStatusUI('syncing', '저장 중...');
     const sentSeq = recipeChangeSeq;
     let ok = false;
     try {
@@ -2518,7 +2538,7 @@ async function pushRecipesToGoogleSheet(silent = false) {
             ok = true;
             if (recipeChangeSeq === sentSeq) clearRecipeDirty();
             else writeRecipeDirty(recipeDbRevision);
-            updateRecipeDbStatusUI('connected', `DB 연동됨 (${recipesData.length}종)`);
+            updateRecipeDbStatusUI('connected', `저장됨 ${recipeNowHm()} · ${recipesData.length}종`);
             if (!silent) showToast('레시피 DB에 저장되었습니다.', 'success');
         } else if (json && json.conflict) {
             recipeDbLoaded = false;

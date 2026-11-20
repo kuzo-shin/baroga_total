@@ -1443,6 +1443,18 @@
       const priceDbBlockReasonRef = useRef('DB를 아직 불러오지 못했습니다');
       const markPriceError = (label) => { setSyncErrorLabel(label); setSyncStatus('ERROR'); };
       const [lastSyncedAt, setLastSyncedAt] = useState(null);
+      // [A1] 자동 저장: 불러온/저장한 시점의 내용과 달라지면 1.5초 뒤 자동 저장
+      const PRICE_AUTOSAVE_DELAY_MS = 1500;
+      const [isPriceDirty, setIsPriceDirty] = useState(false);
+      const [priceSyncedKind, setPriceSyncedKind] = useState('');   // '저장됨' | '불러옴'
+      const priceBaselineJsonRef = useRef(null);
+      const priceAutosaveTimerRef = useRef(null);
+      const priceSavingRef = useRef(false);
+      const priceResaveRef = useRef(false);
+      const priceDirtyRef = useRef(false);
+      const priceFailedJsonRef = useRef(null); // 저장 실패한 내용: 같은 내용으로 자동 재시도하지 않음
+      const [priceLoadTick, setPriceLoadTick] = useState(0);
+      const nowHm = () => (typeof window.barogaNowHm === 'function' ? window.barogaNowHm() : new Date().toTimeString().slice(0, 5));
 
       const [selectedProductIds, setSelectedProductIds] = useState({
         PIE: 'pie-croissant',
@@ -1526,6 +1538,9 @@
           return;
         }
 
+        if (priceSavingRef.current) { priceResaveRef.current = true; return; }
+        priceSavingRef.current = true;
+        if (priceAutosaveTimerRef.current) { clearTimeout(priceAutosaveTimerRef.current); priceAutosaveTimerRef.current = null; }
         setSyncStatus('SAVING');
         const corePayload = {
           settings,
@@ -1533,6 +1548,8 @@
           pkCostRows,
           msUpdatedDate,
         };
+        const sentJson = JSON.stringify(corePayload);
+        let saveOk = false;
         try {
           const parsed = await priceApi(targetUrl, {
             action: 'replaceAll',
@@ -1541,8 +1558,12 @@
           }, 30000);
           if (parsed && parsed.ok === true && typeof parsed.revision === 'number') {
             priceDbRevisionRef.current = parsed.revision;
+            saveOk = true;
+            priceBaselineJsonRef.current = sentJson;
+            priceFailedJsonRef.current = null;
             setSyncStatus('SUCCESS');
-            setLastSyncedAt(parsed.updatedAt || new Date().toLocaleTimeString('ko-KR'));
+            setPriceSyncedKind('저장됨');
+            setLastSyncedAt(nowHm());
             if (!silent) showToast('제품단가 구글 스프레드시트 DB에 저장되었습니다!');
             if (parsed.warning) showToast(`저장은 완료됐지만 ${parsed.warning}`);
           } else if (parsed && parsed.conflict) {
@@ -1563,6 +1584,12 @@
           showToast(isTimeout
             ? '저장 응답이 없습니다(시간 초과). ↻ 불러오기로 실제 저장 여부를 확인해 주세요.'
             : `구글 시트 저장 실패: ${err && err.message ? err.message : err} — 변경 내용은 이 기기에만 있습니다.`);
+        } finally {
+          priceSavingRef.current = false;
+          if (!saveOk) priceFailedJsonRef.current = sentJson;
+          // 저장 중에 또 바뀐 내용이 있으면 이어서 저장 (최신 화면 값은 아래 자동 저장 효과가 다시 판단)
+          priceResaveRef.current = false;
+          setPriceRecheckTick((t) => t + 1);
         }
       };
 
@@ -1589,7 +1616,8 @@
             priceDbBlockReasonRef.current = revision === null ? '제품단가 GAS 스크립트가 구버전입니다 (v2.0 업데이트 필요)' : '';
             if (revision === null) markPriceError('저장 중지 (GAS 업데이트 필요)');
             else setSyncStatus('IDLE');
-            showToast('제품단가 DB가 비어 있습니다. 지금 화면의 데이터를 DB에 저장하려면 확인 후 [구글시트 저장]을 누르세요.');
+            priceBaselineJsonRef.current = null; // 빈 DB: 자동 저장하지 않음 (수동 저장 필요)
+            showToast('제품단가 DB가 비어 있습니다. 지금 화면의 데이터를 DB에 저장하려면 확인 후 [DB 저장]을 누르세요.');
             return;
           }
 
@@ -1645,12 +1673,14 @@
             priceDbLoadedRef.current = true;
             priceDbRevisionRef.current = revision;
             priceDbBlockReasonRef.current = revision === null ? '제품단가 GAS 스크립트가 구버전입니다 (v2.0 업데이트 필요)' : '';
-            setLastSyncedAt(result.updatedAt || new Date().toLocaleTimeString('ko-KR'));
+            setLastSyncedAt(nowHm());
             if (revision === null) {
               markPriceError('저장 중지 (GAS 업데이트 필요)');
             } else {
               setSyncStatus('SUCCESS');
             }
+            setPriceSyncedKind('불러옴');
+            setPriceLoadTick((t) => t + 1);
             if (!silentOnEmpty) {
               showToast('제품단가 구글 스프레드시트에서 최신 DB를 불러왔습니다!');
             }
@@ -1697,6 +1727,37 @@
       useEffect(() => {
         window.reloadProductPriceDb = () => handleLoadFromGoogleSheet(true, priceGasUrl);
       });
+
+      // [A1] 불러온 직후의 내용을 기준점으로 기록
+      useEffect(() => {
+        if (priceLoadTick === 0) return;
+        priceBaselineJsonRef.current = JSON.stringify({ settings, categoryDbs, pkCostRows, msUpdatedDate });
+        priceDirtyRef.current = false;
+        priceFailedJsonRef.current = null;
+        setIsPriceDirty(false);
+      }, [priceLoadTick]);
+
+      // [A1] 내용이 기준점과 달라지면 자동 저장 예약
+      const [priceRecheckTick, setPriceRecheckTick] = useState(0);
+      useEffect(() => {
+        if (!priceDbLoadedRef.current || priceBaselineJsonRef.current === null) return;
+        if (priceAutosaveTimerRef.current) clearTimeout(priceAutosaveTimerRef.current);
+        const nowJson = JSON.stringify({ settings, categoryDbs, pkCostRows, msUpdatedDate });
+        const dirty = nowJson !== priceBaselineJsonRef.current;
+        priceDirtyRef.current = dirty;
+        setIsPriceDirty(dirty);
+        if (!dirty || priceSavingRef.current || nowJson === priceFailedJsonRef.current) return;
+        priceAutosaveTimerRef.current = setTimeout(() => {
+          priceAutosaveTimerRef.current = null;
+          handleSaveToGoogleSheet(null, true);
+        }, PRICE_AUTOSAVE_DELAY_MS);
+      }, [settings, categoryDbs, pkCostRows, msUpdatedDate, priceRecheckTick]);
+
+      // [A1] 창 닫기 경고 (index.html 공통 처리기에 등록)
+      useEffect(() => {
+        window.barogaUnsavedCheckers = window.barogaUnsavedCheckers || {};
+        window.barogaUnsavedCheckers.price = () => Boolean(priceDirtyRef.current || priceSavingRef.current || priceAutosaveTimerRef.current);
+      }, []);
 
       const calc = useMemo(() => {
         const avgMonthlyWorkDays = Number(settings.avgMonthlyWorkDays) || 0;
@@ -3531,12 +3592,14 @@
                             : 'bg-emerald-500'
                       }` }),
                       React.createElement("span", null, syncStatus === 'SAVING'
-                        ? '저장중...'
+                        ? '저장 중...'
                         : syncStatus === 'LOADING'
-                          ? '동기화중...'
+                          ? '불러오는 중...'
                           : syncStatus === 'ERROR'
                             ? syncErrorLabel
-                            : `DB 연동됨 (${pkCostRows.length}종)`),
+                            : isPriceDirty
+                              ? '저장 대기...'
+                              : (lastSyncedAt && priceSyncedKind ? `${priceSyncedKind} ${lastSyncedAt} · ${pkCostRows.length}종` : `DB 연동됨 (${pkCostRows.length}종)`)),
                       React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", className: "w-3.5 h-3.5 ml-0.5 opacity-75" },
                         React.createElement("path", { d: "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" }),
                         React.createElement("circle", { cx: "12", cy: "12", r: "3" })
