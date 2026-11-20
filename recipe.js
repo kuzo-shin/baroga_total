@@ -694,29 +694,29 @@ function renderRecipeWorkspace() {
                     <div class="px-3 py-2.5 bg-stone-100 border-b border-stone-300 flex flex-wrap items-center justify-between gap-1.5 shrink-0">
                         <div class="flex items-center gap-1.5">
                             <h3 class="text-xs sm:text-sm font-black text-stone-900">제품내역</h3>
-                            <span id="recipeCountSub" class="px-1.5 py-0.5 rounded bg-stone-200 text-stone-700 text-[10px] font-extrabold">0종</span>
+                            <span id="recipeCountSub" class="px-1.5 py-0.5 rounded bg-stone-200 text-stone-700 text-xs font-extrabold">0종</span>
                         </div>
                         <div class="flex items-center gap-1">
-                            <button type="button" onclick="createNewRecipeItem('PRODUCT')" class="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-amber-600 hover:bg-amber-700 text-white cursor-pointer">+ 완제품</button>
-                            <button type="button" onclick="createNewRecipeItem('SUB')" class="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-rose-700 hover:bg-rose-800 text-white cursor-pointer" title="다른 제품에 투입 가능한 반제품·충전물 레시피">+ 반제품</button>
-                            <button type="button" onclick="duplicateSelectedRecipe()" class="px-2 py-1 rounded-lg text-[11px] font-bold bg-white border border-stone-300 text-stone-700 hover:bg-stone-50 cursor-pointer">복제</button>
-                            <button type="button" onclick="deleteSelectedRecipe()" class="px-2 py-1 rounded-lg text-[11px] font-bold bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 cursor-pointer">삭제</button>
+                            <button type="button" onclick="createNewRecipeItem('PRODUCT')" class="px-2 py-1 rounded-lg text-xs font-extrabold bg-amber-600 hover:bg-amber-700 text-white cursor-pointer">+ 완제품</button>
+                            <button type="button" onclick="createNewRecipeItem('SUB')" class="px-2 py-1 rounded-lg text-xs font-extrabold bg-rose-700 hover:bg-rose-800 text-white cursor-pointer" title="다른 제품에 투입 가능한 반제품·충전물 레시피">+ 반제품</button>
+                            <button type="button" onclick="duplicateSelectedRecipe()" class="px-2 py-1 rounded-lg text-xs font-bold bg-white border border-stone-300 text-stone-700 hover:bg-stone-50 cursor-pointer">복제</button>
+                            <button type="button" onclick="deleteSelectedRecipe()" class="px-2 py-1 rounded-lg text-xs font-bold bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 cursor-pointer">삭제</button>
                         </div>
                     </div>
                     <div class="p-2 border-b border-stone-200 bg-stone-50/70 flex flex-col gap-1.5 shrink-0">
                         <div class="grid grid-cols-3 gap-1">
-                            <button type="button" onclick="setRecipeCategoryFilter('ALL')" id="rcCat_ALL" class="py-1 rounded text-[11px] font-extrabold bg-stone-900 text-white cursor-pointer">전체</button>
-                            <button type="button" onclick="setRecipeCategoryFilter('PRODUCT')" id="rcCat_PRODUCT" class="py-1 rounded text-[11px] font-bold bg-white border border-stone-200 text-stone-600 cursor-pointer">완제품</button>
-                            <button type="button" onclick="setRecipeCategoryFilter('SUB')" id="rcCat_SUB" class="py-1 rounded text-[11px] font-bold bg-white border border-stone-200 text-rose-700 cursor-pointer">반제품·충전물</button>
+                            <button type="button" onclick="setRecipeCategoryFilter('ALL')" id="rcCat_ALL" class="py-1 rounded text-xs font-extrabold bg-stone-900 text-white cursor-pointer">전체</button>
+                            <button type="button" onclick="setRecipeCategoryFilter('PRODUCT')" id="rcCat_PRODUCT" class="py-1 rounded text-xs font-bold bg-white border border-stone-200 text-stone-600 cursor-pointer">완제품</button>
+                            <button type="button" onclick="setRecipeCategoryFilter('SUB')" id="rcCat_SUB" class="py-1 rounded text-xs font-bold bg-white border border-stone-200 text-rose-700 cursor-pointer">반제품·충전물</button>
                         </div>
                         <div class="flex items-center gap-1">
                             <input type="text" id="recipeListSearchInput" oninput="renderRecipeSidebarList()" placeholder="품목코드 · 품목명 검색..." class="flex-1 min-w-0 text-xs border border-stone-300 rounded-lg px-2.5 py-1 bg-white focus:outline-none focus:border-amber-500">
                         </div>
                     </div>
                     <div id="recipeSidebarList" class="flex-1 min-h-0 overflow-y-auto max-h-[420px] xl:max-h-none"></div>
-                    <div class="px-3 py-1.5 bg-stone-50 border-t border-stone-200 text-[11px] text-stone-500 flex items-center justify-between shrink-0">
+                    <div class="px-3 py-1.5 bg-stone-50 border-t border-stone-200 text-xs text-stone-500 flex items-center justify-between shrink-0">
                         <span>클릭하여 배합비 조회 · 편집</span>
-                        <span class="font-mono text-[10.5px] text-stone-400">스크롤 이동 ↕</span>
+                        <span class="font-mono text-xs text-stone-400">스크롤 이동 ↕</span>
                     </div>
                 </div>
 
@@ -735,7 +735,7 @@ function renderRecipeWorkspace() {
                             <i data-lucide="search" class="w-4 h-4 text-amber-400"></i>
                             <div>
                                 <h3 class="text-sm font-extrabold">발주 원재료 검색 · 배합비 투입</h3>
-                                <p class="text-[11px] text-stone-400">원재료명·거래처·규격·초성(예: ㄱㄹㅂ, ㅇㅋㅂㅌ)으로 검색 후 즉시 투입하거나 여러 개를 체크해 일괄 투입하세요</p>
+                                <p class="text-xs text-stone-400">원재료명·거래처·규격·초성(예: ㄱㄹㅂ, ㅇㅋㅂㅌ)으로 검색 후 즉시 투입하거나 여러 개를 체크해 일괄 투입하세요</p>
                             </div>
                         </div>
                         <button type="button" onclick="closeRawMaterialPickerModal()" class="text-stone-400 hover:text-white p-1 cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -752,8 +752,8 @@ function renderRecipeWorkspace() {
                             <option value="ALL">전체 거래처</option>
                         </select>
                         <div class="inline-flex rounded-xl border border-stone-300 bg-white p-0.5">
-                            <button type="button" id="rawScopeBtn_RAW" onclick="setRawPickerScope('RAW')" class="px-2.5 py-1 rounded-lg font-extrabold text-[11px] bg-stone-900 text-white cursor-pointer">원재료만</button>
-                            <button type="button" id="rawScopeBtn_ALL" onclick="setRawPickerScope('ALL')" class="px-2.5 py-1 rounded-lg font-bold text-[11px] text-stone-600 cursor-pointer">전체품목</button>
+                            <button type="button" id="rawScopeBtn_RAW" onclick="setRawPickerScope('RAW')" class="px-2.5 py-1 rounded-lg font-extrabold text-xs bg-stone-900 text-white cursor-pointer">원재료만</button>
+                            <button type="button" id="rawScopeBtn_ALL" onclick="setRawPickerScope('ALL')" class="px-2.5 py-1 rounded-lg font-bold text-xs text-stone-600 cursor-pointer">전체품목</button>
                         </div>
                     </div>
 
@@ -786,7 +786,7 @@ function renderRecipeWorkspace() {
 
                     <!-- 하단 액션 바 -->
                     <div class="px-4 py-2.5 bg-stone-100 border-t border-stone-300 flex flex-wrap items-center justify-between gap-2">
-                        <div class="flex items-center gap-2 text-[11px] text-stone-600">
+                        <div class="flex items-center gap-2 text-xs text-stone-600">
                             <span id="rawPickerResultSummary" class="font-bold text-stone-800">총 0종</span>
                             <span>· 행 클릭 시 다중 선택되며, 우측 <strong>[+ 투입]</strong> 클릭 시 1건 즉시 투입 후 창이 유지됩니다.</span>
                         </div>
@@ -812,8 +812,8 @@ function setRecipeCategoryFilter(cat) {
         const btn = document.getElementById(`rcCat_${c}`);
         if (!btn) return;
         btn.className = c === cat
-            ? 'py-1 rounded text-[11px] font-extrabold bg-stone-900 text-white cursor-pointer'
-            : `py-1 rounded text-[11px] font-bold bg-white border border-stone-200 ${c === 'SUB' ? 'text-rose-700' : 'text-stone-600'} cursor-pointer`;
+            ? 'py-1 rounded text-xs font-extrabold bg-stone-900 text-white cursor-pointer'
+            : `py-1 rounded text-xs font-bold bg-white border border-stone-200 ${c === 'SUB' ? 'text-rose-700' : 'text-stone-600'} cursor-pointer`;
     });
     renderRecipeSidebarList();
 }
@@ -861,7 +861,7 @@ function renderRecipeSidebarList() {
                     const isSub = r.recipeType === 'SUB';
                     return `
                         <tr onclick="selectRecipeItem('${escapeHtml(r.id)}')" class="cursor-pointer transition ${active ? 'bg-amber-100/80 font-extrabold' : 'hover:bg-stone-50'}">
-                            <td class="fd-td py-1.5 px-2 text-center font-mono text-[11px] ${dupCodes.has(String(r.productCode || '').trim()) ? 'text-rose-700 font-extrabold bg-rose-50' : 'text-stone-700'} truncate" title="${dupCodes.has(String(r.productCode || '').trim()) ? '품목코드 중복! 엠즈·제품단가 연동이 잘못될 수 있습니다' : ''}">${dupCodes.has(String(r.productCode || '').trim()) ? '⚠' : ''}${escapeHtml(r.productCode)}</td>
+                            <td class="fd-td py-1.5 px-2 text-center font-mono text-xs ${dupCodes.has(String(r.productCode || '').trim()) ? 'text-rose-700 font-extrabold bg-rose-50' : 'text-stone-700'} truncate" title="${dupCodes.has(String(r.productCode || '').trim()) ? '품목코드 중복! 엠즈·제품단가 연동이 잘못될 수 있습니다' : ''}">${dupCodes.has(String(r.productCode || '').trim()) ? '⚠' : ''}${escapeHtml(r.productCode)}</td>
                             <td class="fd-td py-1.5 px-2.5 ${isSub ? 'text-rose-700 font-bold' : 'text-stone-900 font-semibold'} truncate" title="${escapeHtml(r.productName)}">
                                 ${escapeHtml(r.productName)}
                             </td>
@@ -897,7 +897,7 @@ function renderNestedSubRecipeRowsHtml(subRc, parentScale, depth = 1, visited = 
                 html += `
                     <tr class="bg-rose-50/30 hover:bg-rose-50/60">
                         <td class="fd-td py-1 px-2 font-extrabold text-rose-600 truncate" style="padding-left:${indentPx + 8}px" title="${escapeHtml(entry.subRc.productName)} (내부코드: ${escapeHtml(entry.subRc.productCode)})">
-                            <button type="button" onclick="toggleSubNodeCollapse('${escapeHtml(nodeKey)}')" class="mr-1 text-[10px] px-1 rounded border border-rose-200 bg-white text-rose-700 cursor-pointer">${isCollapsed ? '+' : '-'}</button>
+                            <button type="button" onclick="toggleSubNodeCollapse('${escapeHtml(nodeKey)}')" class="mr-1 text-xs px-1 rounded border border-rose-200 bg-white text-rose-700 cursor-pointer">${isCollapsed ? '+' : '-'}</button>
                             <span onclick="selectRecipeItem('${escapeHtml(entry.subRc.id)}')" class="underline decoration-dotted cursor-pointer">${escapeHtml(entry.subRc.productName)}</span>
                         </td>
                         <td class="fd-td py-1 px-1 text-center text-stone-600 truncate">${escapeHtml(ig.origin || '')}</td>
@@ -906,7 +906,7 @@ function renderNestedSubRecipeRowsHtml(subRc, parentScale, depth = 1, visited = 
                         <td class="fd-td py-1 px-1 text-right text-stone-700">${fmtDec(pct, 1)}</td>
                         <td class="fd-td py-1 px-1 text-center text-stone-500">${ig.seq || 0}</td>
                         <td class="fd-td py-1 px-1.5 text-right font-bold text-stone-900">${fmtDec(scaledCost, 1)}</td>
-                        <td class="fd-td py-1 px-1 text-center text-[10px] text-stone-400">-</td>
+                        <td class="fd-td py-1 px-1 text-center text-xs text-stone-400">-</td>
                     </tr>
                 `;
                 if (!isCollapsed) {
@@ -984,13 +984,13 @@ function renderRecipeDetailPanel() {
                     <tr class="bg-rose-50/40 hover:bg-rose-50/80">
                         <td class="fd-td py-1.5 px-2 font-extrabold text-rose-600">
                             <div class="flex items-center gap-1 min-w-0">
-                                <button type="button" onclick="toggleSubNodeCollapse('${escapeHtml(nodeKey)}')" class="text-[10px] w-4 h-4 inline-flex items-center justify-center rounded border border-rose-300 bg-white text-rose-700 cursor-pointer shrink-0">${isCollapsed ? '+' : '-'}</button>
+                                <button type="button" onclick="toggleSubNodeCollapse('${escapeHtml(nodeKey)}')" class="text-xs w-4 h-4 inline-flex items-center justify-center rounded border border-rose-300 bg-white text-rose-700 cursor-pointer shrink-0">${isCollapsed ? '+' : '-'}</button>
                                 <span onclick="selectRecipeItem('${escapeHtml(entry.subRc.id)}')" class="underline decoration-dotted cursor-pointer truncate" title="${escapeHtml(entry.subRc.productName)} (클릭 시 해당 반제품 레시피로 이동)">${escapeHtml(entry.subRc.productName)}</span>
                             </div>
                         </td>
-                        <td class="fd-td py-1 px-1 text-center"><input type="text" value="${escapeHtml(ig.origin || '')}" onchange="updateRecipeIngredient(${idx}, 'origin', this.value)" class="w-full min-w-0 text-center bg-transparent focus:bg-white focus:outline-amber-500 text-[11px]"></td>
+                        <td class="fd-td py-1 px-1 text-center"><input type="text" value="${escapeHtml(ig.origin || '')}" onchange="updateRecipeIngredient(${idx}, 'origin', this.value)" class="w-full min-w-0 text-center bg-transparent focus:bg-white focus:outline-amber-500 text-xs"></td>
                         <td class="fd-td py-1 px-0.5 text-center">
-                            <select onchange="updateRecipeIngredient(${idx}, 'unit', this.value)" class="w-full bg-transparent font-bold text-[11px] text-center text-stone-800 focus:outline-none">
+                            <select onchange="updateRecipeIngredient(${idx}, 'unit', this.value)" class="w-full bg-transparent font-bold text-xs text-center text-stone-800 focus:outline-none">
                                 <option value="EA" ${ig.unit === 'EA' ? 'selected' : ''}>EA</option>
                                 <option value="G" ${ig.unit === 'G' ? 'selected' : ''}>G</option>
                             </select>
@@ -1016,7 +1016,7 @@ function renderRecipeDetailPanel() {
                 const isLinked = Boolean(entry.linkedRaw && ig.priceSource !== 'MANUAL');
                 const unitUpperStr = String(ig.unit || 'G').toUpperCase();
                 const specWarn = unitUpperStr !== 'EA' && ig.priceSource !== 'MANUAL' && (parseFloat(ig.unitPrice) || 0) > 0 && !isSpecWeightParseable(ig.spec); // 단가 0원(물·파지 등)은 원가 영향 없어 경고 안 함
-                const specWarnHtml = specWarn ? `<span class="shrink-0 px-1 rounded bg-rose-100 text-rose-700 text-[9.5px] font-extrabold" title="규격 '${escapeHtml(ig.spec || '없음')}'에서 중량을 읽지 못해 1kg(1,000g)으로 가정해 계산 중입니다. 원재료 발주서 규격을 '20kg', '500g×10'처럼 입력하거나 재료원가를 눌러 직접 설정하세요.">⚠규격</span>` : '';
+                const specWarnHtml = specWarn ? `<span class="shrink-0 px-1 rounded bg-rose-100 text-rose-700 text-xs font-extrabold" title="규격 '${escapeHtml(ig.spec || '없음')}'에서 중량을 읽지 못해 1kg(1,000g)으로 가정해 계산 중입니다. 원재료 발주서 규격을 '20kg', '500g×10'처럼 입력하거나 재료원가를 눌러 직접 설정하세요.">⚠규격</span>` : '';
                 const costCalcLine = unitUpperStr === 'EA'
                     ? `${formatCurrency(ig.unitPrice)} × ${fmtDec(ig.qty, 2)}EA = ${fmtDec(entry.effCost, 1)}원`
                     : `(${formatCurrency(ig.unitPrice)} ÷ ${fmtDec(specGVal, 0)}g = ${perGramPrice.toFixed(2)}원/g) × ${fmtDec(entry.effWeightG, 1)}g = ${fmtDec(entry.effCost, 1)}원`;
@@ -1035,9 +1035,9 @@ ${fmtDec(entry.effWeightG, 1)}g ÷ ${fmtDec(topDenomG, 1)}g × 100 = ${fmtDec(pc
                                 <input type="text" value="${escapeHtml(ig.item || '')}" onchange="updateRecipeIngredient(${idx}, 'item', this.value)" class="w-full min-w-0 font-bold text-stone-900 bg-transparent focus:bg-white focus:outline-amber-500 truncate">
                             </div>
                         </td>
-                        <td class="fd-td py-1 px-1 text-center"><input type="text" value="${escapeHtml(ig.origin || '')}" placeholder="-" onchange="updateRecipeIngredient(${idx}, 'origin', this.value)" class="w-full min-w-0 text-center text-[11px] text-stone-700 bg-transparent focus:bg-white"></td>
+                        <td class="fd-td py-1 px-1 text-center"><input type="text" value="${escapeHtml(ig.origin || '')}" placeholder="-" onchange="updateRecipeIngredient(${idx}, 'origin', this.value)" class="w-full min-w-0 text-center text-xs text-stone-700 bg-transparent focus:bg-white"></td>
                         <td class="fd-td py-1 px-0.5 text-center">
-                            <select onchange="updateRecipeIngredient(${idx}, 'unit', this.value)" class="w-full bg-transparent font-semibold text-[11px] text-center text-stone-700 focus:outline-none">
+                            <select onchange="updateRecipeIngredient(${idx}, 'unit', this.value)" class="w-full bg-transparent font-semibold text-xs text-center text-stone-700 focus:outline-none">
                                 <option value="G" ${ig.unit === 'G' ? 'selected' : ''}>G</option>
                                 <option value="EA" ${ig.unit === 'EA' ? 'selected' : ''}>EA</option>
                                 <option value="ML" ${ig.unit === 'ML' ? 'selected' : ''}>ML</option>
@@ -1107,7 +1107,7 @@ ${fmtDec(entry.effWeightG, 1)}g ÷ ${fmtDec(topDenomG, 1)}g × 100 = ${fmtDec(pc
         <div class="px-3.5 py-2.5 bg-stone-100 border-b border-stone-300 flex items-center justify-between gap-2 shrink-0">
             <div class="flex items-center gap-1.5 flex-1 min-w-0">
                 <h3 class="text-xs sm:text-sm font-black text-stone-900 shrink-0">제품 배합비내역</h3>
-                <select onchange="updateRecipeField('recipeType', this.value)" class="text-[11px] font-extrabold rounded-lg px-2 py-1 border shrink-0 ${rc.recipeType === 'SUB' ? 'bg-rose-50 text-rose-700 border-rose-300' : 'bg-white text-stone-800 border-stone-300'}">
+                <select onchange="updateRecipeField('recipeType', this.value)" class="text-xs font-extrabold rounded-lg px-2 py-1 border shrink-0 ${rc.recipeType === 'SUB' ? 'bg-rose-50 text-rose-700 border-rose-300' : 'bg-white text-stone-800 border-stone-300'}">
                     <option value="PRODUCT" ${rc.recipeType === 'PRODUCT' ? 'selected' : ''}>완제품</option>
                     <option value="SUB" ${rc.recipeType === 'SUB' ? 'selected' : ''}>반제품·충전물</option>
                 </select>
@@ -1120,48 +1120,48 @@ ${fmtDec(entry.effWeightG, 1)}g ÷ ${fmtDec(topDenomG, 1)}g × 100 = ${fmtDec(pc
         <div class="p-2.5 bg-amber-50/50 border-b border-stone-200 space-y-1.5 text-xs shrink-0">
             <!-- 1열: 원재료 투입 (팝업 검색창 호출 방식) -->
             <div class="flex items-center gap-1.5">
-                <div class="w-[132px] shrink-0 h-7 px-2 rounded-lg bg-amber-100/80 border border-amber-300 flex items-center justify-center font-extrabold text-[11px] text-amber-950 whitespace-nowrap">
+                <div class="w-[132px] shrink-0 h-7 px-2 rounded-lg bg-amber-100/80 border border-amber-300 flex items-center justify-center font-extrabold text-xs text-amber-950 whitespace-nowrap">
                     원재료
                 </div>
                 <button type="button" onclick="openRawMaterialPickerModal()" class="flex-1 min-w-0 h-7 border border-amber-400 hover:border-amber-600 rounded-lg px-2.5 bg-white hover:bg-amber-50/40 flex items-center justify-between text-left transition cursor-pointer group">
-                    <span class="flex items-center gap-1.5 min-w-0 truncate font-bold text-[11.5px] text-stone-700 group-hover:text-stone-950">
+                    <span class="flex items-center gap-1.5 min-w-0 truncate font-bold text-xs text-stone-700 group-hover:text-stone-950">
                         <i data-lucide="search" class="w-3.5 h-3.5 text-amber-600 shrink-0"></i>
                         <span class="truncate">클릭하여 발주 원재료 검색 · 선택 (등록 ${rawOnlyList.length}종)</span>
                     </span>
-                    <span class="text-[10px] font-extrabold text-amber-700 bg-amber-100/80 px-1.5 py-0.5 rounded shrink-0 ml-1">검색창 열기</span>
+                    <span class="text-xs font-extrabold text-amber-700 bg-amber-100/80 px-1.5 py-0.5 rounded shrink-0 ml-1">검색창 열기</span>
                 </button>
                 <div class="w-[146px] shrink-0 grid grid-cols-12 gap-1">
-                    <button type="button" onclick="openRawMaterialPickerModal()" class="col-span-8 h-7 rounded-lg bg-stone-900 hover:bg-stone-800 text-white font-extrabold text-[11px] cursor-pointer whitespace-nowrap">+ 원재료 검색</button>
-                    <button type="button" onclick="addBlankIngredientToRecipe()" title="발주 내역에 없는 원재료 직접 추가" class="col-span-4 h-7 rounded-lg bg-white border border-stone-300 hover:bg-stone-100 text-stone-700 font-bold text-[11px] cursor-pointer whitespace-nowrap">수기</button>
+                    <button type="button" onclick="openRawMaterialPickerModal()" class="col-span-8 h-7 rounded-lg bg-stone-900 hover:bg-stone-800 text-white font-extrabold text-xs cursor-pointer whitespace-nowrap">+ 원재료 검색</button>
+                    <button type="button" onclick="addBlankIngredientToRecipe()" title="발주 내역에 없는 원재료 직접 추가" class="col-span-4 h-7 rounded-lg bg-white border border-stone-300 hover:bg-stone-100 text-stone-700 font-bold text-xs cursor-pointer whitespace-nowrap">수기</button>
                 </div>
             </div>
 
             <!-- 2열: 반제품·충전물 투입 -->
             <div class="flex items-center gap-1.5">
-                <div class="w-[132px] shrink-0 h-7 px-2 rounded-lg bg-rose-100/70 border border-rose-200 flex items-center justify-center font-extrabold text-[11px] text-rose-800 whitespace-nowrap">
+                <div class="w-[132px] shrink-0 h-7 px-2 rounded-lg bg-rose-100/70 border border-rose-200 flex items-center justify-center font-extrabold text-xs text-rose-800 whitespace-nowrap">
                     반제품 · 충전물
                 </div>
-                <select id="quickAddSubRecipeSelect" class="flex-1 min-w-0 h-7 border border-rose-300 rounded-lg px-2 font-bold bg-white text-rose-900 text-[11.5px] truncate">
+                <select id="quickAddSubRecipeSelect" class="flex-1 min-w-0 h-7 border border-rose-300 rounded-lg px-2 font-bold bg-white text-rose-900 text-xs truncate">
                     <option value="">하위 반제품 · 충전물 선택 (${availableSubRecipes.length}종)...</option>
                     ${availableSubRecipes.map(sr => `<option value="${escapeHtml(sr.id)}">[${sr.recipeType === 'SUB' ? '반제품' : '완제품'}] ${escapeHtml(sr.productName)}</option>`).join('')}
                 </select>
                 <div class="w-[146px] shrink-0">
-                    <button type="button" onclick="addSubRecipeToFormula()" class="w-full h-7 rounded-lg bg-rose-700 hover:bg-rose-800 text-white font-extrabold text-[11px] cursor-pointer whitespace-nowrap">+ 반제품 투입</button>
+                    <button type="button" onclick="addSubRecipeToFormula()" class="w-full h-7 rounded-lg bg-rose-700 hover:bg-rose-800 text-white font-extrabold text-xs cursor-pointer whitespace-nowrap">+ 반제품 투입</button>
                 </div>
             </div>
 
             <!-- 3열: 포장지·부자재 추가 -->
             <div class="flex items-center gap-1.5">
-                <div class="w-[132px] shrink-0 h-7 px-2 rounded-lg bg-emerald-100/70 border border-emerald-200 flex items-center justify-center font-extrabold text-[11px] text-emerald-900 whitespace-nowrap">
+                <div class="w-[132px] shrink-0 h-7 px-2 rounded-lg bg-emerald-100/70 border border-emerald-200 flex items-center justify-center font-extrabold text-xs text-emerald-900 whitespace-nowrap">
                     포장지 · 부자재
                 </div>
-                <select id="quickAddPackCatalogSelect" class="flex-1 min-w-0 h-7 border border-emerald-300 rounded-lg px-2 font-bold bg-white text-emerald-950 text-[11.5px] truncate">
+                <select id="quickAddPackCatalogSelect" class="flex-1 min-w-0 h-7 border border-emerald-300 rounded-lg px-2 font-bold bg-white text-emerald-950 text-xs truncate">
                     <option value="">발주 포장 부자재 선택 (${packDropdownList.length}종)...</option>
                     ${packDropdownList.map(c => `<option value="${escapeHtml(c.key)}">${escapeHtml(c.item)} (${escapeHtml(c.spec)} · ${formatCurrency(c.unitPrice)})</option>`).join('')}
                 </select>
                 <div class="w-[146px] shrink-0 grid grid-cols-12 gap-1">
-                    <button type="button" onclick="addPackagingRowToRecipe(false)" class="col-span-8 h-7 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-[11px] cursor-pointer whitespace-nowrap">+ 포장지 추가</button>
-                    <button type="button" onclick="addPackagingRowToRecipe(true)" title="포장 부자재 직접 입력 행 추가" class="col-span-4 h-7 rounded-lg bg-white border border-stone-300 hover:bg-stone-100 text-stone-700 font-bold text-[11px] cursor-pointer whitespace-nowrap">수기</button>
+                    <button type="button" onclick="addPackagingRowToRecipe(false)" class="col-span-8 h-7 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs cursor-pointer whitespace-nowrap">+ 포장지 추가</button>
+                    <button type="button" onclick="addPackagingRowToRecipe(true)" title="포장 부자재 직접 입력 행 추가" class="col-span-4 h-7 rounded-lg bg-white border border-stone-300 hover:bg-stone-100 text-stone-700 font-bold text-xs cursor-pointer whitespace-nowrap">수기</button>
                 </div>
             </div>
         </div>
@@ -1196,7 +1196,7 @@ ${fmtDec(entry.effWeightG, 1)}g ÷ ${fmtDec(topDenomG, 1)}g × 100 = ${fmtDec(pc
                 </tbody>
             </table>
         </div>
-        <div class="px-3 py-1.5 bg-stone-50 border-t border-stone-200 text-[11px] text-stone-500 flex flex-wrap items-center justify-between gap-1 shrink-0">
+        <div class="px-3 py-1.5 bg-stone-50 border-t border-stone-200 text-xs text-stone-500 flex flex-wrap items-center justify-between gap-1 shrink-0">
             <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>원재료 [4. 제품단가·변동이력] 현재 단가 연동중 (재료원가 클릭 시 개별 설정)</span>
             <span>배합 재료원가 합계: <strong class="text-stone-900">${fmtDec(m.rawMaterialCost, 1)}원</strong></span>
         </div>
@@ -1335,13 +1335,13 @@ ${fmtDec(m.rawMaterialCost, 1)}원 + ${fmtDec(m.totalPackCost, 1)}원 = ${fmtDec
                     ${rc.imageData
                         ? `<img src="${rc.imageData}" alt="제품이미지" class="w-full h-full object-cover max-h-[225px]">
                            <div class="absolute inset-0 bg-stone-950/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-1.5">
-                               <button type="button" onclick="document.getElementById('recipeImgInput').click()" class="px-2 py-1 rounded bg-white text-stone-900 text-[11px] font-bold cursor-pointer">변경</button>
-                               <button type="button" onclick="clearRecipeImage()" class="px-2 py-1 rounded bg-rose-600 text-white text-[11px] font-bold cursor-pointer">삭제</button>
+                               <button type="button" onclick="document.getElementById('recipeImgInput').click()" class="px-2 py-1 rounded bg-white text-stone-900 text-xs font-bold cursor-pointer">변경</button>
+                               <button type="button" onclick="clearRecipeImage()" class="px-2 py-1 rounded bg-rose-600 text-white text-xs font-bold cursor-pointer">삭제</button>
                            </div>`
                         : `<div onclick="document.getElementById('recipeImgInput').click()" class="w-full h-full flex flex-col items-center justify-center p-3 text-center cursor-pointer hover:bg-[#EFE2C6]/60 transition">
                                <i data-lucide="image-plus" class="w-6 h-6 text-stone-500 mb-1"></i>
                                <span class="text-xs font-extrabold text-stone-700">제품이미지</span>
-                               <span class="text-[10px] text-stone-500 mt-0.5">클릭하여 사진 등록</span>
+                               <span class="text-xs text-stone-500 mt-0.5">클릭하여 사진 등록</span>
                            </div>`
                     }
                     <input type="file" id="recipeImgInput" accept="image/*" onchange="handleRecipeImageUpload(this.files)" class="hidden">
@@ -1638,8 +1638,8 @@ function setRawPickerScope(scope) {
     rawPickerScopeFilter = scope;
     const btnRaw = document.getElementById('rawScopeBtn_RAW');
     const btnAll = document.getElementById('rawScopeBtn_ALL');
-    if (btnRaw) btnRaw.className = scope === 'RAW' ? 'px-2.5 py-1 rounded-lg font-extrabold text-[11px] bg-stone-900 text-white cursor-pointer' : 'px-2.5 py-1 rounded-lg font-bold text-[11px] text-stone-600 cursor-pointer';
-    if (btnAll) btnAll.className = scope === 'ALL' ? 'px-2.5 py-1 rounded-lg font-extrabold text-[11px] bg-stone-900 text-white cursor-pointer' : 'px-2.5 py-1 rounded-lg font-bold text-[11px] text-stone-600 cursor-pointer';
+    if (btnRaw) btnRaw.className = scope === 'RAW' ? 'px-2.5 py-1 rounded-lg font-extrabold text-xs bg-stone-900 text-white cursor-pointer' : 'px-2.5 py-1 rounded-lg font-bold text-xs text-stone-600 cursor-pointer';
+    if (btnAll) btnAll.className = scope === 'ALL' ? 'px-2.5 py-1 rounded-lg font-extrabold text-xs bg-stone-900 text-white cursor-pointer' : 'px-2.5 py-1 rounded-lg font-bold text-xs text-stone-600 cursor-pointer';
     renderRawPickerList();
 }
 
@@ -1690,13 +1690,13 @@ function renderRawPickerList() {
                 <td class="fd-td py-2 px-2.5 font-semibold text-stone-600 truncate" title="${escapeHtml(c.vendor || '-')}">${escapeHtml(c.vendor || '-')}</td>
                 <td class="fd-td py-2 px-2.5 font-extrabold text-stone-900 truncate" title="${escapeHtml(c.item)}">
                     <span>${escapeHtml(c.item)}</span>
-                    ${alreadyIn ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">투입됨</span>` : ''}
+                    ${alreadyIn ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">투입됨</span>` : ''}
                 </td>
                 <td class="fd-td py-2 px-2 text-center text-stone-600 truncate">${escapeHtml(c.spec || '-')}</td>
                 <td class="fd-td py-2 px-2.5 text-right font-bold text-stone-900">${formatCurrency(c.unitPrice)}</td>
-                <td class="fd-td py-2 px-2 text-right text-stone-500 font-mono text-[11px]">${perG.toFixed(2)}원/g</td>
+                <td class="fd-td py-2 px-2 text-right text-stone-500 font-mono text-xs">${perG.toFixed(2)}원/g</td>
                 <td class="fd-td py-1.5 px-2 text-center" onclick="event.stopPropagation()">
-                    <button type="button" onclick="quickAddSingleRawByIdx(${idx})" class="px-2.5 py-1 rounded-lg bg-stone-900 hover:bg-amber-600 text-white font-extrabold text-[11px] transition cursor-pointer whitespace-nowrap">+ 투입</button>
+                    <button type="button" onclick="quickAddSingleRawByIdx(${idx})" class="px-2.5 py-1 rounded-lg bg-stone-900 hover:bg-amber-600 text-white font-extrabold text-xs transition cursor-pointer whitespace-nowrap">+ 투입</button>
                 </td>
             </tr>
         `;
