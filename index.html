@@ -1,4 +1,4 @@
-<!-- [VERSION: index.html v2.7 - 2026-11-20 2단계 보안 (DB 접속 코드 인증 · SRM 계정정보 삭제 · 급여/고정비 기본값 제거 · 화면 출력 이스케이프) / v2.6.1 DB 주소 4종 새 배포로 교체 · 각 기기 저장 주소 일괄 초기화 / v2.6 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 스냅샷 분할 저장 · 샘플 레시피 제거)] -->
+<!-- [VERSION: index.html v2.8 - 2026-11-20 3~5단계 정확성 (발주서 동일 줄·업로드 오류 표시·로트별 소진금액·월말 기준 재고 역산·제조원 추정 표시·재고 변동 이력·부가세 줄별 통일·CSV 안전 처리) / v2.7 2단계 보안 (DB 접속 코드 인증 · SRM 계정정보 삭제 · 급여/고정비 기본값 제거 · 화면 출력 이스케이프) / v2.6.1 DB 주소 4종 새 배포로 교체 · 각 기기 저장 주소 일괄 초기화 / v2.6 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 스냅샷 분할 저장 · 샘플 레시피 제거)] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -39,7 +39,7 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-base sm:text-lg font-extrabold tracking-tight text-stone-900">바로가 공장 통합 관리 시스템</h1>
-                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.7.0</span>
+                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.8.0</span>
                     </div>
                     <p class="text-xs text-stone-500 hidden sm:block">원재료 발주/재고 · 엠즈 입고/회송 · 레시피 배합비 · 제품단가 출고마진 통합 관리</p>
                 </div>
@@ -196,7 +196,7 @@
                                 <span class="w-7 h-7 rounded-lg bg-amber-600 text-white flex items-center justify-center"><i data-lucide="clipboard-check" class="w-4 h-4"></i></span>
                                 <div>
                                     <h3 class="text-sm font-extrabold text-stone-900">생산시설 일일 원재료 사용 보고서 작성</h3>
-                                    <p class="text-[11px] text-stone-500">사용수량 입력 후 [일일 사용 보고 확정]을 누르면 현재고에서 선입선출로 자동 차감됩니다</p>
+                                    <p class="text-[11px] text-stone-500">사용수량 입력 후 [일일 사용 보고 확정]을 누르면 현재고에서 소비기한이 빠른 로트부터 자동 차감됩니다 (소비기한 미입력 로트는 맨 마지막, 같은 소비기한은 발주일 순)</p>
                                 </div>
                             </div>
                             <div class="flex flex-wrap items-center gap-2">
@@ -535,6 +535,7 @@
         let ordersData = [];
         let monthlySnapshots = {};
         let usageLogsData = [];
+        let inventoryAdjustLogs = []; // [4단계 R7] 현재고 수동 조정·발주 수정/삭제·사용보고 취소 이력
         let pendingUsageInputs = {};
         let recipesData = [];
         let selectedRecipeId = null;
@@ -572,6 +573,8 @@
         const STANDARD_TAXABLE_KEYWORDS = ['대두완배기','완두배기','적앙금','백앙금','앙금','팥앙금','고구마앙금','밤앙금','설탕','백설탕','황설탕','흑설탕','분당','슈가파우더','데코슈가','물엿','올리고당','메이플시럽','시럽','생이스트','드라이이스트','이스트','베이킹파우더','소다','제빵개량제','개량제','유화제','바닐라향','바닐라에센스','럼주','초코칩','초콜릿','코코아파우더','코코아분말','커스터드','카스타드','필링','잼','딸기잼','사과잼','마가린','쇼트닝','식용유','카놀라유','올리브유','포도씨유','참기름','소시지','햄','베이컨','페퍼로니','마요네즈','케첩','머스타드','소스','롤치즈','체다치즈','모짜렐라','크림치즈','파마산','치즈','옥수수콘','스위트콘','피클','할라피뇨','올리브','통조림','캔','박스','비닐','포장','봉투','테이프','유산지','패드','트레이','스티커'];
         function formatNumber(n) { return (Number(n) || 0).toLocaleString('ko-KR', { maximumFractionDigits: 2 }); }
         function formatCurrency(n) { return Math.round(Number(n) || 0).toLocaleString('ko-KR') + '원'; }
+        // [5단계] HTML 속성 안의 JS 함수 인자로 값을 넣을 때 사용 (작은따옴표·역슬래시가 있어도 안전)
+        function jsArg(v) { return escapeHtml(JSON.stringify(String(v ?? ''))); }
         function escapeHtml(str) { return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
         function getTodayStr() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
         function inferStandardTaxType(itemName) {
@@ -660,9 +663,10 @@
                     if (o.pureNote === undefined) o.pureNote = pureNote;
                     let explicitMfg = (o.rawManufacturer !== undefined && o.rawManufacturer !== null) ? String(o.rawManufacturer).trim() : (parsed.rawMfg !== null ? String(parsed.rawMfg).trim() : String(o.manufacturer || parsed.mfg || mfgFromColE || '').trim());
                     o.rawManufacturer = explicitMfg;
-                    if (explicitMfg) { lastMfg = explicitMfg; o.manufacturer = explicitMfg; }
-                    else if (lastMfg) { o.manufacturer = lastMfg; }
-                    else { o.manufacturer = ''; }
+                    // [3단계 R6] 제조원을 입력하지 않은 로트는 직전 로트 제조원을 '추정값'으로만 표시 (mfgInferred=true)
+                    if (explicitMfg) { lastMfg = explicitMfg; o.manufacturer = explicitMfg; o.mfgInferred = false; }
+                    else if (lastMfg) { o.manufacturer = lastMfg; o.mfgInferred = true; }
+                    else { o.manufacturer = ''; o.mfgInferred = false; }
                     o.colE = composeColEWithManufacturer(o.manufacturer, o.pureNote);
                     o.id = buildIdWithMeta(o);
                 });
@@ -702,11 +706,13 @@
             return parseMetaFromId(rawId).baseId.startsWith('sample_') || rawId.startsWith('sample_');
         }
         function saveLocalCache() {
+            window.__rawDataVersion = (window.__rawDataVersion || 0) + 1; // [5단계] 레시피 원가 계산 캐시 무효화용
             window.recipesData = recipesData;
             try {
                 localStorage.setItem('baroga_orders_cache_v18', JSON.stringify(ordersData));
                 localStorage.setItem('baroga_snapshots_cache_v18', JSON.stringify(monthlySnapshots));
                 localStorage.setItem('baroga_usagelogs_cache_v18', JSON.stringify(usageLogsData));
+                localStorage.setItem('baroga_adjlogs_cache_v18', JSON.stringify(inventoryAdjustLogs));
                 localStorage.setItem('baroga_recipes_cache_v18', JSON.stringify(recipesData));
             } catch (e) {}
         }
@@ -718,6 +724,8 @@
                 if (cs) { const ps = JSON.parse(cs); if (ps && typeof ps === 'object') monthlySnapshots = { ...monthlySnapshots, ...ps }; }
                 const cu = localStorage.getItem('baroga_usagelogs_cache_v18');
                 if (cu && usageLogsData.length === 0) { const pu = JSON.parse(cu); if (Array.isArray(pu)) usageLogsData = pu; }
+                const ca = localStorage.getItem('baroga_adjlogs_cache_v18');
+                if (ca && inventoryAdjustLogs.length === 0) { const pa = JSON.parse(ca); if (Array.isArray(pa)) inventoryAdjustLogs = pa; }
                 const cr = localStorage.getItem('baroga_recipes_cache_v18');
                 if (cr && recipesData.length === 0) { const pr = JSON.parse(cr); if (Array.isArray(pr)) recipesData = pr; }
             } catch (e) {}
@@ -746,7 +754,7 @@
             return fallbackDate || getTodayStr();
         }
         function extractSnapshotsFromRawRows(rawRows) {
-            const normalOrders = [], snapshots = {}, usageLogs = [];
+            const normalOrders = [], snapshots = {}, usageLogs = [], adjustLogs = [];
             const snapshotParts = {};
             const brokenSnapshots = [];
             (rawRows || []).forEach(r => {
@@ -762,6 +770,13 @@
                     if (!snapshotParts[mKey]) snapshotParts[mKey] = { total, parts: {} };
                     snapshotParts[mKey].total = total;
                     snapshotParts[mKey].parts[idx] = typeof r.colE === 'string' ? r.colE : String(r.colE || '');
+                    return;
+                }
+                if (rawId.startsWith('__ADJ__') || r.colA === '__ADJ__') {
+                    try {
+                        const payload = typeof r.colE === 'string' && r.colE.startsWith('{') ? JSON.parse(r.colE) : null;
+                        if (payload && payload.id) adjustLogs.push(payload);
+                    } catch (e) {}
                     return;
                 }
                 if (rawId.startsWith('__USAGE__') || r.colA === '__USAGE__') {
@@ -798,7 +813,7 @@
                     if (payload && typeof payload === 'object') snapshots[mKey] = payload;
                 } catch (e) { brokenSnapshots.push(mKey); }
             });
-            return { normalOrders, snapshots, usageLogs, brokenSnapshots };
+            return { normalOrders, snapshots, usageLogs, adjustLogs, brokenSnapshots };
         }
         function buildCombinedRowsForSheet() {
             reconcileManufacturerHistory();
@@ -814,6 +829,9 @@
                     const id = parts.length === 1 ? `__SNAPSHOT__${mKey}` : `__SNAPSHOT__${mKey}#${i + 1}/${parts.length}`;
                     rows.push({ id, date: `${mKey}-28`, colA: '__SNAPSHOT__', colB: `${mKey} 월말재고확정${parts.length > 1 ? ` (${i + 1}/${parts.length})` : ''}`, colC: `${snap.totalQty || 0}`, colD: 0, colE: part, amount: i === 0 ? (snap.supplyTotal || 0) : 0 });
                 });
+            });
+            inventoryAdjustLogs.forEach(a => {
+                rows.push({ id: `__ADJ__${a.id}`, date: a.date || getTodayStr(), colA: '__ADJ__', colB: `${a.item || ''} (${a.reason || '조정'})`, colC: a.spec || '', colD: 0, colE: JSON.stringify(a), amount: 0 });
             });
             usageLogsData.forEach(u => {
                 rows.push({ id: `__USAGE__${u.id}`, date: u.date || getTodayStr(), colA: '__USAGE__', colB: `${u.item || ''} (${u.usedQty || 0}사용)`, colC: u.spec || '', colD: 0, colE: JSON.stringify(u), amount: u.totalAmt || 0 });
@@ -904,11 +922,12 @@
                 if (json && json.ok === false) throw new Error(json.error || '서버 오류');
                 const rows = Array.isArray(json) ? json : (json.orders || json.data || json.rows);
                 if (!Array.isArray(rows)) throw new Error('응답 형식을 인식할 수 없습니다');
-                const { normalOrders, snapshots, usageLogs, brokenSnapshots } = extractSnapshotsFromRawRows(rows);
+                const { normalOrders, snapshots, usageLogs, adjustLogs, brokenSnapshots } = extractSnapshotsFromRawRows(rows);
                 ordersData = normalOrders;
                 reconcileManufacturerHistory();
                 monthlySnapshots = snapshots; // 서버 기준으로 교체 (다른 기기에서 삭제한 스냅샷이 되살아나지 않도록)
                 usageLogsData = usageLogs;
+                inventoryAdjustLogs = adjustLogs;
                 rawDbLoaded = true;
                 rawDbRevision = (json && typeof json.revision === 'number') ? json.revision : null;
                 rawDbBlockReason = rawDbRevision === null ? '원재료 GAS 스크립트가 구버전입니다 (v2.0 업데이트 필요)' : '';
@@ -1157,13 +1176,14 @@
         }
         function renderOrderWorkspace() {
             const filtered = getFilteredOrders(false);
-            let totalQty = 0, supplyTotal = 0, taxableSupply = 0, taxFreeSupply = 0;
+            let totalQty = 0, supplyTotal = 0, taxableSupply = 0, taxFreeSupply = 0, vatSum = 0;
             filtered.forEach(o => {
-                const { qty, totalAmt, taxType } = getOrderLineAmounts(o);
-                totalQty += qty; supplyTotal += totalAmt;
+                const { qty, totalAmt, taxType, vatAmt } = getOrderLineAmounts(o);
+                totalQty += qty; supplyTotal += totalAmt; vatSum += vatAmt;
                 if (taxType === '과세') taxableSupply += totalAmt; else taxFreeSupply += totalAmt;
             });
-            const vatTotal = Math.round(taxableSupply * 0.1), vatInc = supplyTotal + vatTotal;
+            // [5단계] 부가세는 화면 전체에서 '줄(발주 품목)별 10% 반올림의 합'으로 통일
+            const vatTotal = vatSum, vatInc = supplyTotal + vatTotal;
             const tfRatio = supplyTotal > 0 ? ((taxFreeSupply / supplyTotal) * 100).toFixed(1) : '0.0';
             document.getElementById('kpi1Title').textContent = '조회 기간 총 발주 건수';
             document.getElementById('kpi1Value').textContent = `${formatNumber(filtered.length)}건`;
@@ -1198,13 +1218,13 @@
 
             container.innerHTML = dates.map(dateStr => {
                 const list = grouped[dateStr];
-                let daySupply = 0, dayTaxable = 0, dayTaxFree = 0;
+                let daySupply = 0, dayTaxable = 0, dayTaxFree = 0, dayVat = 0;
                 list.forEach(o => {
-                    const { totalAmt, taxType } = getOrderLineAmounts(o);
-                    daySupply += totalAmt;
+                    const { totalAmt, taxType, vatAmt } = getOrderLineAmounts(o);
+                    daySupply += totalAmt; dayVat += vatAmt;
                     if (taxType === '과세') dayTaxable += totalAmt; else dayTaxFree += totalAmt;
                 });
-                const dayVatInc = daySupply + Math.round(dayTaxable * 0.1);
+                const dayVatInc = daySupply + dayVat;
 
                 const rowsHtml = list.map(o => {
                     const { qty, unitAmt, totalAmt, taxType } = getOrderLineAmounts(o);
@@ -1213,10 +1233,14 @@
                     const diffInfo = priceDiffMap[o.id] || { diff: 0, pct: 0 };
                     const diffArrow = diffInfo.diff > 0 ? `<span class="text-[11px] font-black text-rose-600 mr-0.5">▲</span>` : (diffInfo.diff < 0 ? `<span class="text-[11px] font-black text-blue-600 mr-0.5">▼</span>` : '');
                     const taxBadge = taxType === '과세'
-                        ? `<button type="button" onclick="toggleOrderTaxType('${escapeHtml(o.id)}')" class="px-1.5 py-0.5 rounded text-[11px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200 cursor-pointer">과세</button>`
-                        : `<button type="button" onclick="toggleOrderTaxType('${escapeHtml(o.id)}')" class="px-1.5 py-0.5 rounded text-[11px] font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-200 cursor-pointer">면세</button>`;
+                        ? `<button type="button" onclick="toggleOrderTaxType(${jsArg(o.id)})" class="px-1.5 py-0.5 rounded text-[11px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200 cursor-pointer">과세</button>`
+                        : `<button type="button" onclick="toggleOrderTaxType(${jsArg(o.id)})" class="px-1.5 py-0.5 rounded text-[11px] font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-200 cursor-pointer">면세</button>`;
                     const mfgText = getOrderManufacturer(o);
-                    const mfgCell = mfgText ? `<span class="inline-block max-w-full truncate px-1.5 py-0.5 rounded bg-amber-100/80 text-amber-950 font-extrabold text-[10px]">${escapeHtml(mfgText)}</span>` : '-';
+                    const mfgCell = mfgText
+                        ? (o.mfgInferred
+                            ? `<span class="inline-block max-w-full truncate px-1.5 py-0.5 rounded border border-dashed border-stone-300 text-stone-500 italic text-[10px]" title="이 로트는 제조원이 입력되지 않아 직전 로트 제조원을 추정값으로 표시합니다. 실제 확인 후 [수정]에서 입력하세요.">추정: ${escapeHtml(mfgText)}</span>`
+                            : `<span class="inline-block max-w-full truncate px-1.5 py-0.5 rounded bg-amber-100/80 text-amber-950 font-extrabold text-[10px]">${escapeHtml(mfgText)}</span>`)
+                        : '-';
                     const showNote = pureNote && pureNote !== '과세' && pureNote !== '면세';
                     const noteHint = showNote ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-stone-100 text-stone-600 text-[10px] font-semibold" title="${escapeHtml(pureNote)}">${escapeHtml(pureNote)}</span>` : '';
                     return `
@@ -1229,13 +1253,13 @@
                             <td class="py-2 px-2 text-right font-bold text-stone-800 whitespace-nowrap">${diffArrow}${formatCurrency(unitAmt)}</td>
                             <td class="py-2 px-2 text-right font-extrabold text-amber-900 whitespace-nowrap">${formatCurrency(totalAmt)}</td>
                             <td class="py-2 px-1.5 text-center">
-                                <input type="date" value="${escapeHtml(expVal)}" onclick="openDatePickerBox(this)" onchange="updateOrderExpiry('${escapeHtml(o.id)}', this.value)" class="expiry-input text-[11px] font-semibold border border-stone-200 hover:border-amber-500 rounded-lg px-1.5 py-0.5 bg-white text-stone-700 focus:border-amber-500 focus:outline-none w-[108px]">
+                                <input type="date" value="${escapeHtml(expVal)}" onclick="openDatePickerBox(this)" onchange="updateOrderExpiry(${jsArg(o.id)}, this.value)" class="expiry-input text-[11px] font-semibold border border-stone-200 hover:border-amber-500 rounded-lg px-1.5 py-0.5 bg-white text-stone-700 focus:border-amber-500 focus:outline-none w-[108px]">
                             </td>
-                            <td class="py-2 px-1.5 text-center text-stone-700 truncate" title="${escapeHtml(mfgText || '-')}">${mfgCell}</td>
+                            <td class="py-2 px-1.5 text-center text-stone-700 truncate">${mfgCell}</td>
                             <td class="py-2 px-1 text-center">
                                 <div class="inline-flex items-center justify-center gap-0.5">
-                                    <button type="button" onclick="openEditOrderModal('${escapeHtml(o.id)}')" class="text-stone-400 hover:text-amber-600 p-1 cursor-pointer" title="발주 수정"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
-                                    <button type="button" onclick="deleteSingleOrder('${escapeHtml(o.id)}')" class="text-stone-400 hover:text-rose-600 p-1 cursor-pointer" title="품목 삭제"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                                    <button type="button" onclick="openEditOrderModal(${jsArg(o.id)})" class="text-stone-400 hover:text-amber-600 p-1 cursor-pointer" title="발주 수정"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+                                    <button type="button" onclick="deleteSingleOrder(${jsArg(o.id)})" class="text-stone-400 hover:text-rose-600 p-1 cursor-pointer" title="품목 삭제"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                                 </div>
                             </td>
                         </tr>
@@ -1253,7 +1277,7 @@
                             <div class="flex items-center gap-3">
                                 <span class="text-xs font-bold text-stone-700">공급가 <strong class="text-stone-900">${formatCurrency(daySupply)}</strong></span>
                                 <span class="text-xs font-extrabold text-amber-800">부가세포함 ${formatCurrency(dayVatInc)}</span>
-                                <button type="button" onclick="deleteOrdersByDate('${escapeHtml(dateStr)}')" title="${escapeHtml(dateStr)} 일자 전체 삭제" class="p-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 cursor-pointer flex items-center justify-center">
+                                <button type="button" onclick="deleteOrdersByDate(${jsArg(dateStr)})" title="${escapeHtml(dateStr)} 일자 전체 삭제" class="p-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 cursor-pointer flex items-center justify-center">
                                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                                 </button>
                             </div>
@@ -1298,13 +1322,13 @@
             const map = {};
             filtered.forEach(o => {
                 const v = o.colA || '미지정';
-                if (!map[v]) map[v] = { vendor: v, count: 0, qty: 0, taxable: 0, taxFree: 0, supply: 0 };
-                const { qty, totalAmt, taxType } = getOrderLineAmounts(o);
-                map[v].count += 1; map[v].qty += qty; map[v].supply += totalAmt;
+                if (!map[v]) map[v] = { vendor: v, count: 0, qty: 0, taxable: 0, taxFree: 0, supply: 0, vat: 0 };
+                const { qty, totalAmt, taxType, vatAmt } = getOrderLineAmounts(o);
+                map[v].count += 1; map[v].qty += qty; map[v].supply += totalAmt; map[v].vat += vatAmt;
                 if (taxType === '과세') map[v].taxable += totalAmt; else map[v].taxFree += totalAmt;
             });
             const list = Object.values(map).sort((a, b) => b.supply - a.supply);
-            container.innerHTML = `<div class="overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b border-stone-200 font-extrabold text-stone-600"><th class="py-2.5 px-3 text-center">순위</th><th class="py-2.5 px-3 text-center">거래처명</th><th class="py-2.5 px-3 text-center">발주건수</th><th class="py-2.5 px-3 text-center">총 수량</th><th class="py-2.5 px-3 text-center">과세 공급가 합계</th><th class="py-2.5 px-3 text-center">면세 공급가 합계</th><th class="py-2.5 px-3 text-center">총 공급가</th><th class="py-2.5 px-3 text-center">부가세 포함</th></tr></thead><tbody>${list.map((r, i) => `<tr class="border-b border-stone-100 hover:bg-stone-50"><td class="py-2.5 px-3 text-center font-bold text-stone-500">${i + 1}</td><td class="py-2.5 px-3 text-center font-extrabold text-stone-900">${escapeHtml(r.vendor)}</td><td class="py-2.5 px-3 text-center font-bold">${formatNumber(r.count)}건</td><td class="py-2.5 px-3 text-center font-extrabold">${formatNumber(r.qty)}</td><td class="py-2.5 px-3 text-right text-blue-700 font-semibold">${formatCurrency(r.taxable)}</td><td class="py-2.5 px-3 text-right text-emerald-700 font-semibold">${formatCurrency(r.taxFree)}</td><td class="py-2.5 px-3 text-right font-extrabold">${formatCurrency(r.supply)}</td><td class="py-2.5 px-3 text-right font-extrabold text-amber-800">${formatCurrency(r.supply + Math.round(r.taxable * 0.1))}</td></tr>`).join('')}</tbody></table></div>`;
+            container.innerHTML = `<div class="overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b border-stone-200 font-extrabold text-stone-600"><th class="py-2.5 px-3 text-center">순위</th><th class="py-2.5 px-3 text-center">거래처명</th><th class="py-2.5 px-3 text-center">발주건수</th><th class="py-2.5 px-3 text-center">총 수량</th><th class="py-2.5 px-3 text-center">과세 공급가 합계</th><th class="py-2.5 px-3 text-center">면세 공급가 합계</th><th class="py-2.5 px-3 text-center">총 공급가</th><th class="py-2.5 px-3 text-center">부가세 포함</th></tr></thead><tbody>${list.map((r, i) => `<tr class="border-b border-stone-100 hover:bg-stone-50"><td class="py-2.5 px-3 text-center font-bold text-stone-500">${i + 1}</td><td class="py-2.5 px-3 text-center font-extrabold text-stone-900">${escapeHtml(r.vendor)}</td><td class="py-2.5 px-3 text-center font-bold">${formatNumber(r.count)}건</td><td class="py-2.5 px-3 text-center font-extrabold">${formatNumber(r.qty)}</td><td class="py-2.5 px-3 text-right text-blue-700 font-semibold">${formatCurrency(r.taxable)}</td><td class="py-2.5 px-3 text-right text-emerald-700 font-semibold">${formatCurrency(r.taxFree)}</td><td class="py-2.5 px-3 text-right font-extrabold">${formatCurrency(r.supply)}</td><td class="py-2.5 px-3 text-right font-extrabold text-amber-800">${formatCurrency(r.supply + r.vat)}</td></tr>`).join('')}</tbody></table></div>`;
         }
         function renderItemSummaryTable(container, filtered) {
             const map = {};
@@ -1331,6 +1355,30 @@
             });
             return Object.values(map).sort((a, b) => a.item.localeCompare(b.item, 'ko'));
         }
+        // [4단계 R7] 재고 변동 이력 기록 (현재고 직접 조정·발주 수정·발주 삭제·사용보고 취소)
+        function logInventoryAdjust(o, before, after, reason, type = 'ADJUST', extra = {}) {
+            const b = Number(before) || 0, a = Number(after) || 0;
+            if (type === 'ADJUST' && Math.abs(a - b) < 1e-9) return;
+            inventoryAdjustLogs.push({
+                id: 'adj_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+                type, date: getTodayStr(), at: new Date().toLocaleString('ko-KR'),
+                orderBaseId: parseMetaFromId(o.id).baseId, orderDate: o.date || '', vendor: o.colA || '', item: o.colB || '', spec: o.colC || '',
+                unitAmt: parseFloat(o.amount) || 0, before: b, after: a, delta: Number((a - b).toFixed(4)), reason: reason || '', ...extra
+            });
+        }
+        // [3단계 R3] 실제 차감될 로트 순서대로 단가를 적용한 소진금액 (미리보기·확정 공통)
+        function simulateLotDeduction(stockItem, useQty) {
+            let rem = Number(useQty) || 0, amt = 0; const parts = [];
+            for (const lot of stockItem.lots) {
+                if (rem <= 0) break;
+                const lotRem = getOrderRemainQty(lot); if (lotRem <= 0) continue;
+                const d = Math.min(lotRem, rem), u = parseFloat(lot.amount) || 0;
+                amt += d * u; parts.push({ lot, qty: d, unitAmt: u });
+                rem = Number((rem - d).toFixed(4));
+            }
+            return { amount: amt, parts };
+        }
+        function estimateUsageCost(stockItem, useQty) { return Math.round(simulateLotDeduction(stockItem, useQty).amount); }
         function setPendingUsageQty(k, v) { if (!pendingUsageInputs[k]) pendingUsageInputs[k] = { qty: 0, note: '' }; pendingUsageInputs[k].qty = Math.max(0, parseFloat(v) || 0); renderUsageWorkspace(); }
         function adjustPendingUsageQty(k, d, maxA) { const cur = pendingUsageInputs[k]?.qty || 0; let n = Math.max(0, Number((cur + d).toFixed(2))); if (maxA !== undefined && n > maxA) n = maxA; if (!pendingUsageInputs[k]) pendingUsageInputs[k] = { qty: 0, note: '' }; pendingUsageInputs[k].qty = n; renderUsageWorkspace(); }
         function setPendingUsageNote(k, s) { if (!pendingUsageInputs[k]) pendingUsageInputs[k] = { qty: 0, note: '' }; pendingUsageInputs[k].note = s; }
@@ -1343,16 +1391,20 @@
             if (targets.length === 0) return showToast('사용수량을 1개 이상 입력해 주세요.', 'error');
             for (const t of targets) if (t.useQty > t.stockItem.totalRemainQty) return showToast(`'${t.stockItem.item}' 사용량이 현재고를 초과합니다.`, 'error');
             targets.forEach(t => {
-                let remToDeduct = t.useQty; const deductions = [];
+                let remToDeduct = t.useQty; const deductions = []; let costSum = 0;
                 for (const lot of t.stockItem.lots) {
                     if (remToDeduct <= 0) break;
                     const lotRem = getOrderRemainQty(lot); if (lotRem <= 0) continue;
                     const dHere = Math.min(lotRem, remToDeduct);
+                    const lotUnit = parseFloat(lot.amount) || 0;
                     lot.remainQty = Number((lotRem - dHere).toFixed(2)); lot.id = buildIdWithMeta(lot);
-                    deductions.push({ orderId: lot.id, baseId: parseMetaFromId(lot.id).baseId, qty: dHere });
+                    deductions.push({ orderId: lot.id, baseId: parseMetaFromId(lot.id).baseId, qty: dHere, unitAmt: lotUnit, orderDate: lot.date || '' });
+                    costSum += dHere * lotUnit;
                     remToDeduct = Number((remToDeduct - dHere).toFixed(2));
                 }
-                usageLogsData.push({ id: 'u_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7), date: reportDate, vendor: t.stockItem.vendor, item: t.stockItem.item, spec: t.stockItem.spec, usedQty: t.useQty, unitAmt: t.stockItem.unitAmt || 0, totalAmt: Math.round(t.useQty * (t.stockItem.unitAmt || 0)), taxType: t.stockItem.taxType || '과세', memo: [globalMemo, t.itemNote].filter(Boolean).join(' · ') || '일일 사용 보고', deductions, createdAt: new Date().toLocaleString('ko-KR') });
+                // [3단계 R3] 소진금액 = 실제 차감된 로트별 수량 × 로트 단가의 합 (단가는 가중평균으로 기록)
+                const totalAmt = Math.round(costSum);
+                usageLogsData.push({ id: 'u_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7), date: reportDate, vendor: t.stockItem.vendor, item: t.stockItem.item, spec: t.stockItem.spec, usedQty: t.useQty, unitAmt: t.useQty > 0 ? Number((costSum / t.useQty).toFixed(2)) : 0, totalAmt, taxType: t.stockItem.taxType || '과세', memo: [globalMemo, t.itemNote].filter(Boolean).join(' · ') || '일일 사용 보고', deductions, createdAt: new Date().toLocaleString('ko-KR') });
             });
             pendingUsageInputs = {};
             renderDashboard(); pushAllToGoogleSheet(false);
@@ -1364,7 +1416,7 @@
                 if (Array.isArray(target.deductions)) {
                     target.deductions.forEach(d => {
                         const lot = ordersData.find(o => o.id === d.orderId || parseMetaFromId(o.id).baseId === d.baseId);
-                        if (lot) { lot.remainQty = Number((getOrderRemainQty(lot) + (parseFloat(d.qty) || 0)).toFixed(2)); lot.id = buildIdWithMeta(lot); }
+                        if (lot) { const before = getOrderRemainQty(lot); lot.remainQty = Number((before + (parseFloat(d.qty) || 0)).toFixed(2)); lot.id = buildIdWithMeta(lot); logInventoryAdjust(lot, before, lot.remainQty, `사용 보고 취소 (${target.date} ${target.usedQty}사용)`, 'USAGE_REVERT', { usageId: target.id, usageDate: target.date }); }
                     });
                 }
                 usageLogsData = usageLogsData.filter(u => u.id !== usageId);
@@ -1376,7 +1428,7 @@
             const todayLogs = usageLogsData.filter(u => u.date === reportDate), monthLogs = usageLogsData.filter(u => String(u.date || '').startsWith(reportDate.slice(0, 7)));
             const stockItems = getAggregatedStockItemsForUsage();
             let pendingCnt = 0, pendingAmt = 0;
-            stockItems.forEach(st => { const pq = pendingUsageInputs[st.key]?.qty || 0; if (pq > 0) { pendingCnt++; pendingAmt += Math.round(pq * st.unitAmt); } });
+            stockItems.forEach(st => { const pq = pendingUsageInputs[st.key]?.qty || 0; if (pq > 0) { pendingCnt++; pendingAmt += estimateUsageCost(st, pq); } });
             document.getElementById('kpi1Title').textContent = `${reportDate} 당일 사용 보고`;
             document.getElementById('kpi1Value').textContent = `${todayLogs.length}건`;
             document.getElementById('kpi1Sub').textContent = `수량 ${formatNumber(todayLogs.reduce((a, c) => a + (parseFloat(c.usedQty) || 0), 0))}`;
@@ -1388,7 +1440,7 @@
             document.getElementById('kpi3Sub').textContent = `가용 품목 ${stockItems.length}종`;
             document.getElementById('kpi4Title').textContent = '당월 누적 소진액';
             document.getElementById('kpi4Value').textContent = formatCurrency(monthLogs.reduce((a, c) => a + (parseFloat(c.totalAmt) || 0), 0));
-            document.getElementById('kpi4Sub').textContent = '선입선출 자동 차감';
+            document.getElementById('kpi4Sub').textContent = '소비기한 빠른 순 자동 차감';
             document.getElementById('footerSummaryLabel').textContent = '현재 입력 중인 일일 사용 예정 합계';
             document.getElementById('footerCountBadge').textContent = `${pendingCnt}종 선택됨`;
             document.getElementById('footerSupplyTotal').textContent = formatCurrency(pendingAmt);
@@ -1396,11 +1448,15 @@
             const container = document.getElementById('mainContentContainer');
             if (activeUsageSubTab === 'SHEET') {
                 const list = stockItems.filter(st => !q || `${st.item} ${st.vendor} ${st.spec}`.toLowerCase().includes(q));
-                container.innerHTML = list.length === 0 ? `<div class="py-16 text-center text-stone-400 text-sm font-bold">현재고(>0) 보유 품목이 없습니다.</div>` : `<div class="overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b border-stone-200 font-extrabold text-stone-600"><th class="py-2.5 px-3">거래처</th><th class="py-2.5 px-3">원재료명</th><th class="py-2.5 px-2 text-center">규격</th><th class="py-2.5 px-2 text-center">가용 현재고</th><th class="py-2.5 px-2 text-center bg-amber-100/70">금일 사용수량</th><th class="py-2.5 px-2 text-center">차감 후 잔여</th><th class="py-2.5 px-2.5 text-right">소진 금액</th><th class="py-2.5 px-2">품목 비고</th></tr></thead><tbody>${list.map(st => { const uq = pendingUsageInputs[st.key]?.qty || 0, nv = pendingUsageInputs[st.key]?.note || '', afterR = Number((st.totalRemainQty - uq).toFixed(2)); return `<tr class="border-b border-stone-100 ${uq > 0 ? 'bg-amber-50/70' : 'hover:bg-stone-50'}"><td class="py-2 px-3 font-bold">${escapeHtml(st.vendor)}</td><td class="py-2 px-3 font-extrabold">${escapeHtml(st.item)}</td><td class="py-2 px-2 text-center">${escapeHtml(st.spec)}</td><td class="py-2 px-2 text-center font-extrabold text-emerald-800">${formatNumber(st.totalRemainQty)}</td><td class="py-2 px-2 text-center"><div class="flex items-center justify-center gap-1"><button type="button" onclick="adjustPendingUsageQty('${escapeHtml(st.key)}', -1, ${st.totalRemainQty})" class="w-6 h-6 rounded border bg-white font-bold cursor-pointer">-</button><input type="number" step="any" value="${uq > 0 ? uq : ''}" placeholder="0" onchange="setPendingUsageQty('${escapeHtml(st.key)}', this.value)" class="no-spinner w-14 text-center font-extrabold border rounded py-1"><button type="button" onclick="adjustPendingUsageQty('${escapeHtml(st.key)}', 1, ${st.totalRemainQty})" class="w-6 h-6 rounded border bg-white font-bold cursor-pointer">+</button></div></td><td class="py-2 px-2 text-center font-extrabold">${formatNumber(afterR)}</td><td class="py-2 px-2.5 text-right font-bold">${uq > 0 ? formatCurrency(Math.round(uq * st.unitAmt)) : formatCurrency(st.unitAmt) + '/개'}</td><td class="py-2 px-2"><input type="text" value="${escapeHtml(nv)}" oninput="setPendingUsageNote('${escapeHtml(st.key)}', this.value)" placeholder="비고" class="w-full border rounded px-2 py-1"></td></tr>`; }).join('')}</tbody></table></div>`;
+                container.innerHTML = list.length === 0 ? `<div class="py-16 text-center text-stone-400 text-sm font-bold">현재고(>0) 보유 품목이 없습니다.</div>` : `<div class="overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b border-stone-200 font-extrabold text-stone-600"><th class="py-2.5 px-3">거래처</th><th class="py-2.5 px-3">원재료명</th><th class="py-2.5 px-2 text-center">규격</th><th class="py-2.5 px-2 text-center">가용 현재고</th><th class="py-2.5 px-2 text-center bg-amber-100/70">금일 사용수량</th><th class="py-2.5 px-2 text-center">차감 후 잔여</th><th class="py-2.5 px-2.5 text-right">소진 금액</th><th class="py-2.5 px-2">품목 비고</th></tr></thead><tbody>${list.map(st => { const uq = pendingUsageInputs[st.key]?.qty || 0, nv = pendingUsageInputs[st.key]?.note || '', afterR = Number((st.totalRemainQty - uq).toFixed(2)); return `<tr class="border-b border-stone-100 ${uq > 0 ? 'bg-amber-50/70' : 'hover:bg-stone-50'}"><td class="py-2 px-3 font-bold">${escapeHtml(st.vendor)}</td><td class="py-2 px-3 font-extrabold">${escapeHtml(st.item)}</td><td class="py-2 px-2 text-center">${escapeHtml(st.spec)}</td><td class="py-2 px-2 text-center font-extrabold text-emerald-800">${formatNumber(st.totalRemainQty)}</td><td class="py-2 px-2 text-center"><div class="flex items-center justify-center gap-1"><button type="button" onclick="adjustPendingUsageQty(${jsArg(st.key)}, -1, ${st.totalRemainQty})" class="w-6 h-6 rounded border bg-white font-bold cursor-pointer">-</button><input type="number" step="any" value="${uq > 0 ? uq : ''}" placeholder="0" onchange="setPendingUsageQty(${jsArg(st.key)}, this.value)" class="no-spinner w-14 text-center font-extrabold border rounded py-1"><button type="button" onclick="adjustPendingUsageQty(${jsArg(st.key)}, 1, ${st.totalRemainQty})" class="w-6 h-6 rounded border bg-white font-bold cursor-pointer">+</button></div></td><td class="py-2 px-2 text-center font-extrabold">${formatNumber(afterR)}</td><td class="py-2 px-2.5 text-right font-bold">${uq > 0 ? formatCurrency(estimateUsageCost(st, uq)) : formatCurrency(st.unitAmt) + '/개'}</td><td class="py-2 px-2"><input type="text" value="${escapeHtml(nv)}" oninput="setPendingUsageNote(${jsArg(st.key)}, this.value)" placeholder="비고" class="w-full border rounded px-2 py-1"></td></tr>`; }).join('')}</tbody></table></div>`;
             } else {
                 const logs = usageLogsData.filter(u => !q || `${u.item} ${u.vendor} ${u.memo} ${u.date}`.toLowerCase().includes(q)).sort((a, b) => String(b.date).localeCompare(String(a.date)));
-                container.innerHTML = logs.length === 0 ? `<div class="py-16 text-center text-stone-400 text-sm font-bold">사용 보고 이력이 없습니다.</div>` : `<div class="overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b font-extrabold text-stone-600"><th class="py-2 px-3">사용일자</th><th class="py-2 px-3">거래처</th><th class="py-2 px-3">원재료명</th><th class="py-2 px-2 text-center">규격</th><th class="py-2 px-2 text-center">사용수량</th><th class="py-2 px-2.5 text-right">소진금액</th><th class="py-2 px-3">비고</th><th class="py-2 px-2 text-center">취소</th></tr></thead><tbody>${logs.map(u => `<tr class="border-b hover:bg-stone-50"><td class="py-2 px-3 font-bold">${escapeHtml(u.date)}</td><td class="py-2 px-3">${escapeHtml(u.vendor)}</td><td class="py-2 px-3 font-extrabold">${escapeHtml(u.item)}</td><td class="py-2 px-2 text-center">${escapeHtml(u.spec)}</td><td class="py-2 px-2 text-center font-extrabold text-rose-700">-${formatNumber(u.usedQty)}</td><td class="py-2 px-2.5 text-right font-extrabold">${formatCurrency(u.totalAmt)}</td><td class="py-2 px-3">${escapeHtml(u.memo || '-')}</td><td class="py-2 px-2 text-center"><button type="button" onclick="revertSingleUsageLog('${escapeHtml(u.id)}')" class="px-2 py-1 rounded bg-rose-50 text-rose-700 border border-rose-200 font-bold cursor-pointer">원복</button></td></tr>`).join('')}</tbody></table></div>`;
-            }
+                container.innerHTML = logs.length === 0 ? `<div class="py-16 text-center text-stone-400 text-sm font-bold">사용 보고 이력이 없습니다.</div>` : `<div class="overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b font-extrabold text-stone-600"><th class="py-2 px-3">사용일자</th><th class="py-2 px-3">거래처</th><th class="py-2 px-3">원재료명</th><th class="py-2 px-2 text-center">규격</th><th class="py-2 px-2 text-center">사용수량</th><th class="py-2 px-2.5 text-right">소진금액</th><th class="py-2 px-3">비고</th><th class="py-2 px-2 text-center">취소</th></tr></thead><tbody>${logs.map(u => `<tr class="border-b hover:bg-stone-50"><td class="py-2 px-3 font-bold">${escapeHtml(u.date)}</td><td class="py-2 px-3">${escapeHtml(u.vendor)}</td><td class="py-2 px-3 font-extrabold">${escapeHtml(u.item)}</td><td class="py-2 px-2 text-center">${escapeHtml(u.spec)}</td><td class="py-2 px-2 text-center font-extrabold text-rose-700">-${formatNumber(u.usedQty)}</td><td class="py-2 px-2.5 text-right font-extrabold">${formatCurrency(u.totalAmt)}</td><td class="py-2 px-3">${escapeHtml(u.memo || '-')}</td><td class="py-2 px-2 text-center"><button type="button" onclick="revertSingleUsageLog(${jsArg(u.id)})" class="px-2 py-1 rounded bg-rose-50 text-rose-700 border border-rose-200 font-bold cursor-pointer">원복</button></td></tr>`).join('')}</tbody></table></div>`;
+
+                // [4단계 R7] 재고 변동 이력 (수동 조정·발주 수정·삭제·사용 보고 취소)
+                const typeLabel = { ADJUST: '현재고 조정', EDIT: '발주 수정', DELETE: '발주 삭제', USAGE_REVERT: '사용보고 취소' };
+                const adj = inventoryAdjustLogs.filter(a => !q || `${a.item} ${a.vendor} ${a.reason} ${a.date}`.toLowerCase().includes(q)).slice().sort((a, b) => String(b.at || b.date).localeCompare(String(a.at || a.date)) || String(b.id).localeCompare(String(a.id)));
+                container.innerHTML += `<div class="mt-5"><div class="flex items-center justify-between mb-2"><h4 class="text-xs font-extrabold text-stone-800">재고 변동 이력 (수동 조정 · 발주 수정/삭제 · 사용보고 취소)</h4><span class="text-[11px] text-stone-500">${adj.length}건 · 삭제·수정 불가 기록</span></div>${adj.length === 0 ? `<div class="py-6 text-center text-stone-400 text-xs">기록된 재고 변동이 없습니다.</div>` : `<div class="overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b font-extrabold text-stone-600"><th class="py-2 px-3">기록 시각</th><th class="py-2 px-2">구분</th><th class="py-2 px-3">원재료명</th><th class="py-2 px-2 text-center">규격</th><th class="py-2 px-2 text-center">발주일</th><th class="py-2 px-2 text-right">변경 전</th><th class="py-2 px-2 text-right">변경 후</th><th class="py-2 px-2 text-right">증감</th><th class="py-2 px-3">사유</th></tr></thead><tbody>${adj.map(a => `<tr class="border-b"><td class="py-2 px-3 whitespace-nowrap">${escapeHtml(a.at || a.date)}</td><td class="py-2 px-2 font-bold">${escapeHtml(typeLabel[a.type] || a.type || '')}</td><td class="py-2 px-3 font-extrabold">${escapeHtml(a.item)}</td><td class="py-2 px-2 text-center">${escapeHtml(a.spec)}</td><td class="py-2 px-2 text-center">${escapeHtml(a.orderDate)}</td><td class="py-2 px-2 text-right">${formatNumber(a.before)}</td><td class="py-2 px-2 text-right">${formatNumber(a.after)}</td><td class="py-2 px-2 text-right font-extrabold ${a.delta < 0 ? 'text-rose-700' : 'text-emerald-700'}">${a.delta > 0 ? '+' : ''}${formatNumber(a.delta)}</td><td class="py-2 px-3">${escapeHtml(a.reason)}</td></tr>`).join('')}</tbody></table></div>`}</div>`;            }
         }
         function renderInventoryWorkspace() {
             const q = (document.getElementById('inventorySearchInput')?.value || '').trim().toLowerCase(), expF = document.getElementById('expiryFilterSelect')?.value || 'ALL';
@@ -1413,11 +1469,11 @@
                 if (q && !`${o.colA} ${o.colB} ${o.colC} ${expStr}`.toLowerCase().includes(q)) return false;
                 return true;
             }).sort((a, b) => (getOrderExpiryDate(a) || '9999-12-31').localeCompare(getOrderExpiryDate(b) || '9999-12-31'));
-            let totalRem = 0, stockSupply = 0, stockTaxable = 0, expSoonCnt = 0;
+            let totalRem = 0, stockSupply = 0, stockTaxable = 0, stockVat = 0, expSoonCnt = 0;
             ordersData.forEach(o => {
                 const rem = getOrderRemainQty(o); if (rem <= 0) return;
                 const { unitAmt, taxType } = getOrderLineAmounts(o), rowS = Math.round(rem * unitAmt);
-                totalRem += rem; stockSupply += rowS; if (taxType === '과세') stockTaxable += rowS;
+                totalRem += rem; stockSupply += rowS; if (taxType === '과세') { stockTaxable += rowS; stockVat += Math.round(rowS * 0.1); }
                 const st = getExpiryStatusInfo(getOrderExpiryDate(o)).status;
                 if (st === 'EXPIRED' || st === 'SOON') expSoonCnt++;
             });
@@ -1430,7 +1486,7 @@
             document.getElementById('kpi1Sub').textContent = `현재고 총 수량 ${formatNumber(totalRem)}`;
             document.getElementById('kpi2Title').textContent = '실시간 현재고 자산 (공급가)';
             document.getElementById('kpi2Value').textContent = formatCurrency(stockSupply);
-            document.getElementById('kpi2Sub').textContent = `부가세 포함: ${formatCurrency(stockSupply + Math.round(stockTaxable * 0.1))}`;
+            document.getElementById('kpi2Sub').textContent = `부가세 포함: ${formatCurrency(stockSupply + stockVat)}`;
             document.getElementById('kpi3Title').textContent = '소비기한 임박·경과 품목';
             document.getElementById('kpi3Value').textContent = `${expSoonCnt}건`;
             document.getElementById('kpi3Sub').textContent = '14일 이내 만료 또는 경과';
@@ -1440,9 +1496,9 @@
             document.getElementById('footerSummaryLabel').textContent = '현재 표시된 재고 자산 합계';
             document.getElementById('footerCountBadge').textContent = `${list.length}건`;
             document.getElementById('footerSupplyTotal').textContent = formatCurrency(stockSupply);
-            document.getElementById('footerVatIncludedTotal').textContent = formatCurrency(stockSupply + Math.round(stockTaxable * 0.1));
+            document.getElementById('footerVatIncludedTotal').textContent = formatCurrency(stockSupply + stockVat);
             const container = document.getElementById('mainContentContainer');
-            container.innerHTML = list.length === 0 ? `<div class="py-16 text-center text-stone-400 text-sm font-bold">재고 내역이 없습니다.</div>` : `<div class="overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b font-extrabold text-stone-600"><th class="py-2.5 px-3">거래처</th><th class="py-2.5 px-3">원재료명</th><th class="py-2.5 px-2 text-center">규격</th><th class="py-2.5 px-2 text-center bg-emerald-100/70">현재고 조정</th><th class="py-2.5 px-2 text-center">구분</th><th class="py-2.5 px-2.5 text-right">단가</th><th class="py-2.5 px-2.5 text-right">재고금액</th><th class="py-2.5 px-2.5 text-center">소비기한</th></tr></thead><tbody>${list.map(o => { const rem = getOrderRemainQty(o), { unitAmt, taxType } = getOrderLineAmounts(o), expStr = getOrderExpiryDate(o), expInfo = getExpiryStatusInfo(expStr); return `<tr class="border-b hover:bg-stone-50"><td class="py-2 px-3 font-bold">${escapeHtml(o.colA)}</td><td class="py-2 px-3 font-extrabold">${escapeHtml(o.colB)} <span class="text-[10px] text-stone-400 block">발주: ${escapeHtml(o.date)}</span></td><td class="py-2 px-2 text-center">${escapeHtml(o.colC)}</td><td class="py-2 px-2 text-center"><div class="flex items-center justify-center gap-1"><button type="button" onclick="adjustRemainQty('${escapeHtml(o.id)}', -1)" class="w-6 h-6 rounded border bg-white font-bold cursor-pointer">-</button><input type="number" step="any" value="${rem}" onchange="setRemainQty('${escapeHtml(o.id)}', this.value)" class="no-spinner w-12 text-center font-extrabold border rounded py-1"><button type="button" onclick="adjustRemainQty('${escapeHtml(o.id)}', 1)" class="w-6 h-6 rounded border bg-white font-bold cursor-pointer">+</button></div></td><td class="py-2 px-2 text-center"><span class="px-2 py-0.5 rounded text-[11px] font-bold ${taxType === '과세' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-800'}">${taxType}</span></td><td class="py-2 px-2.5 text-right font-bold">${formatCurrency(unitAmt)}</td><td class="py-2 px-2.5 text-right font-extrabold text-emerald-900">${formatCurrency(Math.round(rem * unitAmt))}</td><td class="py-2 px-2 text-center"><div class="inline-flex flex-col items-center w-[114px] gap-1"><input type="date" value="${escapeHtml(expStr)}" onclick="openDatePickerBox(this)" onchange="updateOrderExpiry('${escapeHtml(o.id)}', this.value)" class="expiry-input text-[11px] border hover:border-amber-500 rounded px-1.5 py-0.5 w-full"><span class="block w-full py-0.5 rounded text-[10px] border ${expInfo.badgeClass}">${expInfo.label}</span></div></td></tr>`; }).join('')}</tbody></table></div>`;
+            container.innerHTML = list.length === 0 ? `<div class="py-16 text-center text-stone-400 text-sm font-bold">재고 내역이 없습니다.</div>` : `<div class="overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b font-extrabold text-stone-600"><th class="py-2.5 px-3">거래처</th><th class="py-2.5 px-3">원재료명</th><th class="py-2.5 px-2 text-center">규격</th><th class="py-2.5 px-2 text-center bg-emerald-100/70">현재고 조정</th><th class="py-2.5 px-2 text-center">구분</th><th class="py-2.5 px-2.5 text-right">단가</th><th class="py-2.5 px-2.5 text-right">재고금액</th><th class="py-2.5 px-2.5 text-center">소비기한</th></tr></thead><tbody>${list.map(o => { const rem = getOrderRemainQty(o), { unitAmt, taxType } = getOrderLineAmounts(o), expStr = getOrderExpiryDate(o), expInfo = getExpiryStatusInfo(expStr); return `<tr class="border-b hover:bg-stone-50"><td class="py-2 px-3 font-bold">${escapeHtml(o.colA)}</td><td class="py-2 px-3 font-extrabold">${escapeHtml(o.colB)} <span class="text-[10px] text-stone-400 block">발주: ${escapeHtml(o.date)}</span></td><td class="py-2 px-2 text-center">${escapeHtml(o.colC)}</td><td class="py-2 px-2 text-center"><div class="flex items-center justify-center gap-1"><button type="button" onclick="adjustRemainQty(${jsArg(o.id)}, -1)" class="w-6 h-6 rounded border bg-white font-bold cursor-pointer">-</button><input type="number" step="any" value="${rem}" onchange="setRemainQty(${jsArg(o.id)}, this.value)" class="no-spinner w-12 text-center font-extrabold border rounded py-1"><button type="button" onclick="adjustRemainQty(${jsArg(o.id)}, 1)" class="w-6 h-6 rounded border bg-white font-bold cursor-pointer">+</button></div></td><td class="py-2 px-2 text-center"><span class="px-2 py-0.5 rounded text-[11px] font-bold ${taxType === '과세' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-800'}">${taxType}</span></td><td class="py-2 px-2.5 text-right font-bold">${formatCurrency(unitAmt)}</td><td class="py-2 px-2.5 text-right font-extrabold text-emerald-900">${formatCurrency(Math.round(rem * unitAmt))}</td><td class="py-2 px-2 text-center"><div class="inline-flex flex-col items-center w-[114px] gap-1"><input type="date" value="${escapeHtml(expStr)}" onclick="openDatePickerBox(this)" onchange="updateOrderExpiry(${jsArg(o.id)}, this.value)" class="expiry-input text-[11px] border hover:border-amber-500 rounded px-1.5 py-0.5 w-full"><span class="block w-full py-0.5 rounded text-[10px] border ${expInfo.badgeClass}">${expInfo.label}</span></div></td></tr>`; }).join('')}</tbody></table></div>`;
         }
         function getFilteredPriceCatalogList() {
             const q = (document.getElementById('priceSearchInput')?.value || '').trim().toLowerCase(), cf = document.getElementById('priceChangeFilterSelect')?.value || 'ALL';
@@ -1494,7 +1550,7 @@
             document.getElementById('footerSupplyTotal').textContent = `평균 ${formatCurrency(avgU)}`;
             document.getElementById('footerVatIncludedTotal').textContent = `변동품목 ${list.filter(i => i.changeCount > 0).length}종`;
             const container = document.getElementById('mainContentContainer');
-            container.innerHTML = list.length === 0 ? `<div class="py-16 text-center text-stone-400 text-sm font-bold">품목 단가 이력이 없습니다.</div>` : `<div class="overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b font-extrabold text-stone-600"><th class="py-2.5 px-3">거래처</th><th class="py-2.5 px-3">원재료명</th><th class="py-2.5 px-2 text-center">규격</th><th class="py-2.5 px-2.5 text-center">현재 제조원</th><th class="py-2.5 px-2 text-center">구분</th><th class="py-2.5 px-2.5 text-right">직전 단가</th><th class="py-2.5 px-2.5 text-right">현재 단가</th><th class="py-2.5 px-2 text-center">변동폭</th><th class="py-2.5 px-2 text-center">이력</th></tr></thead><tbody>${list.map(it => { const pctBadge = it.diffPct > 0 ? `<span class="px-2 py-0.5 rounded-full font-extrabold bg-rose-100 text-rose-700">▲ +${it.diffPct.toFixed(1)}%</span>` : (it.diffPct < 0 ? `<span class="px-2 py-0.5 rounded-full font-extrabold bg-blue-100 text-blue-700">▼ ${it.diffPct.toFixed(1)}%</span>` : `<span class="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600">0.0%</span>`); return `<tr class="border-b hover:bg-stone-50"><td class="py-2.5 px-3 font-bold">${escapeHtml(it.vendor)}</td><td class="py-2.5 px-3 font-extrabold">${escapeHtml(it.item)}</td><td class="py-2.5 px-2 text-center">${escapeHtml(it.spec)}</td><td class="py-2.5 px-2.5 text-center font-bold">${escapeHtml(it.currentMfg || '-')}</td><td class="py-2.5 px-2 text-center">${it.taxType}</td><td class="py-2.5 px-2.5 text-right text-stone-500">${formatCurrency(it.prevUnit)}</td><td class="py-2.5 px-2.5 text-right font-extrabold">${formatCurrency(it.latestUnit)}</td><td class="py-2.5 px-2 text-center">${pctBadge}</td><td class="py-2.5 px-2 text-center"><button type="button" onclick="openItemPriceHistoryModal('${escapeHtml(it.key)}')" class="px-2.5 py-1 rounded bg-stone-800 text-white font-bold cursor-pointer">변동(${it.changeCount})</button></td></tr>`; }).join('')}</tbody></table></div>`;
+            container.innerHTML = list.length === 0 ? `<div class="py-16 text-center text-stone-400 text-sm font-bold">품목 단가 이력이 없습니다.</div>` : `<div class="overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b font-extrabold text-stone-600"><th class="py-2.5 px-3">거래처</th><th class="py-2.5 px-3">원재료명</th><th class="py-2.5 px-2 text-center">규격</th><th class="py-2.5 px-2.5 text-center">현재 제조원</th><th class="py-2.5 px-2 text-center">구분</th><th class="py-2.5 px-2.5 text-right">직전 단가</th><th class="py-2.5 px-2.5 text-right">현재 단가</th><th class="py-2.5 px-2 text-center">변동폭</th><th class="py-2.5 px-2 text-center">이력</th></tr></thead><tbody>${list.map(it => { const pctBadge = it.diffPct > 0 ? `<span class="px-2 py-0.5 rounded-full font-extrabold bg-rose-100 text-rose-700">▲ +${it.diffPct.toFixed(1)}%</span>` : (it.diffPct < 0 ? `<span class="px-2 py-0.5 rounded-full font-extrabold bg-blue-100 text-blue-700">▼ ${it.diffPct.toFixed(1)}%</span>` : `<span class="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600">0.0%</span>`); return `<tr class="border-b hover:bg-stone-50"><td class="py-2.5 px-3 font-bold">${escapeHtml(it.vendor)}</td><td class="py-2.5 px-3 font-extrabold">${escapeHtml(it.item)}</td><td class="py-2.5 px-2 text-center">${escapeHtml(it.spec)}</td><td class="py-2.5 px-2.5 text-center font-bold">${escapeHtml(it.currentMfg || '-')}</td><td class="py-2.5 px-2 text-center">${it.taxType}</td><td class="py-2.5 px-2.5 text-right text-stone-500">${formatCurrency(it.prevUnit)}</td><td class="py-2.5 px-2.5 text-right font-extrabold">${formatCurrency(it.latestUnit)}</td><td class="py-2.5 px-2 text-center">${pctBadge}</td><td class="py-2.5 px-2 text-center"><button type="button" onclick="openItemPriceHistoryModal(${jsArg(it.key)})" class="px-2.5 py-1 rounded bg-stone-800 text-white font-bold cursor-pointer">변동(${it.changeCount})</button></td></tr>`; }).join('')}</tbody></table></div>`;
         }
         function renderMainChart() {
             const canvas = document.getElementById('mainChartCanvas'); if (!canvas || !window.Chart) return;
@@ -1632,39 +1688,80 @@
                 return `<div class="p-2.5 rounded-xl border border-stone-100 bg-stone-50/70"><div class="flex justify-between text-xs"><span class="font-extrabold text-stone-800">${idx + 1}. ${escapeHtml(v)}</span><span class="font-black text-stone-900">${formatCurrency(amt)} <span class="text-[10px] text-amber-700">(${ratio}%)</span></span></div><div class="w-full h-1.5 bg-stone-200 rounded-full mt-1.5 overflow-hidden"><div class="h-full bg-amber-600 rounded-full" style="width:${Math.min(100, parseFloat(ratio))}%"></div></div></div>`;
             }).join('');
         }
-        function adjustRemainQty(id, d) { const t = ordersData.find(o => o.id === id); if (!t) return; t.remainQty = Math.max(0, Number((getOrderRemainQty(t) + d).toFixed(2))); t.id = buildIdWithMeta(t); renderDashboard(); pushAllToGoogleSheet(true); }
-        function setRemainQty(id, v) { const t = ordersData.find(o => o.id === id); if (!t) return; t.remainQty = Math.max(0, parseFloat(v) || 0); t.id = buildIdWithMeta(t); renderDashboard(); pushAllToGoogleSheet(true); }
+        function adjustRemainQty(id, d) { const t = ordersData.find(o => o.id === id); if (!t) return; const before = getOrderRemainQty(t); t.remainQty = Math.max(0, Number((before + d).toFixed(2))); logInventoryAdjust(t, before, t.remainQty, '현재고 직접 조정(+/-)'); t.id = buildIdWithMeta(t); renderDashboard(); pushAllToGoogleSheet(true); }
+        function setRemainQty(id, v) { const t = ordersData.find(o => o.id === id); if (!t) return; const before = getOrderRemainQty(t); t.remainQty = Math.max(0, parseFloat(v) || 0); logInventoryAdjust(t, before, t.remainQty, '현재고 직접 입력'); t.id = buildIdWithMeta(t); renderDashboard(); pushAllToGoogleSheet(true); }
         function openDatePickerBox(el) { if (el && typeof el.showPicker === 'function') { try { el.showPicker(); } catch (e) {} } }
         function updateOrderExpiry(id, d) { const t = ordersData.find(o => o.id === id); if (!t) return; t.expiryDate = d || ''; t.id = buildIdWithMeta(t); renderDashboard(); pushAllToGoogleSheet(true); }
         function toggleOrderTaxType(id) { const t = ordersData.find(o => o.id === id); if (!t) return; t.taxType = getOrderLineAmounts(t).taxType === '과세' ? '면세' : '과세'; t.id = buildIdWithMeta(t); renderDashboard(); pushAllToGoogleSheet(true); }
         function toggleHideZeroStock() { hideZeroStock = Boolean(document.getElementById('hideZeroStockChk')?.checked); renderDashboard(); }
-        function deleteSingleOrder(id) { openConfirmModal('품목 삭제', '선택한 발주 내역을 삭제하시겠습니까?', () => { ordersData = ordersData.filter(o => o.id !== id); renderDashboard(); pushAllToGoogleSheet(false); }); }
-        function deleteOrdersByDate(d) { openConfirmModal('일자 전체 삭제', `${d} 일자 발주 내역을 모두 삭제하시겠습니까?`, () => { ordersData = ordersData.filter(o => o.date !== d); renderDashboard(); pushAllToGoogleSheet(false); }); }
+        function deleteSingleOrder(id) { openConfirmModal('품목 삭제', '선택한 발주 내역을 삭제하시겠습니까?', () => { const t = ordersData.find(o => o.id === id); if (t) logInventoryAdjust(t, getOrderRemainQty(t), 0, '발주 내역 삭제', 'DELETE', { orderSnapshot: { ...t } }); ordersData = ordersData.filter(o => o.id !== id); renderDashboard(); pushAllToGoogleSheet(false); }); }
+        function deleteOrdersByDate(d) { openConfirmModal('일자 전체 삭제', `${d} 일자 발주 내역을 모두 삭제하시겠습니까?`, () => { ordersData.filter(o => o.date === d).forEach(t => logInventoryAdjust(t, getOrderRemainQty(t), 0, `발주 일자 전체 삭제 (${d})`, 'DELETE', { orderSnapshot: { ...t } })); ordersData = ordersData.filter(o => o.date !== d); renderDashboard(); pushAllToGoogleSheet(false); }); }
         function renderSnapshotQuickListBar() {
             const bar = document.getElementById('snapshotQuickListBar'); if (!bar) return;
             const keys = Object.keys(monthlySnapshots).sort((a, b) => b.localeCompare(a));
-            bar.innerHTML = keys.length === 0 ? `<span class="text-emerald-900 font-bold">매월 말 [재고조사 완료 및 확정]을 누르면 스냅샷이 보존됩니다.</span>` : `<div class="flex flex-wrap items-center gap-1.5"><span class="font-extrabold text-emerald-950">보관된 월말 스냅샷:</span>${keys.map(m => `<button type="button" onclick="openSnapshotDetailModal('${escapeHtml(m)}')" class="px-2.5 py-1 rounded-lg bg-white border border-emerald-300 text-emerald-950 font-extrabold cursor-pointer">${escapeHtml(m)} (${formatCurrency(monthlySnapshots[m].supplyTotal || 0)})</button>`).join('')}</div>`;
+            bar.innerHTML = keys.length === 0 ? `<span class="text-emerald-900 font-bold">매월 말 [재고조사 완료 및 확정]을 누르면 스냅샷이 보존됩니다.</span>` : `<div class="flex flex-wrap items-center gap-1.5"><span class="font-extrabold text-emerald-950">보관된 월말 스냅샷:</span>${keys.map(m => `<button type="button" onclick="openSnapshotDetailModal(${jsArg(m)})" class="px-2.5 py-1 rounded-lg bg-white border border-emerald-300 text-emerald-950 font-extrabold cursor-pointer">${escapeHtml(m)} (${formatCurrency(monthlySnapshots[m].supplyTotal || 0)})</button>`).join('')}</div>`;
+        }
+        // [3단계 R5] 월말 기준 재고 역산
+        //  현재고에서 '월말 이후'에 일어난 사용 보고 차감분을 되돌려 더하고, 월말 이후 수동 조정·발주 수정분을 되돌리며,
+        //  월말 이후에 들어온 발주(로트)는 제외합니다. 월말 이후 삭제된 발주는 삭제 이력에서 복원해 포함합니다.
+        //  ※ v2.8 이전에 한 현재고 수동 조정은 이력이 없어 역산에 반영되지 않습니다.
+        function getMonthEndStr(mKey) {
+            const [y, m] = mKey.split('-').map(Number);
+            const last = new Date(y, m, 0).getDate();
+            return `${mKey}-${String(last).padStart(2, '0')}`;
+        }
+        function computeStockAsOf(monthEnd) {
+            const today = getTodayStr();
+            const lots = new Map();
+            ordersData.forEach(o => {
+                if (String(o.date || '') > monthEnd) return;
+                lots.set(parseMetaFromId(o.id).baseId, { o, rem: getOrderRemainQty(o) });
+            });
+            inventoryAdjustLogs.forEach(a => {
+                if (a.type !== 'DELETE' || !(a.date > monthEnd) || !a.orderSnapshot) return;
+                if (String(a.orderSnapshot.date || '') > monthEnd || lots.has(a.orderBaseId)) return;
+                lots.set(a.orderBaseId, { o: a.orderSnapshot, rem: 0, deletedLater: true });
+            });
+            usageLogsData.forEach(u => {
+                if (!(String(u.date || '') > monthEnd) || !Array.isArray(u.deductions)) return;
+                u.deductions.forEach(d => { const L = lots.get(d.baseId); if (L) L.rem += parseFloat(d.qty) || 0; });
+            });
+            inventoryAdjustLogs.forEach(a => {
+                if (!(a.date > monthEnd) || a.type === 'USAGE_REVERT') return;
+                const L = lots.get(a.orderBaseId); if (L) L.rem -= (Number(a.delta) || 0);
+            });
+            return { isFuture: monthEnd >= today, lots: Array.from(lots.values()).map(L => ({ ...L, rem: Number(Math.max(0, L.rem).toFixed(4)) })) };
         }
         function confirmMonthlyInventorySnapshot() {
             const mVal = document.getElementById('snapshotTargetMonth')?.value || getTodayStr().slice(0, 7);
             const reason = (document.getElementById('snapshotCreateReason')?.value || '').trim() || `${mVal} 정기 재고실사 확정`;
-            let supplyTotal = 0, taxableSupply = 0, totalQty = 0;
-            const items = ordersData.filter(o => getOrderRemainQty(o) > 0).map(o => {
-                const rem = getOrderRemainQty(o), { unitAmt, taxType } = getOrderLineAmounts(o), rowAmt = Math.round(rem * unitAmt);
-                totalQty += rem; supplyTotal += rowAmt; if (taxType === '과세') taxableSupply += rowAmt;
-                return { vendor: o.colA, item: o.colB, spec: o.colC, remainQty: rem, taxType, unitAmt, rowAmt, expiryDate: getOrderExpiryDate(o) };
-            });
-            monthlySnapshots[mVal] = { month: mVal, confirmedAt: getTodayStr(), memo: reason, supplyTotal, vatIncludedTotal: supplyTotal + Math.round(taxableSupply * 0.1), taxableSupply, totalQty, items };
-            renderDashboard(); pushAllToGoogleSheet(false);
+            const monthEnd = getMonthEndStr(mVal);
+            const { isFuture, lots } = computeStockAsOf(monthEnd);
+            const doConfirm = () => {
+                let supplyTotal = 0, taxableSupply = 0, totalQty = 0;
+                const items = lots.filter(L => L.rem > 0).map(L => {
+                    const o = L.o, rem = L.rem, { unitAmt, taxType } = getOrderLineAmounts(o), rowAmt = Math.round(rem * unitAmt);
+                    totalQty += rem; supplyTotal += rowAmt; if (taxType === '과세') taxableSupply += rowAmt;
+                    return { vendor: o.colA, item: o.colB, spec: o.colC, remainQty: rem, taxType, unitAmt, rowAmt, expiryDate: getOrderExpiryDate(o), orderDate: o.date || '', deletedLater: !!L.deletedLater };
+                });
+                monthlySnapshots[mVal] = { month: mVal, asOfDate: isFuture ? getTodayStr() : monthEnd, method: isFuture ? 'CURRENT' : 'AS_OF_MONTH_END', confirmedAt: getTodayStr(), memo: reason, supplyTotal, vatIncludedTotal: supplyTotal + items.reduce((acc, it) => acc + (it.taxType === '과세' ? Math.round(it.rowAmt * 0.1) : 0), 0), taxableSupply, totalQty, items };
+                renderDashboard(); pushAllToGoogleSheet(false);
+                showToast(`${mVal} 재고 확정 완료 (${isFuture ? '오늘 현재고 기준' : monthEnd + ' 월말 기준 역산'})`, 'success');
+            };
+            const warns = [];
+            if (monthlySnapshots[mVal]) warns.push(`${mVal} 확정 기록이 이미 있습니다 (${monthlySnapshots[mVal].confirmedAt || ''} 확정). 덮어씁니다.`);
+            if (isFuture) warns.push(`${mVal} 월말(${monthEnd})이 아직 지나지 않아 오늘 현재고 기준으로 확정됩니다.`);
+            else warns.push(`${monthEnd} 월말 기준으로 역산합니다 (월말 이후 사용 보고·수동 조정·신규 발주 제외).`);
+            openConfirmModal('재고조사 확정', warns.join('\n'), doConfirm);
         }
         function openSnapshotDetailModal(m) {
             const snap = monthlySnapshots[m]; if (!snap) return;
             document.getElementById('snapshotModalTitle').textContent = `${m} 월말 확정 재고 상세표`;
-            document.getElementById('snapshotCurrentMemoText').textContent = snap.memo || '-';
+            document.getElementById('snapshotCurrentMemoText').textContent = `${snap.memo || '-'}  ·  기준일: ${snap.asOfDate || snap.confirmedAt || '-'}${snap.method === 'AS_OF_MONTH_END' ? ' (월말 역산)' : (snap.method === 'CURRENT' ? ' (확정 시점 현재고)' : ' (이전 방식: 확정 시점 현재고)')}`;
             document.getElementById('snapshotFooterSupply').textContent = formatCurrency(snap.supplyTotal || 0);
             document.getElementById('snapshotFooterVatInc').textContent = formatCurrency(snap.vatIncludedTotal || 0);
             document.getElementById('snapshotModalBody').innerHTML = `<table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b font-extrabold"><th class="py-2 px-2.5">거래처</th><th class="py-2 px-2.5">원재료명</th><th class="py-2 px-2 text-center">규격</th><th class="py-2 px-2 text-center">재고수량</th><th class="py-2 px-2.5 text-right">단가</th><th class="py-2 px-2.5 text-right">합산금액</th></tr></thead><tbody>${(snap.items || []).map(it => `<tr class="border-b"><td class="py-1.5 px-2.5 font-bold">${escapeHtml(it.vendor)}</td><td class="py-1.5 px-2.5 font-extrabold">${escapeHtml(it.item)}</td><td class="py-1.5 px-2 text-center">${escapeHtml(it.spec)}</td><td class="py-1.5 px-2 text-center font-extrabold">${formatNumber(it.remainQty)}</td><td class="py-1.5 px-2.5 text-right">${formatCurrency(it.unitAmt)}</td><td class="py-1.5 px-2.5 text-right font-extrabold">${formatCurrency(it.rowAmt)}</td></tr>`).join('')}</tbody></table>`;
-            document.getElementById('snapshotDeleteBtn').onclick = () => { delete monthlySnapshots[m]; closeSnapshotDetailModal(); renderDashboard(); pushAllToGoogleSheet(false); };
+            document.getElementById('snapshotDeleteBtn').onclick = () => { closeSnapshotDetailModal(); openConfirmModal('확정 기록 삭제', `${m} 월말 확정 재고 기록을 삭제하시겠습니까?\n삭제 후에는 되돌릴 수 없습니다.`, () => { delete monthlySnapshots[m]; renderDashboard(); pushAllToGoogleSheet(false); }); };
             const modal = document.getElementById('snapshotDetailModal'); modal.classList.remove('hidden'); modal.classList.add('flex');
         }
         function closeSnapshotDetailModal() { const m = document.getElementById('snapshotDetailModal'); m.classList.add('hidden'); m.classList.remove('flex'); }
@@ -1735,24 +1832,33 @@
             if (!fileList || fileList.length === 0) return;
             const fbDate = document.getElementById('uploadFallbackDate')?.value || getTodayStr();
             const skipDup = Boolean(document.getElementById('skipDuplicateUploadChk')?.checked), incZero = Boolean(document.getElementById('includeZeroQtyUploadChk')?.checked);
-            let added = 0;
+            let added = 0, skipped = 0;
+            const failed = [], emptyFiles = [];
+            const sigOf = (o) => `${o.date}||${o.colB}||${o.colC}||${Number(o.colD)}||${Number(o.amount)}`;
             for (const file of Array.from(fileList)) {
                 try {
                     const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
                     const orderDate = extractDateFromFilename(file.name, fbDate);
                     let best = [];
                     wb.SheetNames.forEach(sName => { const parsed = parseSheetRowsToOrders(sheetToFull2DArray(wb.Sheets[sName]), orderDate, incZero); if (parsed.length > best.length) best = parsed; });
-                    const sigMap = new Map();
-                    ordersData.forEach(ex => sigMap.set(`${ex.date}||${ex.colB}||${ex.colC}||${Number(ex.colD)}||${Number(ex.amount)}`, ex));
+                    if (best.length === 0) { emptyFiles.push(file.name); continue; }
+                    // [3단계 R1] 중복 판정은 '이번 파일 이전에 이미 등록된 내역'과만 비교
+                    //  → 같은 발주서 안에 품목·수량·단가가 같은 줄이 2개 있어도 둘 다 등록
+                    const existingSigs = new Set(ordersData.map(sigOf));
                     best.forEach(nc => {
-                        const sig = `${nc.date}||${nc.colB}||${nc.colC}||${Number(nc.colD)}||${Number(nc.amount)}`;
-                        if (skipDup && sigMap.has(sig)) return;
-                        sigMap.set(sig, nc); ordersData.push(nc); added++;
+                        if (skipDup && existingSigs.has(sigOf(nc))) { skipped++; return; }
+                        ordersData.push(nc); added++;
                     });
-                } catch (e) {}
+                } catch (e) {
+                    failed.push(`${file.name} (${e && e.message ? e.message : e})`);
+                }
             }
             reconcileManufacturerHistory(); closeUploadModal(); initYearAndMonthControls(); renderDashboard();
-            if (added > 0) { await pushAllToGoogleSheet(true); showToast(`${added}건 발주 등록 완료`, 'success'); }
+            // [3단계 R2] 결과를 항상 알림 (실패·빈 파일·중복 건너뜀 포함)
+            if (failed.length) showToast(`읽지 못한 파일 ${failed.length}개: ${failed.join(', ')}`, 'error');
+            if (emptyFiles.length) showToast(`발주 품목을 찾지 못한 파일: ${emptyFiles.join(', ')} — 양식(품명·수량 열)을 확인하세요`, 'error');
+            if (added > 0) { await pushAllToGoogleSheet(true); showToast(`${added}건 발주 등록 완료${skipped ? ` · 이미 등록된 동일 내역 ${skipped}건 건너뜀` : ''}`, 'success'); }
+            else if (!failed.length && !emptyFiles.length) showToast(`새로 등록된 내역이 없습니다${skipped ? ` (이미 등록된 동일 내역 ${skipped}건)` : ''}.`, 'info');
         }
         function openManualAddModal() { document.getElementById('m_date').value = getTodayStr(); const m = document.getElementById('manualAddModal'); m.classList.remove('hidden'); m.classList.add('flex'); }
         function closeManualAddModal() { const m = document.getElementById('manualAddModal'); m.classList.add('hidden'); m.classList.remove('flex'); }
@@ -1788,7 +1894,8 @@
             document.getElementById('e_remainQty').value = rem;
             document.getElementById('e_unitPrice').value = unitAmt;
             document.getElementById('e_expiry').value = getOrderExpiryDate(o) || '';
-            document.getElementById('e_mfg').value = getOrderManufacturer(o) || '';
+            document.getElementById('e_mfg').value = o.mfgInferred ? '' : (getOrderManufacturer(o) || '');
+            document.getElementById('e_mfg').placeholder = o.mfgInferred ? `미입력 (직전 로트: ${getOrderManufacturer(o)})` : '';
             document.getElementById('e_note').value = getOrderPureNote(o) || '';
 
             const m = document.getElementById('editOrderModal');
@@ -1822,6 +1929,7 @@
             const rawMfg = (document.getElementById('e_mfg').value || '').trim();
             const pureNote = (document.getElementById('e_note').value || '').trim();
 
+            const beforeRem = getOrderRemainQty(o), beforeQty = parseFloat(o.colD) || 0;
             o.date = document.getElementById('e_date').value || getTodayStr();
             o.taxType = document.getElementById('e_taxType').value || '과세';
             o.colA = document.getElementById('e_vendor').value.trim() || '기타';
@@ -1836,6 +1944,9 @@
             o.rawManufacturer = rawMfg;
             o.colE = composeColEWithManufacturer(rawMfg, pureNote);
             o.id = buildIdWithMeta(o);
+            if (Math.abs(beforeRem - newRem) > 1e-9 || Math.abs(beforeQty - newQty) > 1e-9) {
+                logInventoryAdjust(o, beforeRem, newRem, `발주 수정 (발주수량 ${beforeQty} → ${newQty})${pureNote ? ' · ' + pureNote : ''}`, 'EDIT', { beforeQty, afterQty: newQty });
+            }
 
             reconcileManufacturerHistory();
             closeEditOrderModal();
@@ -1845,6 +1956,13 @@
             showToast('발주 내역이 수정되었습니다.', 'success');
         }
 
+        // [5단계] CSV 칸 안전 처리: 따옴표 이중화, 수식으로 해석되는 =,+,-,@ 시작 문자열 앞에 ' 추가
+        function csvCell(v) {
+            if (typeof v === 'number') return String(v);
+            let t = String(v ?? '');
+            if (/^[=+\-@]/.test(t) && !/^-?\d+(\.\d+)?$/.test(t)) t = "'" + t;
+            return `"${t.replace(/"/g, '""')}"`;
+        }
         function triggerCsvDownload(csv, name) { const b = new Blob([csv], { type: 'text/csv;charset=utf-8;' }), u = URL.createObjectURL(b), a = document.createElement('a'); a.href = u; a.download = name; a.click(); URL.revokeObjectURL(u); }
         function exportCurrentMasterCsv() {
             if (activeMasterDomain === 'MS_INBOUND' && typeof window.exportMsInboundExcel === 'function') window.exportMsInboundExcel();
@@ -1855,17 +1973,17 @@
         function exportFilteredCsv() {
             const list = getFilteredOrders(activeWorkspace !== 'ORDER'); if (list.length === 0) return showToast('내보낼 데이터가 없습니다.', 'error');
             let csv = '\uFEFF발주일자,거래처,원재료명,규격,발주수량,현재고,과세구분,개당단가,합산금액,소비기한,제조원,비고\n';
-            list.forEach(o => { const { qty, unitAmt, totalAmt, taxType } = getOrderLineAmounts(o); csv += `"${o.date}","${o.colA}","${o.colB}","${o.colC}",${qty},${getOrderRemainQty(o)},"${taxType}",${unitAmt},${totalAmt},"${getOrderExpiryDate(o)}","${getOrderManufacturer(o)}","${getOrderPureNote(o)}"\n`; });
+            list.forEach(o => { const { qty, unitAmt, totalAmt, taxType } = getOrderLineAmounts(o); csv += [o.date, o.colA, o.colB, o.colC, qty, getOrderRemainQty(o), taxType, unitAmt, totalAmt, getOrderExpiryDate(o), (o.mfgInferred ? '(추정) ' : '') + getOrderManufacturer(o), getOrderPureNote(o)].map(csvCell).join(',') + '\n'; });
             triggerCsvDownload(csv, `바로가공장_발주내역_${getTodayStr()}.csv`);
         }
         function exportInventoryCsv() {
             let csv = '\uFEFF거래처,원재료명,규격,현재고,과세구분,단가,합산금액,소비기한\n';
-            ordersData.forEach(o => { const rem = getOrderRemainQty(o); if (hideZeroStock && rem <= 0) return; const { unitAmt, taxType } = getOrderLineAmounts(o); csv += `"${o.colA}","${o.colB}","${o.colC}",${rem},"${taxType}",${unitAmt},${Math.round(rem * unitAmt)},"${getOrderExpiryDate(o)}"\n`; });
+            ordersData.forEach(o => { const rem = getOrderRemainQty(o); if (hideZeroStock && rem <= 0) return; const { unitAmt, taxType } = getOrderLineAmounts(o); csv += [o.colA, o.colB, o.colC, rem, taxType, unitAmt, Math.round(rem * unitAmt), getOrderExpiryDate(o)].map(csvCell).join(',') + '\n'; });
             triggerCsvDownload(csv, `바로가공장_현재고_${getTodayStr()}.csv`);
         }
         function exportUsageLogsCsv() {
             let csv = '\uFEFF사용일자,거래처,원재료명,규격,사용수량,단가,소진금액,비고\n';
-            usageLogsData.forEach(u => { csv += `"${u.date}","${u.vendor}","${u.item}","${u.spec}",${u.usedQty},${u.unitAmt},${u.totalAmt},"${u.memo}"\n`; });
+            usageLogsData.forEach(u => { csv += [u.date, u.vendor, u.item, u.spec, Number(u.usedQty) || 0, Number(u.unitAmt) || 0, Number(u.totalAmt) || 0, u.memo].map(csvCell).join(',') + '\n'; });
             triggerCsvDownload(csv, `바로가공장_사용이력_${getTodayStr()}.csv`);
         }
 

@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: price.js v1.11 - 2026-11-20 2단계 보안 (급여·고정비·매출·단가 기본값 코드에서 제거, DB 값만 사용) / v1.10 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 빈 DB 자동 덮어쓰기 제거)]
+// [VERSION: price.js v1.12 - 2026-11-20 3~5단계 (레시피 재료비 실시간 반영·매장 수수료율 설정화·퇴직금 표기 정리) / v1.11 2단계 보안 (급여·고정비·매출·단가 기본값 코드에서 제거, DB 값만 사용) / v1.10 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 빈 DB 자동 덮어쓰기 제거)]
 // 바로가 공장 통합 관리 시스템 - 제품단가 전용 모듈 (price.js)
 // ============================================================================
 (function () {
@@ -17,7 +17,8 @@
       annualPublicHolidays: 15, // 공휴일 유급 (연간) - 5인이상 사업장
 
       // ■ 2. 퇴직금
-      severanceRatePercent: 8.33, // 퇴직금 비율 (1년이상) % - 세전÷12 월적립
+      severanceRatePercent: 8.33, // 퇴직금 비율 (참고값 · 계산 미사용: 기본급여(세전)에 퇴직금이 포함된 것으로 책정)
+      storeCommissionRatePercent: 9.29, // [5단계] 매장 매입가 수수료율(%) — 매장 매입가 = 출고가 × (1+수수료율) × 1.1(VAT)
 
       // ■ 3. 월간 환산 기준
       defaultMonthlyProdDays: 20, // 월 평균 생산일수 (기본값) - 파트별 시트에서 개별 조정 가능
@@ -1769,23 +1770,15 @@
         };
       }, [settings]);
 
+      // [5단계] 매장 매입가 수수료율 (기본 9.29%, 기본설정에서 변경)
+      const storeFeeRatePct = (() => { const r = parseFloat(settings.storeCommissionRatePercent); return isFinite(r) ? r : 9.29; })();
+      const storeFeeMul = 1 + storeFeeRatePct / 100;
+
       const jobMap = useMemo(() => {
         const map = new Map();
         settings.jobTypeSalaries.forEach((jt) => map.set(jt.id, jt));
         return map;
       }, [settings.jobTypeSalaries]);
-
-      const computedCategoryDbs = useMemo(() => {
-        const result = {};
-        Object.keys(PROCESS_CATEGORIES).forEach((catKey) => {
-          const list = categoryDbs[catKey] || [];
-          result[catKey] = list.map((product) => ({
-            product,
-            computed: computeProductLabor(product, jobMap, calc.actualMonthlyWorkHours),
-          }));
-        });
-        return result;
-      }, [categoryDbs, jobMap, calc.actualMonthlyWorkHours]);
 
       const [recipeRefreshTick, setRecipeRefreshTick] = useState(0);
       useEffect(() => {
@@ -1807,6 +1800,36 @@
         });
         return { list, byCode, byName };
       }, [recipeRefreshTick, activeTab]);
+
+      // [3단계 Q4] 품목코드로 연결된 레시피가 있으면 1배합 재료비를 레시피의 '현재' 생산원가로 실시간 반영
+      //  (기존: [레시피 연동] 버튼을 누른 시점 값으로 고정 → 레시피 탭과 원가가 달라짐)
+      //  1배합 생산수량·PK입수는 직접 수정할 수 있도록 기존처럼 버튼 연동 값을 유지
+      const computedCategoryDbs = useMemo(() => {
+        const result = {};
+        Object.keys(PROCESS_CATEGORIES).forEach((catKey) => {
+          const list = categoryDbs[catKey] || [];
+          result[catKey] = list.map((product) => {
+            let effective = product;
+            const code = normalizeCodeStr(product.productCode);
+            const rc = code ? liveRecipeLookup.byCode.get(code) : null;
+            if (rc) {
+              try {
+                const m = evalLiveRecipeMetrics(rc);
+                if (m && Number(m.productionCost) > 0) {
+                  effective = { ...product, batchMaterialCost: Math.round(m.productionCost) };
+                }
+              } catch (e) {}
+            }
+            return {
+              product,
+              computed: computeProductLabor(effective, jobMap, calc.actualMonthlyWorkHours),
+            };
+          });
+        });
+        return result;
+      }, [categoryDbs, jobMap, calc.actualMonthlyWorkHours, liveRecipeLookup]);
+
+
 
       const laborDbByProductName = useMemo(() => {
         const byIdMap = new Map();
@@ -2247,7 +2270,7 @@
               ? Number((((pkLab / pkEa) / expMargin) * 100).toFixed(1))
               : '';
 
-            const storeBuy = relEa > 0 ? Math.round(relEa * 1.0929 * 1.1 + Number.EPSILON) : '';
+            const storeBuy = relEa > 0 ? Math.round(relEa * storeFeeMul * 1.1 + Number.EPSILON) : '';
             const gontranPrice = Number(row.gontranPriceEa) || 0;
             const storeRatio = (storeBuy !== '' && gontranPrice > 0) ? Number(((storeBuy / gontranPrice) * 100).toFixed(2)) : '';
 
@@ -2892,7 +2915,7 @@
             const storeBuyPriceAuto =
               releasePriceEa <= 0
                 ? null
-                : Math.round(releasePriceEa * 1.0929 * 1.1 + Number.EPSILON);
+                : Math.round(releasePriceEa * storeFeeMul * 1.1 + Number.EPSILON);
 
             const gontranPriceEa = Number(row.gontranPriceEa) || 0;
 
@@ -3033,10 +3056,10 @@
 
             const tipStoreBuyPrice = {
               title: '매장매입가 (1ea, VAT포함) (U열)',
-              formula: 'ROUND(바로가 출고가(M) × 1.0929(수수료 9.29%) × 1.1(VAT), 0)',
+              formula: `ROUND(바로가 출고가(M) × ${storeFeeMul.toFixed(4)}(수수료 ${storeFeeRatePct}%) × 1.1(VAT), 0)`,
               calc:
                 storeBuyPriceAuto !== null
-                  ? `${fmtInt(releasePriceEa)}원 × 1.0929 × 1.1 = ${fmtInt(storeBuyPriceAuto)}원`
+                  ? `${fmtInt(releasePriceEa)}원 × ${storeFeeMul.toFixed(4)} × 1.1 = ${fmtInt(storeBuyPriceAuto)}원`
                   : '바로가 출고가(1ea) 입력 시 자동 계산됩니다.',
             };
 
@@ -3214,7 +3237,7 @@
         const rightJobs = settings.jobTypeSalaries.slice(halfIdx);
 
         return (
-          React.createElement("div", { className: "grid grid-cols-1 lg:grid-cols-12 gap-4" }, React.createElement("div", { className: "lg:col-span-7 space-y-4" }, React.createElement("div", { className: "bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3" }, React.createElement("h3", { className: "text-xs font-extrabold text-slate-800 border-b border-slate-200 pb-2" }, "■ 1~3. 근무시간 산정 · 퇴직금 · 월간 환산 기준"), React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs" }, React.createElement("div", { className: "p-2 rounded-lg bg-blue-50/60 border border-blue-200" }, React.createElement("div", { className: "text-[11px] text-slate-500 font-semibold" }, "월 소정근로일수"), React.createElement("div", { className: "mt-1 flex items-center justify-between" }, React.createElement(CommaNumberInput, { value: settings.avgMonthlyWorkDays, allowDecimal: true, onChangeValue: (v) => updateSettingField('avgMonthlyWorkDays', v), className: "w-16 text-sm font-extrabold text-blue-700 bg-white border border-blue-300 rounded px-1.5 py-0.5 text-right tabular-nums" }), React.createElement("span", { className: "text-slate-500 font-bold" }, "일"))), React.createElement("div", { className: "p-2 rounded-lg bg-blue-50/60 border border-blue-200" }, React.createElement("div", { className: "text-[11px] text-slate-500 font-semibold" }, "일 소정근로시간"), React.createElement("div", { className: "mt-1 flex items-center justify-between" }, React.createElement(CommaNumberInput, { value: settings.dailyWorkHours, allowDecimal: true, onChangeValue: (v) => updateSettingField('dailyWorkHours', v), className: "w-16 text-sm font-extrabold text-blue-700 bg-white border border-blue-300 rounded px-1.5 py-0.5 text-right tabular-nums" }), React.createElement("span", { className: "text-slate-500 font-bold" }, "시간"))), React.createElement("div", { onMouseEnter: (e) =>
+          React.createElement("div", { className: "grid grid-cols-1 lg:grid-cols-12 gap-4" }, React.createElement("div", { className: "lg:col-span-7 space-y-4" }, React.createElement("div", { className: "bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3" }, React.createElement("h3", { className: "text-xs font-extrabold text-slate-800 border-b border-slate-200 pb-2" }, "■ 1~3. 근무시간 산정 · 월간 환산 기준 (퇴직금은 작업유형별 기본급여에 포함된 것으로 보고 별도 가산하지 않음)"), React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs" }, React.createElement("div", { className: "p-2 rounded-lg bg-blue-50/60 border border-blue-200" }, React.createElement("div", { className: "text-[11px] text-slate-500 font-semibold" }, "월 소정근로일수"), React.createElement("div", { className: "mt-1 flex items-center justify-between" }, React.createElement(CommaNumberInput, { value: settings.avgMonthlyWorkDays, allowDecimal: true, onChangeValue: (v) => updateSettingField('avgMonthlyWorkDays', v), className: "w-16 text-sm font-extrabold text-blue-700 bg-white border border-blue-300 rounded px-1.5 py-0.5 text-right tabular-nums" }), React.createElement("span", { className: "text-slate-500 font-bold" }, "일"))), React.createElement("div", { className: "p-2 rounded-lg bg-amber-50/70 border border-amber-200", title: "매장 매입가(VAT 포함) = 바로가 출고가 × (1 + 수수료율) × 1.1" }, React.createElement("div", { className: "text-[11px] text-slate-500 font-semibold" }, "매장 매입가 수수료율"), React.createElement("div", { className: "mt-1 flex items-center justify-between" }, React.createElement(CommaNumberInput, { value: settings.storeCommissionRatePercent ?? 9.29, allowDecimal: true, onChangeValue: (v) => updateSettingField('storeCommissionRatePercent', v), className: "w-16 text-sm font-extrabold text-amber-800 bg-white border border-amber-300 rounded px-1.5 py-0.5 text-right tabular-nums" }), React.createElement("span", { className: "text-slate-500 font-bold" }, "%"))), React.createElement("div", { className: "p-2 rounded-lg bg-blue-50/60 border border-blue-200" }, React.createElement("div", { className: "text-[11px] text-slate-500 font-semibold" }, "일 소정근로시간"), React.createElement("div", { className: "mt-1 flex items-center justify-between" }, React.createElement(CommaNumberInput, { value: settings.dailyWorkHours, allowDecimal: true, onChangeValue: (v) => updateSettingField('dailyWorkHours', v), className: "w-16 text-sm font-extrabold text-blue-700 bg-white border border-blue-300 rounded px-1.5 py-0.5 text-right tabular-nums" }), React.createElement("span", { className: "text-slate-500 font-bold" }, "시간"))), React.createElement("div", { onMouseEnter: (e) =>
                       showFormulaTooltip(e, {
                         title: '실제 월 근무일수',
                         formula: '월 소정근로일수 - 월평균 공휴일 - 월평균 연차',
