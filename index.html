@@ -1,4 +1,4 @@
-<!-- [VERSION: index.html v2.6 - 2026-11-20 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 스냅샷 분할 저장 · 샘플 레시피 제거)] -->
+<!-- [VERSION: index.html v2.7 - 2026-11-20 2단계 보안 (DB 접속 코드 인증 · SRM 계정정보 삭제 · 급여/고정비 기본값 제거 · 화면 출력 이스케이프) / v2.6.1 DB 주소 4종 새 배포로 교체 · 각 기기 저장 주소 일괄 초기화 / v2.6 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 스냅샷 분할 저장 · 샘플 레시피 제거)] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -39,7 +39,7 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-base sm:text-lg font-extrabold tracking-tight text-stone-900">바로가 공장 통합 관리 시스템</h1>
-                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.6.0</span>
+                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.7.0</span>
                     </div>
                     <p class="text-xs text-stone-500 hidden sm:block">원재료 발주/재고 · 엠즈 입고/회송 · 레시피 배합비 · 제품단가 출고마진 통합 관리</p>
                 </div>
@@ -47,6 +47,9 @@
             <div class="flex flex-wrap items-center gap-2">
                 <button type="button" onclick="exportCurrentMasterCsv()" class="flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-xl text-xs font-bold border border-stone-200 bg-white hover:bg-stone-100 text-stone-700 transition cursor-pointer">
                     <i data-lucide="download" class="w-4 h-4"></i><span class="hidden md:inline">CSV 내보내기</span>
+                </button>
+                <button type="button" onclick="openAccessCodeModal()" title="DB 접속 코드 입력·변경" class="flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-xl text-xs font-bold border border-stone-200 bg-white hover:bg-stone-100 text-stone-700 transition cursor-pointer">
+                    <i data-lucide="key-round" class="w-4 h-4"></i><span class="hidden md:inline">접속 코드</span>
                 </button>
                 <button type="button" onclick="downloadBackupTxtFile()" class="flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-xl text-xs font-extrabold bg-stone-900 hover:bg-stone-800 text-amber-300 transition cursor-pointer shadow-xs">
                     <i data-lucide="file-code" class="w-4 h-4"></i><span>백업 TXT</span>
@@ -479,11 +482,41 @@
             </div>
         </div>
     </div>
+    <!-- 모달 8: DB 접속 코드 (2단계 보안) -->
+    <div id="accessCodeModal" class="fixed inset-0 bg-stone-950/70 backdrop-blur-xs z-[60] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-xl border border-stone-200 text-xs">
+            <div class="flex items-center gap-2 pb-3 border-b border-stone-200">
+                <i data-lucide="key-round" class="w-5 h-5 text-amber-700"></i>
+                <h3 class="text-base font-extrabold text-stone-900">DB 접속 코드</h3>
+            </div>
+            <p class="mt-3 text-stone-600 leading-relaxed">원재료·엠즈 입고·레시피·제품단가 데이터를 불러오고 저장하려면 팀 공용 접속 코드가 필요합니다. 이 기기에서 한 번 입력하면 기억됩니다.</p>
+            <p id="accessCodeModalError" class="hidden mt-2 px-3 py-2 rounded-lg bg-rose-50 text-rose-800 border border-rose-200 font-bold"></p>
+            <input type="password" id="accessCodeInput" autocomplete="current-password" placeholder="접속 코드 입력" onkeydown="if(event.key==='Enter') submitAccessCode()" class="mt-3 w-full border border-stone-300 focus:border-amber-600 focus:outline-none rounded-xl px-3 py-2 text-sm font-bold">
+            <div class="mt-4 flex items-center justify-between gap-2">
+                <button type="button" onclick="clearAccessCodeOnThisDevice()" class="px-3 py-2 rounded-xl text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 font-bold cursor-pointer">이 기기에서 지우기</button>
+                <div class="flex gap-2">
+                    <button type="button" onclick="closeAccessCodeModal()" class="px-3 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold cursor-pointer">닫기</button>
+                    <button type="button" onclick="submitAccessCode()" class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold cursor-pointer">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <div id="toastContainer" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
     <script>
-        const DEFAULT_GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzY2ycdFr7UMpNwOL4XshXx2l8pk47xR1U2I79fiagUbv3WMWEq48nAqO5jl4dGp_QP/exec";
-        const DEFAULT_RECIPE_GAS_URL = "https://script.google.com/macros/s/AKfycbw9zwUi9b7sNkdu4IVqIy0386ZkPLFe4cwqiZIb0qTkLLdq0mFWr2aHQvANPF2VOS4paw/exec";
+        const DEFAULT_GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwDZDxhGuHRXobrud2_FaMeuIEXdXN-wdKn8MHxk2pyEMGxLTeXKD_uBokhTLw_Yfhc/exec";
+        const DEFAULT_RECIPE_GAS_URL = "https://script.google.com/macros/s/AKfycbycrRwFx0Ixcj8-xBY7m-IiowUqZ1ByKoqhn5x43IMYDXF1FlsF8tQmIbAaOz6SSbtdVg/exec";
         const GAS_URL_STORAGE_KEYS = ['baroga_gas_url', 'baroga_gas_webapp_url', 'gasWebAppUrl', 'GOOGLE_SHEET_WEBAPP_URL'];
+        // [DB 주소 일괄 전환 2026-11-20] 각 기기 브라우저에 저장돼 있던 예전 DB 주소를 한 번 지워서
+        // 모든 자리(PC·모바일)가 위의 새 기본 주소를 바라보도록 함. 이후 DB 설정 창에서 바꾼 주소는 그대로 유지됨.
+        const DB_URL_CONFIG_VERSION = '2026-11-20-v2-deploy';
+        (function migrateDbUrlsToNewDefaults() {
+            try {
+                if (localStorage.getItem('baroga_db_url_config_version') === DB_URL_CONFIG_VERSION) return;
+                [...GAS_URL_STORAGE_KEYS, 'baroga_recipe_gas_url', 'ms_inbound_cloud_url_v3', 'baroga_product_price_gas_url']
+                    .forEach(k => localStorage.removeItem(k));
+                localStorage.setItem('baroga_db_url_config_version', DB_URL_CONFIG_VERSION);
+            } catch (e) {}
+        })();
         const RECIPE_PROCESS_PRESETS = ['반죽', '탕종', '르방', '폴리쉬', '토핑', '크림', '필링', '앙금', '시럽', '기타'];
         function loadSavedGasUrl() {
             try {
@@ -590,7 +623,8 @@
             const tax = (order.taxType === '면세' || order.taxType === '과세') ? order.taxType : (parsed.tax || inferStandardTaxType(order.colB));
             const mfg = order.manufacturer !== undefined ? String(order.manufacturer || '').trim() : (parsed.mfg || '');
             const rawMfg = order.rawManufacturer !== undefined ? String(order.rawManufacturer || '').trim() : (parsed.rawMfg !== null ? parsed.rawMfg : mfg);
-            return `${baseId}__META__EXP:${exp}|REM:${rem}|TAX:${tax}|MFG:${encodeURIComponent(mfg)}|RAW_MFG:${encodeURIComponent(rawMfg)}`;
+            const encMeta = (v) => encodeURIComponent(v).replace(/'/g, '%27'); // 작은따옴표가 버튼(onclick) 코드를 깨뜨리지 않도록
+            return `${baseId}__META__EXP:${exp}|REM:${rem}|TAX:${tax}|MFG:${encMeta(mfg)}|RAW_MFG:${encMeta(rawMfg)}`;
         }
         function getOrderExpiryDate(o) { return (o.expiryDate !== undefined && o.expiryDate !== '') ? o.expiryDate : (parseMetaFromId(o.id).exp || ''); }
         function getOrderManufacturer(o) {
@@ -802,6 +836,61 @@
             const t = setTimeout(() => ctrl.abort(), timeoutMs);
             try { return await fetch(url, { ...options, signal: ctrl.signal, redirect: 'follow' }); } finally { clearTimeout(t); }
         }
+        // ====================================================================
+        // [2단계 보안] DB 접속 코드 — 4개 DB(GAS) 요청에 공통으로 첨부
+        //  코드는 이 기기 브라우저에만 저장되며, 코드에는 들어 있지 않음
+        // ====================================================================
+        const ACCESS_CODE_STORAGE_KEY = 'baroga_access_code';
+        function getAccessCode() { try { return localStorage.getItem(ACCESS_CODE_STORAGE_KEY) || ''; } catch (e) { return ''; } }
+        function openAccessCodeModal(errorText) {
+            const m = document.getElementById('accessCodeModal'); if (!m) return;
+            const err = document.getElementById('accessCodeModalError');
+            if (err) { if (errorText) { err.textContent = errorText; err.classList.remove('hidden'); } else { err.textContent = ''; err.classList.add('hidden'); } }
+            const input = document.getElementById('accessCodeInput'); if (input) input.value = '';
+            m.classList.remove('hidden'); m.classList.add('flex');
+            if (window.lucide) lucide.createIcons();
+            setTimeout(() => { try { input && input.focus(); } catch (e) {} }, 50);
+        }
+        function closeAccessCodeModal() { const m = document.getElementById('accessCodeModal'); if (m) { m.classList.add('hidden'); m.classList.remove('flex'); } }
+        function submitAccessCode() {
+            const v = String(document.getElementById('accessCodeInput')?.value || '').trim();
+            if (!v) return;
+            try { localStorage.setItem(ACCESS_CODE_STORAGE_KEY, v); } catch (e) {}
+            closeAccessCodeModal();
+            reloadAllDomainsFromDb();
+        }
+        function clearAccessCodeOnThisDevice() {
+            try { localStorage.removeItem(ACCESS_CODE_STORAGE_KEY); } catch (e) {}
+            closeAccessCodeModal();
+            showToast('이 기기에 저장된 접속 코드를 지웠습니다. 다음 접속 시 다시 입력해야 합니다.', 'info');
+        }
+        function reloadAllDomainsFromDb() {
+            try { syncFromGoogleSheet(true); } catch (e) {}
+            try { if (window.MSInbound && typeof window.MSInbound.pullFromCloud === 'function') window.MSInbound.pullFromCloud(true); } catch (e) {}
+            try { if (typeof syncRecipesFromGoogleSheet === 'function') syncRecipesFromGoogleSheet(false); } catch (e) {}
+            try { if (typeof window.reloadProductPriceDb === 'function') window.reloadProductPriceDb(); } catch (e) {}
+        }
+        let _accessCodeModalShownAt = 0;
+        async function barogaApi(url, body, timeoutMs = 20000) {
+            const code = getAccessCode();
+            if (!code) {
+                if (Date.now() - _accessCodeModalShownAt > 1500) { _accessCodeModalShownAt = Date.now(); openAccessCodeModal(); }
+                const err = new Error('접속 코드를 입력해야 합니다'); err.unauthorized = true; throw err;
+            }
+            const res = await fetchWithTimeout(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ ...body, accessCode: code })
+            }, timeoutMs);
+            if (!res.ok) throw new Error(`서버 응답 오류 (HTTP ${res.status})`);
+            const json = await res.json();
+            if (json && json.unauthorized) {
+                try { localStorage.removeItem(ACCESS_CODE_STORAGE_KEY); } catch (e) {}
+                if (Date.now() - _accessCodeModalShownAt > 1500) { _accessCodeModalShownAt = Date.now(); openAccessCodeModal(json.error || '접속 코드가 올바르지 않습니다.'); }
+                const err = new Error(json.error || '접속 코드가 올바르지 않습니다'); err.unauthorized = true; throw err;
+            }
+            return json;
+        }
         async function syncFromGoogleSheet(showMessage = false) {
             if (!gasWebAppUrl || (isSyncing && !showMessage)) return;
             if (saveDebounceTimer || isSavingToDb || hasPendingDbSave) {
@@ -811,10 +900,7 @@
             isSyncing = true;
             updateDbStatusUI('syncing', '동기화중...');
             try {
-                const sep = gasWebAppUrl.includes('?') ? '&' : '?';
-                const res = await fetchWithTimeout(`${gasWebAppUrl}${sep}action=getAll&t=${Date.now()}`, { method: 'GET' }, 20000);
-                if (!res.ok) throw new Error(`서버 응답 오류 (HTTP ${res.status})`);
-                const json = await res.json();
+                const json = await barogaApi(gasWebAppUrl, { action: 'getAll' }, 20000);
                 if (json && json.ok === false) throw new Error(json.error || '서버 오류');
                 const rows = Array.isArray(json) ? json : (json.orders || json.data || json.rows);
                 if (!Array.isArray(rows)) throw new Error('응답 형식을 인식할 수 없습니다');
@@ -838,7 +924,10 @@
                 reconcileManufacturerHistory();
                 initYearAndMonthControls();
                 renderDashboard();
-                if (!rawDbLoaded) {
+                if (err && err.unauthorized) {
+                    rawDbBlockReason = '접속 코드가 필요합니다';
+                    updateDbStatusUI('error', '접속 코드 필요');
+                } else if (!rawDbLoaded) {
                     rawDbBlockReason = 'DB를 불러오지 못했습니다';
                     updateDbStatusUI('error', 'DB 불러오기 실패 · 저장 중지');
                     showToast(`원재료 DB를 불러오지 못했습니다 (${err && err.message ? err.message : err}). 화면은 이 기기에 남은 사본이며, 저장은 중지됩니다. ↻ 버튼으로 다시 시도하세요.`, 'error');
@@ -874,12 +963,9 @@
             isSavingToDb = true;
             updateDbStatusUI('syncing', '저장중...');
             const combinedRows = buildCombinedRowsForSheet();
-            const payload = JSON.stringify({ action: 'replaceAll', baseRevision: rawDbRevision, data: combinedRows });
             let ok = false;
             try {
-                const res = await fetchWithTimeout(gasWebAppUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: payload }, 30000);
-                if (!res.ok) throw new Error(`서버 응답 오류 (HTTP ${res.status})`);
-                const json = await res.json();
+                const json = await barogaApi(gasWebAppUrl, { action: 'replaceAll', baseRevision: rawDbRevision, data: combinedRows }, 30000);
                 if (json && json.ok === true && typeof json.revision === 'number') {
                     rawDbRevision = json.revision;
                     ok = true;

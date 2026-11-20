@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: price.js v1.10 - 2026-11-20 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 빈 DB 자동 덮어쓰기 제거)]
+// [VERSION: price.js v1.11 - 2026-11-20 2단계 보안 (급여·고정비·매출·단가 기본값 코드에서 제거, DB 값만 사용) / v1.10 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 빈 DB 자동 덮어쓰기 제거)]
 // 바로가 공장 통합 관리 시스템 - 제품단가 전용 모듈 (price.js)
 // ============================================================================
 (function () {
@@ -24,24 +24,24 @@
 
       // ■ 4. 월 고정비 항목 (인건비 제외) - DB 구조 (수정·추가·삭제 가능)
       fixedCostItems: [
-        { id: 'fc-1', name: '임차료 (공장+사무실)', amount: 10400000, unit: '원/월', note: '' },
-        { id: 'fc-2', name: '전기·수도·가스', amount: 10500000, unit: '원/월', note: '' },
-        { id: 'fc-3', name: '감가상각비', amount: 15000000, unit: '원/월', note: '' },
-        { id: 'fc-4', name: '운송비', amount: 5000000, unit: '원/월', note: '' },
-        { id: 'fc-5', name: '청소비', amount: 1200000, unit: '원/월', note: '' },
-        { id: 'fc-6', name: '통신·소방·프로그램', amount: 3300000, unit: '원/월', note: '' },
-        { id: 'fc-7', name: '반품·불량·샘플', amount: 6000000, unit: '원/월', note: '' },
-        { id: 'fc-8', name: '수선비', amount: 6000000, unit: '원/월', note: '' },
-        { id: 'fc-9', name: '부재료 (포장재 등)', amount: 6000000, unit: '원/월', note: '' },
-        { id: 'fc-10', name: '복리후생', amount: 3000000, unit: '원/월', note: '' },
-        { id: 'fc-11', name: '사대보험+국세 (회사부담)', amount: 20000000, unit: '원/월', note: '' },
-        { id: 'fc-12', name: '법인카드 (기타경비)', amount: 7000000, unit: '원/월', note: '' },
-        { id: 'fc-13', name: '보안·검사·세무 등', amount: 2000000, unit: '원/월', note: '' },
-        { id: 'fc-14', name: '비생산직 인건비 (품질·구매·영업·대표 4인)', amount: 16000000, unit: '원/월', note: '' },
+        { id: 'fc-1', name: '임차료 (공장+사무실)', amount: 0, unit: '원/월', note: '' },
+        { id: 'fc-2', name: '전기·수도·가스', amount: 0, unit: '원/월', note: '' },
+        { id: 'fc-3', name: '감가상각비', amount: 0, unit: '원/월', note: '' },
+        { id: 'fc-4', name: '운송비', amount: 0, unit: '원/월', note: '' },
+        { id: 'fc-5', name: '청소비', amount: 0, unit: '원/월', note: '' },
+        { id: 'fc-6', name: '통신·소방·프로그램', amount: 0, unit: '원/월', note: '' },
+        { id: 'fc-7', name: '반품·불량·샘플', amount: 0, unit: '원/월', note: '' },
+        { id: 'fc-8', name: '수선비', amount: 0, unit: '원/월', note: '' },
+        { id: 'fc-9', name: '부재료 (포장재 등)', amount: 0, unit: '원/월', note: '' },
+        { id: 'fc-10', name: '복리후생', amount: 0, unit: '원/월', note: '' },
+        { id: 'fc-11', name: '사대보험+국세 (회사부담)', amount: 0, unit: '원/월', note: '' },
+        { id: 'fc-12', name: '법인카드 (기타경비)', amount: 0, unit: '원/월', note: '' },
+        { id: 'fc-13', name: '보안·검사·세무 등', amount: 0, unit: '원/월', note: '' },
+        { id: 'fc-14', name: '비생산직 인건비 (품질·구매·영업·대표 4인)', amount: 0, unit: '원/월', note: '' },
       ],
 
       // ■ 5. 고정비 배분 기준 · 활용 지표
-      expectedTotalMonthlySales: 320000000, // 바로가 전체 예상 월 매출 (출고가)
+      expectedTotalMonthlySales: 0, // 바로가 전체 예상 월 매출 (출고가)
 
       // ■ 6. 파트별 예상 월 매출 배분
       linkPartFixedToMonthlyTotal: false,
@@ -49,80 +49,80 @@
         {
           id: 'part-1',
           name: '파이',
-          expectedSales: 240000000,
-          rawAllocatedFixed: 68520000,
+          expectedSales: 0,
+          rawAllocatedFixed: 0,
           laborFactor: 2.2,
-          factorNote: '6월 배부 12.38M',
-          juneSalaryTotal: 24900000,
-          juneAllocatedCost: 12384021,
+          factorNote: '',
+          juneSalaryTotal: '',
+          juneAllocatedCost: null,
         },
         {
           id: 'part-2',
           name: '알생지·건강빵',
-          expectedSales: 80000000,
-          rawAllocatedFixed: 22840000,
+          expectedSales: 0,
+          rawAllocatedFixed: 0,
           laborFactor: 1.1,
-          factorNote: '6월 배부 33.22M',
-          juneSalaryTotal: 34000000,
-          juneAllocatedCost: 33222593,
+          factorNote: '',
+          juneSalaryTotal: '',
+          juneAllocatedCost: null,
         },
         {
           id: 'part-3',
           name: '파베이크',
-          expectedSales: 30000000,
-          rawAllocatedFixed: 8565000,
+          expectedSales: 0,
+          rawAllocatedFixed: 0,
           laborFactor: 1.1,
-          factorNote: '알파베 공통 (=H4)',
-          juneSalaryTotal: '(알파베 공통)',
+          factorNote: '',
+          juneSalaryTotal: '',
           juneAllocatedCost: null,
         },
         {
           id: 'part-4',
           name: '제과',
-          expectedSales: 30000000,
-          rawAllocatedFixed: 8565000,
+          expectedSales: 0,
+          rawAllocatedFixed: 0,
           laborFactor: 1.5,
-          factorNote: '제과 6월 표본 없음',
-          juneSalaryTotal: 64900000,
-          juneAllocatedCost: 45606614,
+          factorNote: '',
+          juneSalaryTotal: '',
+          juneAllocatedCost: null,
         },
       ],
 
       // ■ 7. 작업유형별 기본급여(세전) DB (제품별 인건비 산출 기준 데이터)
       jobTypeSalaries: [
-        { id: 'jt-1', jobType: '론도', baseSalary: 2900000 },
-        { id: 'jt-2', jobType: '밑작업', baseSalary: 2900000 },
-        { id: 'jt-3', jobType: '계량 직원', baseSalary: 3500000 },
-        { id: 'jt-4', jobType: '믹싱 직원', baseSalary: 3500000 },
-        { id: 'jt-5', jobType: '반죽 직원', baseSalary: 3500000 },
-        { id: 'jt-6', jobType: '성형', baseSalary: 3000000 },
-        { id: 'jt-7', jobType: '분할', baseSalary: 3000000 },
-        { id: 'jt-8', jobType: '반죽 분할', baseSalary: 3000000 },
-        { id: 'jt-9', jobType: '반죽 분할 직원', baseSalary: 3000000 },
-        { id: 'jt-10', jobType: '분할 직원', baseSalary: 3000000 },
-        { id: 'jt-11', jobType: '버터 분할', baseSalary: 3000000 },
-        { id: 'jt-12', jobType: '버터 성형', baseSalary: 3000000 },
-        { id: 'jt-13', jobType: '재단', baseSalary: 3000000 },
-        { id: 'jt-14', jobType: '버터 라미네이팅', baseSalary: 3000000 },
-        { id: 'jt-15', jobType: '라미네이팅', baseSalary: 3000000 },
-        { id: 'jt-16', jobType: '라미네이팅 냉동 이동', baseSalary: 3000000 },
-        { id: 'jt-17', jobType: '바리오컷', baseSalary: 3000000 },
-        { id: 'jt-18', jobType: '기계', baseSalary: 3000000 },
-        { id: 'jt-19', jobType: '기계 보조', baseSalary: 3000000 },
-        { id: 'jt-20', jobType: '반죽 냉동 이동', baseSalary: 3000000 },
-        { id: 'jt-21', jobType: '냉동 이동 및 중간정리', baseSalary: 3000000 },
-        { id: 'jt-22', jobType: '냉동 이동 및 정리', baseSalary: 3000000 },
-        { id: 'jt-23', jobType: '냉동 보관 및 정리', baseSalary: 3000000 },
-        { id: 'jt-24', jobType: '냉동 보관', baseSalary: 3000000 },
-        { id: 'jt-25', jobType: '냉동보관', baseSalary: 3000000 },
-        { id: 'jt-26', jobType: '중간정리', baseSalary: 3000000 },
-        { id: 'jt-27', jobType: '정리', baseSalary: 3000000 },
-        { id: 'jt-28', jobType: '속재료 정리', baseSalary: 3000000 },
-        { id: 'jt-29', jobType: '준비', baseSalary: 3000000 },
-        { id: 'jt-30', jobType: '굽기', baseSalary: 3000000 },
-        { id: 'jt-31', jobType: '사과캔 따기, 굽기', baseSalary: 3000000 },
-        { id: 'jt-32', jobType: '작업자1', baseSalary: 3000000 },
-        { id: 'jt-33', jobType: '작업자2', baseSalary: 3000000 },
+        { id: 'jt-1', jobType: '론도', baseSalary: 0 },
+        { id: 'jt-2', jobType: '밑작업', baseSalary: 0 },
+        { id: 'jt-3', jobType: '계량 직원', baseSalary: 0 },
+        { id: 'jt-4', jobType: '믹싱 직원', baseSalary: 0 },
+        { id: 'jt-5', jobType: '반죽 직원', baseSalary: 0 },
+        { id: 'jt-6', jobType: '성형', baseSalary: 0 },
+        { id: 'jt-7', jobType: '분할', baseSalary: 0 },
+        { id: 'jt-8', jobType: '반죽 분할', baseSalary: 0 },
+        { id: 'jt-9', jobType: '반죽 분할 직원', baseSalary: 0 },
+        { id: 'jt-10', jobType: '분할 직원', baseSalary: 0 },
+        { id: 'jt-11', jobType: '버터 분할', baseSalary: 0 },
+        { id: 'jt-12', jobType: '버터 성형', baseSalary: 0 },
+        { id: 'jt-13', jobType: '재단', baseSalary: 0 },
+        { id: 'jt-14', jobType: '버터 라미네이팅', baseSalary: 0 },
+        { id: 'jt-15', jobType: '라미네이팅', baseSalary: 0 },
+        { id: 'jt-16', jobType: '라미네이팅 냉동 이동', baseSalary: 0 },
+        { id: 'jt-17', jobType: '바리오컷', baseSalary: 0 },
+        { id: 'jt-18', jobType: '기계', baseSalary: 0 },
+        { id: 'jt-19', jobType: '기계 보조', baseSalary: 0 },
+        { id: 'jt-20', jobType: '반죽 냉동 이동', baseSalary: 0 },
+        { id: 'jt-21', jobType: '냉동 이동 및 중간정리', baseSalary: 0 },
+        { id: 'jt-22', jobType: '냉동 이동 및 정리', baseSalary: 0 },
+        { id: 'jt-23', jobType: '냉동 보관 및 정리', baseSalary: 0 },
+        { id: 'jt-24', jobType: '냉동 보관', baseSalary: 0 },
+        { id: 'jt-25', jobType: '냉동보관', baseSalary: 0 },
+        { id: 'jt-26', jobType: '중간정리', baseSalary: 0 },
+        { id: 'jt-27', jobType: '정리', baseSalary: 0 },
+        { id: 'jt-28', jobType: '속재료 정리', baseSalary: 0 },
+        { id: 'jt-29', jobType: '준비', baseSalary: 0 },
+        { id: 'jt-30', jobType: '굽기', baseSalary: 0 },
+        { id: 'jt-31', jobType: '사과캔 따기, 굽기', baseSalary: 0 },
+        { id: 'jt-32', jobType: '작업자1', baseSalary: 0 },
+        { id: 'jt-33', jobType: '작업자2', baseSalary: 0 },
       ],
     };
 
@@ -1114,11 +1114,11 @@
             productCode: prod.productCode || '',
             section: catLabel,
             productName: prod.productName,
-            releasePriceEa: prod.productName === '크로와상' ? 1614 : 0,
+            releasePriceEa: 0,
             storeBuyPriceEa: 0,
             gontranPriceEa: 0,
-            msBuyPricePk: prod.productName === '크로와상' ? 77475 : 0,
-            msSellPricePk: prod.productName === '크로와상' ? 84673 : 0,
+            msBuyPricePk: 0,
+            msSellPricePk: 0,
             msNote: '',
             note: '',
           });
@@ -1301,7 +1301,7 @@
     }
 
     const DEFAULT_PRICE_GAS_WEB_APP_URL =
-      'https://script.google.com/macros/s/AKfycbyDgXS0bpuOs-VA4BgiTyRBnB2KsXQXd43-BKA8bIsjWB7KcKDQ8v7kR4r1e_b3o9Q-Pw/exec';
+      'https://script.google.com/macros/s/AKfycbw4zdcL2yjESq8G2_889Oz3pzdAuYJm-DjzEwMNUp4t0NjuRVcWaSnMdxTYD_9RrciZ_Q/exec';
     const LEGACY_PRICE_GAS_URL_PART = 'AKfycbyxvi_Xp6HasU8GA1t5Av6CDqeM4pAUkB8Y7YSxUo_c2hTRvxNxWhNWEMBwWBCX2lnDIg';
     const PRICE_GAS_URL_STORAGE_KEY = 'baroga_product_price_gas_url';
 
@@ -1507,9 +1507,10 @@
         return null;
       };
 
-      const priceFetch = (url, options, timeoutMs) => {
-        if (typeof window.fetchWithTimeout === 'function') return window.fetchWithTimeout(url, options, timeoutMs);
-        return fetch(url, options);
+      // [2단계 보안] 모든 DB 요청은 접속 코드를 붙여 POST로 보냄 (index.html의 barogaApi)
+      const priceApi = (url, body, timeoutMs) => {
+        if (typeof window.barogaApi === 'function') return window.barogaApi(url, body, timeoutMs);
+        return Promise.reject(new Error('접속 코드 모듈을 찾을 수 없습니다'));
       };
 
       const handleSaveToGoogleSheet = async (overrideUrl = null, silent = false) => {
@@ -1531,21 +1532,12 @@
           pkCostRows,
           msUpdatedDate,
         };
-        const bodyStr = JSON.stringify({
-          action: 'replaceAll',
-          baseRevision: priceDbRevisionRef.current,
-          payload: corePayload,
-        });
-
         try {
-          const response = await priceFetch(targetUrl, {
-            method: 'POST',
-            redirect: 'follow',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: bodyStr,
+          const parsed = await priceApi(targetUrl, {
+            action: 'replaceAll',
+            baseRevision: priceDbRevisionRef.current,
+            payload: corePayload,
           }, 30000);
-          if (!response.ok) throw new Error(`서버 응답 오류 (HTTP ${response.status})`);
-          const parsed = await response.json();
           if (parsed && parsed.ok === true && typeof parsed.revision === 'number') {
             priceDbRevisionRef.current = parsed.revision;
             setSyncStatus('SUCCESS');
@@ -1582,11 +1574,7 @@
         setSyncStatus('LOADING');
 
         try {
-          const sep = targetUrl.includes('?') ? '&' : '?';
-          const urlWithNoCache = `${targetUrl}${sep}action=getAll&t=${Date.now()}`;
-          const response = await priceFetch(urlWithNoCache, { method: 'GET', redirect: 'follow' }, 20000);
-          if (!response.ok) throw new Error(`서버 응답 오류 (HTTP ${response.status})`);
-          const result = await response.json();
+          const result = await priceApi(targetUrl, { action: 'getAll' }, 20000);
           if (result && (result.ok === false || result.status === 'error')) {
             throw new Error(result.message || result.error || '서버 오류');
           }
@@ -1669,7 +1657,10 @@
             throw new Error(result?.message || '인식할 수 없는 응답 형식');
           }
         } catch (err) {
-          if (!priceDbLoadedRef.current) {
+          if (err && err.unauthorized) {
+            priceDbBlockReasonRef.current = '접속 코드가 필요합니다';
+            markPriceError('접속 코드 필요');
+          } else if (!priceDbLoadedRef.current) {
             priceDbBlockReasonRef.current = 'DB를 불러오지 못했습니다';
             markPriceError('DB 불러오기 실패 · 저장 중지');
             showToast(`제품단가 DB를 불러오지 못했습니다 (${err && err.message ? err.message : err}). 화면은 이 기기에 남은 사본이며 저장은 중지됩니다.`);
@@ -1700,6 +1691,11 @@
       useEffect(() => {
         handleLoadFromGoogleSheet(true, priceGasUrl);
       }, []);
+
+      // 접속 코드 입력 직후 다시 불러오기용 (index.html의 reloadAllDomainsFromDb에서 호출)
+      useEffect(() => {
+        window.reloadProductPriceDb = () => handleLoadFromGoogleSheet(true, priceGasUrl);
+      });
 
       const calc = useMemo(() => {
         const avgMonthlyWorkDays = Number(settings.avgMonthlyWorkDays) || 0;

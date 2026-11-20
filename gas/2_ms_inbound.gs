@@ -1,6 +1,6 @@
 /**
  * [바로가 ERP] 2. 엠즈 입고 DB — Google Apps Script
- * 버전: v2.0 (2026-11-20 1단계 데이터 손실 방지)
+ * 버전: v2.1 (2026-11-20 2단계 접속 코드 인증 추가 / v2.0 1단계 데이터 손실 방지)
  *
  * 변경 사항
  *  - 기존: 전체 데이터를 첫 번째 시트 A1 셀 한 칸에 저장 (셀당 50,000자 한도 → 12월 중 초과 예상)
@@ -49,7 +49,7 @@ function readPayload_() {
   return { source: 'EMPTY', updatedAt: '', data: null };
 }
 
-function doGet(e) {
+function readAll_() {
   try {
     const r = readPayload_();
     return jsonOut({ ok: true, revision: getRevision_(), source: r.source, updatedAt: r.updatedAt, data: r.data });
@@ -58,11 +58,10 @@ function doGet(e) {
   }
 }
 
-function doPost(e) {
+function writeAll_(body) {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(20000)) return jsonOut({ ok: false, error: '다른 저장 작업이 진행 중입니다. 잠시 후 다시 시도하세요.' });
   try {
-    const body = (e && e.postData && e.postData.contents) ? JSON.parse(e.postData.contents) : {};
     if (body.action !== 'replaceAll') return jsonOut({ ok: false, error: '지원하지 않는 작업입니다: ' + body.action });
 
     const current = getRevision_();
@@ -122,4 +121,40 @@ function writeChunkRows_(sheet, headers, rows) {
   sheet.getRange(1, 1, all.length, headers.length).setValues(all);
   const lastRow = sheet.getLastRow();
   if (lastRow > all.length) sheet.getRange(all.length + 1, 1, lastRow - all.length, headers.length).clearContent();
+}
+
+// ============================================================================
+// [2단계 보안] 접속 코드 인증
+//  - 스크립트 속성 ACCESS_CODE 에 저장된 코드와 일치하는 요청만 읽기·저장 허용
+//  - 설정: Apps Script 왼쪽 ⚙ 프로젝트 설정 → 스크립트 속성 → ACCESS_CODE 추가
+//  - 코드가 설정되지 않았으면 모든 요청 거부 (안전한 기본값)
+//  - 주소창으로 여는 GET 요청은 데이터를 돌려주지 않음
+// ============================================================================
+function checkAccess_(body) {
+  const code = PropertiesService.getScriptProperties().getProperty('ACCESS_CODE');
+  if (!code) {
+    return { ok: false, unauthorized: true, status: 'error', error: '관리자가 접속 코드를 아직 설정하지 않았습니다 (스크립트 속성 ACCESS_CODE).', message: '접속 코드 미설정' };
+  }
+  if (!body || String(body.accessCode || '') !== String(code)) {
+    Utilities.sleep(800); // 무작위 대입 지연
+    return { ok: false, unauthorized: true, status: 'error', error: '접속 코드가 올바르지 않습니다.', message: '접속 코드 오류' };
+  }
+  return null;
+}
+
+function doGet(e) {
+  return jsonOut({ ok: false, unauthorized: true, status: 'error', error: '접속 코드가 필요합니다. 사이트에서 접속 코드를 입력하세요.' });
+}
+
+function doPost(e) {
+  let body;
+  try {
+    body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+  } catch (err) {
+    return jsonOut({ ok: false, status: 'error', error: '요청 형식이 올바르지 않습니다.' });
+  }
+  const denied = checkAccess_(body);
+  if (denied) return jsonOut(denied);
+  if (body.action === 'getAll') return readAll_();
+  return writeAll_(body);
 }

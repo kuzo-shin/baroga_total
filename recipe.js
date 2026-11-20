@@ -1,9 +1,9 @@
 // ============================================================================
-// [VERSION: v3.12 - 2026-11-20 1단계 데이터 손실 방지 (자동 저장 · 저장 응답 확인 · 리비전 충돌 방지 · 사진 분리 저장 · 미저장 수정분 보호 · 샘플추가 버튼 제거)]
+// [VERSION: v3.13 - 2026-11-20 2단계 보안 (DB 요청에 접속 코드 첨부) / v3.12 1단계 데이터 손실 방지 (자동 저장 · 저장 응답 확인 · 리비전 충돌 방지 · 사진 분리 저장 · 미저장 수정분 보호 · 샘플추가 버튼 제거)]
 // 바로가 공장 통합 관리 시스템 - 레시피 전용 모듈 (recipe.js)
 // ============================================================================
 
-const BAROGA_DEFAULT_RECIPE_GAS_URL = "https://script.google.com/macros/s/AKfycbw9zwUi9b7sNkdu4IVqIy0386ZkPLFe4cwqiZIb0qTkLLdq0mFWr2aHQvANPF2VOS4paw/exec";
+const BAROGA_DEFAULT_RECIPE_GAS_URL = "https://script.google.com/macros/s/AKfycbycrRwFx0Ixcj8-xBY7m-IiowUqZ1ByKoqhn5x43IMYDXF1FlsF8tQmIbAaOz6SSbtdVg/exec";
 const LEGACY_DUMMY_RECIPE_URL_PART = "AKfycbxR8N2mP9vL4kQ7wT1yU5iO3pA6sD8fG0hJ2kL5zX9cV4bN7mM1qW6eR8tY";
 
 let collapsedSubRecipeNodes = new Set();
@@ -2357,10 +2357,7 @@ async function syncRecipesFromGoogleSheet(showMessage = false) {
     }
     updateRecipeDbStatusUI('syncing', '동기화중...');
     try {
-        const sep = recipeGasWebAppUrl.includes('?') ? '&' : '?';
-        const res = await fetchWithTimeout(`${recipeGasWebAppUrl}${sep}action=getAll&t=${Date.now()}`, { method: 'GET' }, 20000);
-        if (!res.ok) throw new Error(`서버 응답 오류 (HTTP ${res.status})`);
-        const json = await res.json();
+        const json = await barogaApi(recipeGasWebAppUrl, { action: 'getAll' }, 20000);
         if (json && (json.ok === false || json.status === 'error')) throw new Error(json.error || json.message || '서버 오류');
         const rows = Array.isArray(json) ? json : (json.data || json.rows || json.recipes);
         if (!Array.isArray(rows)) throw new Error('응답 형식을 인식할 수 없습니다');
@@ -2408,7 +2405,10 @@ async function syncRecipesFromGoogleSheet(showMessage = false) {
         if (revision === null) updateRecipeDbStatusUI('error', '저장 중지 (GAS 업데이트 필요)');
         else updateRecipeDbStatusUI('connected', `DB 연동됨 (${recipesData.length}종)`);
     } catch (e) {
-        if (!recipeDbLoaded) {
+        if (e && e.unauthorized) {
+            recipeDbBlockReason = '접속 코드가 필요합니다';
+            updateRecipeDbStatusUI('error', '접속 코드 필요');
+        } else if (!recipeDbLoaded) {
             recipeDbBlockReason = 'DB를 불러오지 못했습니다';
             updateRecipeDbStatusUI('error', 'DB 불러오기 실패 · 저장 중지');
             showToast(`레시피 DB를 불러오지 못했습니다 (${e && e.message ? e.message : e}). 화면은 이 기기에 남은 사본이며 저장은 중지됩니다.`, 'error');
@@ -2465,14 +2465,7 @@ async function pushRecipesToGoogleSheet(silent = false) {
                 id: rc.id
             };
         });
-        const bodyStr = JSON.stringify({ action: 'replaceAll', baseRevision: recipeDbRevision, data: payloadRows, images });
-        const res = await fetchWithTimeout(recipeGasWebAppUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: bodyStr
-        }, 30000);
-        if (!res.ok) throw new Error(`서버 응답 오류 (HTTP ${res.status})`);
-        const json = await res.json();
+        const json = await barogaApi(recipeGasWebAppUrl, { action: 'replaceAll', baseRevision: recipeDbRevision, data: payloadRows, images }, 30000);
         if (json && json.ok === true && typeof json.revision === 'number') {
             recipeDbRevision = json.revision;
             ok = true;
