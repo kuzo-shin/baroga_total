@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: v3.8 - 2026-11-20 좌측 제품내역 높이 배합비내역과 1:1 정렬 및 한화면 스크롤 적용 · DB연동됨 좌측 [원재료 현재 단가 적용] 자동보정 버튼 탑재]
+// [VERSION: v3.9 - 2026-11-20 한화면 세로 높이 여백 미세조정(하단 잘림 해소) 및 우측 제빵공정 카드 자연 높이 복원]
 // 바로가 공장 통합 관리 시스템 - 레시피 전용 모듈 (recipe.js)
 // ============================================================================
 
@@ -553,7 +553,7 @@ function renderRecipeWorkspace() {
     const mainEl = document.getElementById('recipeMainSection');
     if (!mainEl) return;
     ensureApplyRawPriceHeaderButton();
-    mainEl.className = `${activeMasterDomain === 'RECIPE' ? 'flex' : 'hidden'} max-w-[1880px] w-full mx-auto px-3 sm:px-5 py-2.5 flex-1 flex-col gap-2.5`;
+    mainEl.className = `${activeMasterDomain === 'RECIPE' ? 'flex' : 'hidden'} max-w-[1880px] w-full mx-auto px-3 sm:px-5 py-2 flex-1 flex-col gap-2`;
 
     if (!document.getElementById('fdThreeColRoot')) {
         mainEl.innerHTML = `
@@ -565,7 +565,7 @@ function renderRecipeWorkspace() {
                 .fd-kv-input { width: 100%; min-width: 0; text-align: right; font-weight: 800; background: #FFFBEB; border: 1px solid #F59E0B; border-radius: 4px; padding: 1px 5px; font-size: 11.5px; color: #1C1917; }
                 .fd-kv-input:focus { outline: 2px solid #D97706; background: #FFFFFF; }
             </style>
-            <div id="fdThreeColRoot" class="grid grid-cols-1 xl:grid-cols-12 gap-3.5 xl:items-stretch xl:h-[calc(100vh-172px)] xl:min-h-[580px]">
+            <div id="fdThreeColRoot" class="grid grid-cols-1 xl:grid-cols-12 gap-3 xl:items-stretch xl:h-[calc(100vh-196px)] xl:min-h-[530px]">
                 <!-- [1] 좌측: 제품내역 (제품 배합비내역과 상하 높이 1:1 일치 + 내부 스크롤) -->
                 <div class="xl:col-span-3 xl:h-full bg-white rounded-xl border border-stone-300 shadow-2xs flex flex-col overflow-hidden">
                     <div class="px-3 py-2.5 bg-stone-100 border-b border-stone-300 flex flex-wrap items-center justify-between gap-1.5 shrink-0">
@@ -601,8 +601,8 @@ function renderRecipeWorkspace() {
                 <!-- [2] 중앙: 제품 배합비내역 (좌측 제품내역과 동일 높이 · 내부 스크롤) -->
                 <div id="fdCenterFormulaPanel" class="xl:col-span-5 xl:h-full bg-white rounded-xl border border-stone-300 shadow-2xs flex flex-col overflow-hidden"></div>
 
-                <!-- [3] 우측: 원가·수율 요약 + 이미지 + 제빵공정 -->
-                <div id="fdRightMetricsPanel" class="xl:col-span-4 xl:h-full flex flex-col gap-2.5 overflow-y-auto"></div>
+                <!-- [3] 우측: 원가·수율 요약 + 이미지 + 제빵공정 (자연 높이 유지) -->
+                <div id="fdRightMetricsPanel" class="xl:col-span-4 xl:self-start flex flex-col gap-2.5"></div>
             </div>
 
             <!-- [모달] 레시피 원재료 검색 · 다중 투입 팝업 -->
@@ -1165,7 +1165,7 @@ function renderRecipeDetailPanel() {
         </div>
 
         <!-- 하단: 제빵공정 테이블 -->
-        <div class="bg-white rounded-xl border border-stone-300 shadow-2xs p-2.5 flex-1 flex flex-col justify-between">
+        <div class="bg-white rounded-xl border border-stone-300 shadow-2xs p-2.5">
             <h4 class="text-xs sm:text-sm font-black text-stone-900 mb-2 px-0.5">제빵공정</h4>
             <div class="overflow-x-auto">
                 <table class="w-full table-fixed border-collapse text-xs">
