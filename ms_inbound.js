@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: ms_inbound.js v1.4 - 2026-11-19 상단 DB 버튼 3종 UI/UX 통일 (DB연동됨·초록 DB저장·회전 아이콘) 및 심플 URL 설정 팝업 적용]
+// [VERSION: ms_inbound.js v1.5 - 2026-11-20 레시피 내부 아이디(품목코드) 연동 컬럼 추가 및 레시피 판매금액(1PK) → pk당 매입단가 실시간 자동 동기화 적용]
 // 바로가 공장 통합 관리 시스템 - 엠즈 입고 전용 모듈 (ms_inbound.js)
 // ============================================================================
 (function () {
@@ -14,6 +14,7 @@
     const STORAGE_KEY = 'ms_inbound_records_v3_5';
     const RETURNS_STORAGE_KEY = 'ms_return_records_v3_5';
     const PRICES_STORAGE_KEY = 'ms_unit_prices_v3_6';
+    const RECIPE_LINKS_STORAGE_KEY = 'ms_recipe_code_links_v1';
     const CLOUD_URL_KEY = 'ms_inbound_cloud_url_v3';
 
     // 11월 4일 및 10월 엠즈 입고 내역 실제 데이터 11건 기본 탑재
@@ -34,21 +35,215 @@
     let records = [];
     let returnRecords = [];
     let unitPrices = {}; // { [상품코드 또는 상품명]: pk당_매입단가(number) }
+    let recipeLinks = {}; // { [상품코드 또는 상품명]: 레시피_내부아이디(품목코드 string) }
     let currentFilter = 'ALL';
     let currentMainView = 'DAILY';
     let collapsedMap = {};
     let editingTarget = null;
     let confirmCallback = null;
 
-    // 품목의 pk당 매입단가 조회 헬퍼
-    function getItemUnitPrice(item) {
-      if (!item) return 0;
-      if (item.code && unitPrices[item.code] !== undefined) return Number(unitPrices[item.code]) || 0;
-      if (item.name && unitPrices[item.name] !== undefined) return Number(unitPrices[item.name]) || 0;
-      return 0;
+    // 레시피 탭 & 제품단가 탭의 실시간 목록 및 1PK 판매금액 조회 헬퍼
+    function getLiveRecipesListForMs() {
+      if (typeof window !== 'undefined' && Array.isArray(window.recipesData) && window.recipesData.length > 0) {
+        return window.recipesData;
+      }
+      try {
+        const cached = localStorage.getItem('baroga_recipes_cache_v18');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      } catch (e) {}
+      return [];
     }
 
-    // 품목의 pk당 매입단가 저장 헬퍼
+    function getRecipeSellingPriceByCode(recipeCode) {
+      const cleanCode = String(recipeCode || '').trim();
+      if (!cleanCode) return null;
+
+      const list = getLiveRecipesListForMs();
+      const matchedRc = list.find(r => r && String(r.productCode || '').trim() === cleanCode) || null;
+
+      let sellPrice = 0;
+      let packQty = matchedRc ? (parseFloat(matchedRc.packQty) || 0) : 0;
+      let releasePriceEa = 0;
+      let productName = matchedRc ? (matchedRc.productName || '') : '';
+      let foundEntity = Boolean(matchedRc);
+
+      // 1순위: recipe.js의 calculateRecipeMetrics(matchedRc) 실시간 산출 판매금액
+      if (matchedRc && typeof window !== 'undefined' && typeof window.calculateRecipeMetrics === 'function') {
+        try {
+          const m = window.calculateRecipeMetrics(matchedRc);
+          if (m) {
+            sellPrice = Math.round(Number(m.sellPrice) || 0);
+            releasePriceEa = Number(m.releasePriceEa) || 0;
+            packQty = Number(m.packQty) || packQty;
+          }
+        } catch (e) {}
+      }
+
+      // 2순위 보조: price.js 브릿지 또는 로컬 캐시에서 직접 출고가×PK입수 계산
+      if (sellPrice <= 0 && typeof window !== 'undefined' && window.barogaProductPriceBridge && typeof window.barogaProductPriceBridge.findPriceByRecipe === 'function') {
+        const hit = window.barogaProductPriceBridge.findPriceByRecipe(cleanCode, productName, 'PRODUCT');
+        if (hit && hit.matched) {
+          foundEntity = true;
+          if (!productName) productName = hit.productName || '';
+          releasePriceEa = Number(hit.releasePriceEa) || 0;
+          const effPk = packQty > 0 ? packQty : (Number(hit.pkQuantityEa) || 0);
+          packQty = effPk;
+          if (releasePriceEa > 0 && effPk > 0) {
+            sellPrice = Math.round(releasePriceEa * effPk);
+          }
+        }
+      }
+
+      if (sellPrice <= 0 && matchedRc && Number(matchedRc.sellingPrice) > 0) {
+        sellPrice = Math.round(Number(matchedRc.sellingPrice) || 0);
+      }
+
+      if (!foundEntity) return null;
+      return {
+        matched: true,
+        recipeCode: cleanCode,
+        productName,
+        packQty,
+        releasePriceEa,
+        sellPrice
+      };
+    }
+
+    function getItemRecipeCode(item) {
+      if (!item) return '';
+      if (item.code && item.code !== '-' && recipeLinks[item.code] !== undefined) {
+        return String(recipeLinks[item.code] || '').trim();
+      }
+      if (item.name && recipeLinks[item.name] !== undefined) {
+        return String(recipeLinks[item.name] || '').trim();
+      }
+      return '';
+    }
+
+    function setItemRecipeCode(code, name, recipeCodeVal) {
+      const clean = String(recipeCodeVal || '').trim();
+      if (code && code !== '-') {
+        if (clean) recipeLinks[code] = clean;
+        else delete recipeLinks[code];
+      }
+      if (name) {
+        if (clean) recipeLinks[name] = clean;
+        else delete recipeLinks[name];
+      }
+      saveToStorage();
+      renderAll();
+      const linked = clean ? getRecipeSellingPriceByCode(clean) : null;
+      if (clean && linked && linked.sellPrice > 0) {
+        showToast(`[레시피 ${clean}] ${linked.productName} 판매금액(${linked.sellPrice.toLocaleString()}원)이 연동되었습니다!`);
+      } else if (clean && linked) {
+        showToast(`[레시피 ${clean}] 연결됨 (현재 판매금액 0원 — 제품단가 출고가를 확인하세요)`);
+      } else if (clean) {
+        showToast(`레시피 코드 [${clean}] 저장됨 (일치하는 레시피 코드를 확인해주세요)`);
+      } else {
+        showToast('레시피 내부 아이디 연동이 해제되었습니다.');
+      }
+    }
+
+    // 품목명 핵심 키워드 정규화 (엠즈 상품명 ↔ 바로가 레시피/단가표 자동 매칭용)
+    function normalizeMsCoreProductName(str) {
+      return String(str || '')
+        .replace(/^M\s*(\[[^\]]*\]|\([^)]*\))?\s*/i, '')
+        .replace(/\[[^\]]*\]/g, '')
+        .replace(/\((New_?곤트란|곤트란|바로가|르미디|공장|반제품|신|대|소|합포장|막대|스틱)\)/gi, '')
+        .replace(/New\s*/gi, '')
+        .replace(/_?\d+(?:\.\d+)?\s*(?:g|kg|ea|pk|box).*$/i, '')
+        .replace(/\(\s*\d+[^)]*\)/g, '')
+        .replace(/생지/g, '')
+        .replace(/[^가-힣a-zA-Z0-9]/g, '')
+        .toLowerCase();
+    }
+
+    function autoMatchRecipeCodes() {
+      const recipes = getLiveRecipesListForMs().filter(r => r && r.recipeType !== 'SUB' && String(r.productCode || '').trim());
+      if (recipes.length === 0) {
+        showToast('연동할 레시피 데이터가 아직 로드되지 않았습니다.');
+        return;
+      }
+      const rcIndex = recipes.map(r => ({
+        code: String(r.productCode || '').trim(),
+        name: r.productName || '',
+        core: normalizeMsCoreProductName(r.productName)
+      })).filter(x => x.core.length >= 2);
+
+      const catalogMap = new Map();
+      records.forEach(rec => {
+        (rec.items || []).forEach(it => {
+          const k = (it.code ? it.code + '_' : '') + it.name;
+          if (!catalogMap.has(k)) catalogMap.set(k, { code: it.code || '-', name: it.name });
+        });
+      });
+
+      let matchedCount = 0;
+      catalogMap.forEach(it => {
+        if (getItemRecipeCode(it)) return; // 이미 수동 지정된 항목은 보존
+        const msCore = normalizeMsCoreProductName(it.name);
+        if (!msCore) return;
+        let hit = rcIndex.find(r => r.core === msCore);
+        if (!hit) {
+          hit = rcIndex.find(r => msCore.includes(r.core) || r.core.includes(msCore));
+        }
+        if (hit) {
+          if (it.code && it.code !== '-') recipeLinks[it.code] = hit.code;
+          if (it.name) recipeLinks[it.name] = hit.code;
+          matchedCount++;
+        }
+      });
+
+      if (matchedCount > 0) {
+        saveToStorage();
+        renderAll();
+        showToast(`품목명 분석을 통해 ${matchedCount}개 품목의 레시피 내부ID가 자동 매칭되었습니다!`);
+      } else {
+        showToast('추가로 자동 매칭할 수 있는 미연결 품목이 없습니다. 표에서 직접 선택·입력해 주세요.');
+      }
+    }
+
+    // 품목의 단가 및 레시피 연동 상세 정보 조회 헬퍼
+    function getItemPriceMeta(item) {
+      if (!item) return { price: 0, isRecipeSynced: false, recipeCode: '', recipeInfo: null };
+      const rCode = getItemRecipeCode(item);
+      if (rCode) {
+        const rInfo = getRecipeSellingPriceByCode(rCode);
+        if (rInfo && rInfo.sellPrice > 0) {
+          return {
+            price: rInfo.sellPrice,
+            isRecipeSynced: true,
+            recipeCode: rCode,
+            recipeInfo: rInfo
+          };
+        }
+        const manualFallback =
+          (item.code && unitPrices[item.code] !== undefined ? Number(unitPrices[item.code]) : 0) ||
+          (item.name && unitPrices[item.name] !== undefined ? Number(unitPrices[item.name]) : 0) ||
+          0;
+        return {
+          price: manualFallback,
+          isRecipeSynced: false,
+          recipeCode: rCode,
+          recipeInfo: rInfo
+        };
+      }
+      const manual =
+        (item.code && unitPrices[item.code] !== undefined ? Number(unitPrices[item.code]) : 0) ||
+        (item.name && unitPrices[item.name] !== undefined ? Number(unitPrices[item.name]) : 0) ||
+        0;
+      return { price: manual, isRecipeSynced: false, recipeCode: '', recipeInfo: null };
+    }
+
+    // 품목의 pk당 매입단가 조회 헬퍼 (레시피 내부 아이디가 연동되어 판매금액이 있으면 최우선 반영)
+    function getItemUnitPrice(item) {
+      return getItemPriceMeta(item).price;
+    }
+
+    // 품목의 pk당 매입단가 수동 저장 헬퍼
     function setItemUnitPrice(code, name, priceVal) {
       const num = parseInt(String(priceVal).replace(/[^0-9]/g, ''), 10) || 0;
       if (code && code !== '-') unitPrices[code] = num;
@@ -67,7 +262,7 @@
       const rootEl = document.getElementById('msInboundRoot');
       if (!rootEl) return;
       if (!_msInboundMounted) {
-        rootEl.innerHTML = "<style>\n  #msInboundRoot .drop-active { border-color: #2563eb !important; background-color: #eff6ff !important; }\n</style>\n<div class=\"w-full\">\n  <!-- 엠즈 입고 전용 상단 툴바 (4대 도메인 통일 DB 버튼 우측 정렬) -->\n  <div class=\"w-full bg-indigo-50/90 border-b border-indigo-200/80 no-print\">\n    <div class=\"max-w-[1600px] mx-auto px-4 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-2\">\n      <div class=\"flex items-center gap-2.5 flex-wrap\">\n        <span class=\"text-xs sm:text-sm font-extrabold text-indigo-950\">엠즈 입고 및 회송 통합 관리</span>\n        <span class=\"text-xs text-stone-600 hidden md:inline\">기본 입고 운임: 240,000원 + 10,000원(까데기) = <b>250,000원</b></span>\n      </div>\n      <div class=\"flex items-center gap-1.5 ml-auto\">\n        <button type=\"button\" id=\"msi_dbStatusBadge\" onclick=\"window.MSInbound.openCloudModal()\" class=\"flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-xl text-xs font-bold border bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100 transition cursor-pointer\">\n          <span id=\"msi_dbStatusDot\" class=\"w-2 h-2 rounded-full bg-emerald-500\"></span>\n          <span id=\"msi_dbStatusText\">DB 연동됨</span>\n          <i data-lucide=\"settings\" class=\"w-3.5 h-3.5 ml-0.5 opacity-75\"></i>\n        </button>\n        <button type=\"button\" onclick=\"window.MSInbound.pushToCloud(false)\" class=\"flex items-center gap-1.5 px-3.5 py-1.5 h-9 rounded-xl text-xs font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition cursor-pointer\">\n          <i data-lucide=\"cloud-upload\" class=\"w-3.5 h-3.5\"></i>\n          <span>DB 저장</span>\n        </button>\n        <button type=\"button\" onclick=\"window.MSInbound.pullFromCloud(false)\" title=\"구글 시트 새로고침\" class=\"flex items-center justify-center w-9 h-9 rounded-xl border border-stone-200 bg-white hover:bg-stone-100 text-stone-700 transition cursor-pointer\">\n          <span id=\"msi_syncSpinWrap\" class=\"inline-flex items-center justify-center\"><i data-lucide=\"refresh-cw\" class=\"w-4 h-4\"></i></span>\n        </button>\n      </div>\n    </div>\n  </div>\n\n  <!-- 본문 영역: 가독성 최적 좌우 폭 (max-w-6xl = 1152px 중앙 정렬) -->\n  <div class=\"max-w-6xl mx-auto px-3 sm:px-5 pt-4 pb-8\">\n  <!-- 슬림형 엑셀 업로드 & 인라인 기본 설정 툴바 -->\n  <section class=\"bg-white px-4 py-3 rounded-2xl border border-slate-200/80 shadow-sm mb-4 no-print\">\n    <div class=\"flex flex-col lg:flex-row lg:items-center justify-between gap-3\">\n      <!-- 좌측: 컴팩트 업로드 버튼/드롭존 -->\n      <label id=\"msi_dropZone\" for=\"msi_excelInput\" class=\"flex-1 border border-dashed border-blue-300 bg-blue-50/30 hover:bg-blue-50/70 hover:border-blue-500 rounded-xl px-4 py-2.5 transition cursor-pointer flex items-center justify-between gap-3\">\n        <input type=\"file\" id=\"msi_excelInput\" accept=\".xlsx,.xls,.csv\" class=\"hidden\" multiple onchange=\"window.MSInbound.handleFiles(this.files)\">\n        <div class=\"flex items-center gap-3 min-w-0\">\n          <div class=\"w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm\">\n            <i data-lucide=\"file-up\" class=\"w-4 h-4\"></i>\n          </div>\n          <div class=\"text-left truncate\">\n            <div class=\"text-xs font-bold text-slate-800 truncate\">엠즈 입고 엑셀 업로드 (.xls, .xlsx, .csv)</div>\n            <div class=\"text-[11px] text-slate-500 truncate\">클릭하거나 파일을 끌어다 놓으면 [입고요청일] 기준으로 자동 분리·합산됩니다</div>\n          </div>\n        </div>\n        <span class=\"px-2.5 py-1 bg-white text-blue-600 border border-blue-200 rounded-lg text-[11px] font-semibold shrink-0 shadow-sm\">파일 선택</span>\n      </label>\n\n      <!-- 우측: 컴팩트 인라인 설정 바 -->\n      <div class=\"flex flex-wrap items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200/70 text-xs\">\n        <div class=\"flex items-center gap-1\">\n          <span class=\"text-[11px] text-slate-400 font-medium\">입고상태</span>\n          <select id=\"msi_defaultStatus\" class=\"text-xs px-2 py-1 rounded-md border border-slate-200 bg-white font-medium\">\n            <option value=\"입고 완료\">완료</option>\n            <option value=\"입고 예정\">예정</option>\n          </select>\n        </div>\n        <div class=\"flex items-center gap-1\">\n          <span class=\"text-[11px] text-slate-400 font-medium\">기사</span>\n          <input type=\"text\" id=\"msi_defaultDriver\" value=\"김민겸 기사\" class=\"w-20 text-xs px-2 py-1 rounded-md border border-slate-200 bg-white font-medium\">\n        </div>\n        <div class=\"flex items-center gap-1\">\n          <span class=\"text-[11px] text-slate-400 font-medium\">운임</span>\n          <input type=\"number\" id=\"msi_defaultCost\" value=\"250000\" step=\"10000\" class=\"w-20 text-xs px-2 py-1 rounded-md border border-slate-200 bg-white font-medium\">\n        </div>\n        <label class=\"flex items-center gap-1.5 text-[11px] font-semibold text-slate-700 cursor-pointer px-2 py-1 bg-white rounded-md border border-slate-200\">\n          <input type=\"checkbox\" id=\"msi_mergeSameItemToggle\" checked onchange=\"window.MSInbound.renderAll()\" class=\"rounded text-blue-600\">\n          <span>동일품목 합산</span>\n        </label>\n      </div>\n    </div>\n    <div id=\"msi_uploadStatusBanner\" class=\"hidden mt-2 px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-semibold\"></div>\n  </section>\n\n  <!-- 메인 상단: KPI 요약 카드 + 품목별 누적 상위 TOP 5 간략 그래프 -->\n  <section class=\"grid grid-cols-1 lg:grid-cols-12 gap-4 mb-5\">\n    <!-- 좌측: KPI 5개 요약 그리드 (5칸) -->\n    <div class=\"lg:col-span-5 grid grid-cols-2 gap-2.5\">\n      <div class=\"bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm flex flex-col justify-between\">\n        <div class=\"text-[11px] font-medium text-slate-400\">입고 일수 (건수)</div>\n        <div class=\"text-xl font-bold text-slate-800 my-0.5\" id=\"msi_statCount\">0건</div>\n        <div class=\"text-[11px] text-slate-400\" id=\"msi_statSubCount\">완료 0 / 예정 0</div>\n      </div>\n      <div class=\"bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm flex flex-col justify-between\">\n        <div class=\"text-[11px] font-medium text-slate-400\">누적 발주 박스</div>\n        <div class=\"text-xl font-bold text-blue-600 my-0.5\" id=\"msi_statBoxes\">0 box</div>\n        <div class=\"text-[11px] text-slate-400\" id=\"msi_statAvgBoxes\">일평균 0 box</div>\n      </div>\n      <div class=\"bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm flex flex-col justify-between\">\n        <div class=\"text-[11px] font-medium text-slate-400\">누적 환산 팩(pk)</div>\n        <div class=\"text-xl font-bold text-emerald-600 my-0.5\" id=\"msi_statPks\">0 pk</div>\n        <div class=\"text-[11px] text-slate-400\" id=\"msi_statAvgPks\">일평균 0 pk</div>\n      </div>\n      <div class=\"bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm flex flex-col justify-between\">\n        <div class=\"text-[11px] font-medium text-slate-400\">취급 품목 종수</div>\n        <div class=\"text-xl font-bold text-indigo-600 my-0.5\" id=\"msi_statUniqueItems\">0종</div>\n        <div class=\"text-[11px] text-slate-400 truncate\" id=\"msi_statTopItem\">-</div>\n      </div>\n      <div class=\"bg-white px-3.5 py-3 rounded-xl border border-slate-200/80 shadow-sm flex flex-col justify-between\">\n        <div class=\"text-[11px] font-medium text-slate-400\">누적 총 운임 (입고+회송)</div>\n        <div class=\"text-lg font-bold text-slate-900 my-0.5\" id=\"msi_statCost\">0원</div>\n        <div class=\"text-[10px] text-slate-400 truncate\" id=\"msi_statCostBreakdown\">입고 0 / 회송 0</div>\n      </div>\n      <div class=\"bg-indigo-50/60 px-3.5 py-3 rounded-xl border border-indigo-200/80 shadow-sm flex flex-col justify-between\">\n        <div class=\"text-[11px] font-semibold text-indigo-700\">누적 매입 금액 (pk×단가)</div>\n        <div class=\"text-lg font-bold text-indigo-700 my-0.5\" id=\"msi_statPurchaseAmount\">0원</div>\n        <div class=\"text-[10px] text-indigo-500 truncate\" id=\"msi_statPriceSetRate\">단가 등록 0/0종</div>\n      </div>\n    </div>\n\n    <!-- 우측: 품목별 누적 통계 & 순위 TOP 10 간략 그래프 위젯 (7칸) -->\n    <div class=\"lg:col-span-7 bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex flex-col justify-between\">\n      <div class=\"flex items-center justify-between mb-2\">\n        <div class=\"flex items-center gap-2\">\n          <span class=\"text-sm font-bold text-slate-900\">📊 품목별 누적 입고 상위 TOP 10</span>\n          <span class=\"text-[11px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md font-semibold\">(pk 기준)</span>\n        </div>\n        <button onclick=\"window.MSInbound.switchMainView('ANALYTICS')\" class=\"text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5 no-print\">\n          전체 순위 보기 <i data-lucide=\"chevron-right\" class=\"w-3.5 h-3.5\"></i>\n        </button>\n      </div>\n      <div id=\"msi_top5ChartContainer\" class=\"space-y-1.5 my-auto\"></div>\n    </div>\n  </section>\n\n  <!-- 메인 뷰 전환 탭 & 검색/아코디언 컨트롤 바 -->\n  <div class=\"flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 no-print\">\n    <!-- 뷰 전환 버튼 (3개 탭) -->\n    <div class=\"inline-flex flex-wrap p-1 bg-slate-200/80 rounded-xl w-fit gap-0.5\">\n      <button id=\"msi_tabBtnDaily\" onclick=\"window.MSInbound.switchMainView('DAILY')\" class=\"flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-sm transition\">\n        <i data-lucide=\"calendar-days\" class=\"w-3.5 h-3.5 text-blue-600\"></i> 일자별 입고 내역\n      </button>\n      <button id=\"msi_tabBtnAnalytics\" onclick=\"window.MSInbound.switchMainView('ANALYTICS')\" class=\"flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition\">\n        <i data-lucide=\"bar-chart-3\" class=\"w-3.5 h-3.5 text-indigo-600\"></i> 품목별 누적 통계 & 순위\n      </button>\n      <button id=\"msi_tabBtnReturns\" onclick=\"window.MSInbound.switchMainView('RETURNS')\" class=\"flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition\">\n        <i data-lucide=\"rotate-ccw\" class=\"w-3.5 h-3.5 text-amber-600\"></i> 회송 내역 관리\n        <span id=\"msi_returnTabCountBadge\" class=\"px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded-full text-[10px] font-extrabold\">0</span>\n      </button>\n      <button id=\"msi_tabBtnPrices\" onclick=\"window.MSInbound.switchMainView('PRICES')\" class=\"flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition\">\n        <i data-lucide=\"coins\" class=\"w-3.5 h-3.5 text-emerald-600\"></i> 매입가 DB 관리\n      </button>\n    </div>\n\n    <!-- 우측 검색 및 접기/펼치기 · 정산 엑셀 컨트롤 -->\n    <div class=\"flex flex-wrap items-center gap-2\">\n      <button type=\"button\" onclick=\"window.MSInbound.downloadSettlementExcel()\" class=\"flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold bg-white border border-slate-200 rounded-lg text-emerald-700 hover:bg-emerald-50 transition cursor-pointer\" title=\"4개 시트 정산 엑셀 다운로드\">\n        <i data-lucide=\"file-spreadsheet\" class=\"w-3.5 h-3.5\"></i><span>정산 엑셀</span>\n      </button>\n      <div id=\"msi_accordionControls\" class=\"flex items-center gap-1\">\n        <button onclick=\"window.MSInbound.toggleAllCards(false)\" class=\"px-2.5 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50\">전체 펼치기</button>\n        <button onclick=\"window.MSInbound.toggleAllCards(true)\" class=\"px-2.5 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50\">전체 접기</button>\n      </div>\n      <div class=\"relative w-full sm:w-60\">\n        <i data-lucide=\"search\" class=\"w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2\"></i>\n        <input type=\"text\" id=\"msi_searchInput\" oninput=\"window.MSInbound.renderAll()\" placeholder=\"상품명, 코드, 날짜, 사유 검색...\" class=\"w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500\">\n      </div>\n    </div>\n  </div>\n\n  <!-- 월별/일자별 필터 칩 -->\n  <div class=\"flex items-center gap-1.5 overflow-x-auto pb-2 mb-4 no-print\" id=\"msi_dateTabs\"></div>\n\n  <!-- 뷰 1: 일자별 입고 내역 컨테이너 -->\n  <section id=\"msi_dailyViewContainer\" class=\"space-y-3.5\"></section>\n\n  <!-- 뷰 2: 품목별 누적 통계 & 순위 컨테이너 -->\n  <section id=\"msi_analyticsViewContainer\" class=\"hidden space-y-5\"></section>\n\n  <!-- 뷰 3: 회송 내역 관리 (수기 등록 & 이력 목록) 컨테이너 -->\n  <section id=\"msi_returnsViewContainer\" class=\"hidden space-y-4\">\n    <!-- 회송 요약 카드 (사유별 집계) -->\n    <div class=\"grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5\">\n      <div class=\"bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm\">\n        <div class=\"text-[11px] font-medium text-slate-400\">총 회송 건수</div>\n        <div class=\"text-lg font-bold text-slate-800 mt-0.5\" id=\"msi_retStatCount\">0건</div>\n      </div>\n      <div class=\"bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm\">\n        <div class=\"text-[11px] font-medium text-slate-400\">누적 회송 운임료</div>\n        <div class=\"text-lg font-bold text-rose-600 mt-0.5\" id=\"msi_retStatCost\">0원</div>\n      </div>\n      <div class=\"bg-rose-50/60 p-3.5 rounded-xl border border-rose-200/60\">\n        <div class=\"text-[11px] font-semibold text-rose-700\">소비기한 오류</div>\n        <div class=\"text-lg font-bold text-rose-800 mt-0.5\" id=\"msi_retStatReason1\">0건</div>\n      </div>\n      <div class=\"bg-amber-50/60 p-3.5 rounded-xl border border-amber-200/60\">\n        <div class=\"text-[11px] font-semibold text-amber-700\">외박스 파손</div>\n        <div class=\"text-lg font-bold text-amber-800 mt-0.5\" id=\"msi_retStatReason2\">0건</div>\n      </div>\n      <div class=\"bg-orange-50/60 p-3.5 rounded-xl border border-orange-200/60\">\n        <div class=\"text-[11px] font-semibold text-orange-700\">파레트 적재 불량</div>\n        <div class=\"text-lg font-bold text-orange-800 mt-0.5\" id=\"msi_retStatReason3\">0건</div>\n      </div>\n      <div class=\"bg-purple-50/60 p-3.5 rounded-xl border border-purple-200/60\">\n        <div class=\"text-[11px] font-semibold text-purple-700\">입고 시간 미준수</div>\n        <div class=\"text-lg font-bold text-purple-800 mt-0.5\" id=\"msi_retStatReason4\">0건</div>\n      </div>\n      <div class=\"bg-slate-100/80 p-3.5 rounded-xl border border-slate-200/80\">\n        <div class=\"text-[11px] font-semibold text-slate-600\">기타 사유</div>\n        <div class=\"text-lg font-bold text-slate-800 mt-0.5\" id=\"msi_retStatReason5\">0건</div>\n      </div>\n    </div>\n\n    <!-- 회송 수기 등록 폼 -->\n    <div class=\"bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm no-print\">\n      <div class=\"flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3.5\">\n        <div>\n          <h3 class=\"text-sm font-bold text-slate-900 flex items-center gap-1.5\">\n            <span class=\"w-2 h-2 rounded-full bg-amber-500\"></span> 회송 내역 수기 등록\n          </h3>\n          <p class=\"text-[11px] text-slate-500 mt-0.5\">입고 진행 기사에게 지불한 회송 운임료와 회송 사유를 기록하면 클라우드에 즉시 동기화됩니다.</p>\n        </div>\n        <!-- 사유 빠른 선택 버튼 -->\n        <div class=\"flex flex-wrap items-center gap-1\">\n          <span class=\"text-[11px] text-slate-400 mr-1\">사유 빠른선택:</span>\n          <button type=\"button\" onclick=\"window.MSInbound.selectReturnReason('소비기한 오류')\" class=\"px-2 py-1 rounded-md text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition\">소비기한 오류</button>\n          <button type=\"button\" onclick=\"window.MSInbound.selectReturnReason('외박스 파손')\" class=\"px-2 py-1 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition\">외박스 파손</button>\n          <button type=\"button\" onclick=\"window.MSInbound.selectReturnReason('파레트 적재 불량')\" class=\"px-2 py-1 rounded-md text-[11px] font-semibold bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100 transition\">파레트 적재 불량</button>\n          <button type=\"button\" onclick=\"window.MSInbound.selectReturnReason('입고 시간 미준수')\" class=\"px-2 py-1 rounded-md text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition\">입고 시간 미준수</button>\n        </div>\n      </div>\n\n      <div class=\"grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 items-end\">\n        <div class=\"lg:col-span-2\">\n          <label class=\"block text-[11px] font-semibold text-slate-600 mb-1\">회송일자</label>\n          <input type=\"date\" id=\"msi_retInputDate\" class=\"block w-full h-9 text-xs px-2.5 rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:border-blue-500\">\n        </div>\n        <div class=\"lg:col-span-2\">\n          <label class=\"block text-[11px] font-semibold text-slate-600 mb-1\">회송 사유</label>\n          <select id=\"msi_retInputReason\" class=\"block w-full h-9 text-xs px-2.5 rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:border-blue-500 font-medium\">\n            <option value=\"소비기한 오류\">소비기한 오류</option>\n            <option value=\"외박스 파손\">외박스 파손</option>\n            <option value=\"파레트 적재 불량\">파레트 적재 불량</option>\n            <option value=\"입고 시간 미준수\">입고 시간 미준수</option>\n            <option value=\"기타 사유\">기타 사유</option>\n          </select>\n        </div>\n        <div class=\"lg:col-span-2\">\n          <label class=\"block text-[11px] font-semibold text-slate-600 mb-1\">담당 기사</label>\n          <input type=\"text\" id=\"msi_retInputDriver\" value=\"김민겸 기사\" placeholder=\"김민겸 기사\" class=\"block w-full h-9 text-xs px-2.5 rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:border-blue-500\">\n        </div>\n        <div class=\"lg:col-span-2\">\n          <label class=\"block text-[11px] font-semibold text-slate-600 mb-1\">회송 운임료 (원)</label>\n          <input type=\"number\" id=\"msi_retInputCost\" value=\"250000\" step=\"10000\" placeholder=\"250000\" class=\"block w-full h-9 text-xs px-2.5 rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:border-blue-500 font-semibold text-rose-600\">\n        </div>\n        <div class=\"lg:col-span-3\">\n          <label class=\"block text-[11px] font-semibold text-slate-600 mb-1\">상세 내용 / 대상 품목 (Enter로 줄바꿈 가능)</label>\n          <textarea id=\"msi_retInputNote\" rows=\"1\" oninput=\"this.style.height='36px';this.style.height=Math.max(36,this.scrollHeight)+'px'\" placeholder=\"예: 크로와상 생지 2box 외박스 파손\" class=\"block w-full h-9 min-h-[36px] text-xs px-2.5 py-[8px] rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:border-blue-500 resize-none leading-[18px] overflow-hidden\"></textarea>\n        </div>\n        <div class=\"lg:col-span-1\">\n          <button type=\"button\" onclick=\"window.MSInbound.addReturnRecord()\" class=\"w-full h-9 px-3 bg-slate-900 hover:bg-blue-600 text-white font-bold text-xs rounded-lg transition shadow-sm flex items-center justify-center gap-1\">\n            <i data-lucide=\"plus\" class=\"w-3.5 h-3.5\"></i> 등록\n          </button>\n        </div>\n      </div>\n    </div>\n\n    <!-- 회송 내역 목록 테이블 -->\n    <div class=\"bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden\">\n      <div class=\"p-4 sm:px-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60\">\n        <div class=\"flex items-center gap-2\">\n          <h3 class=\"text-sm font-bold text-slate-900\">📋 회송 이력 및 운임 정산 내역</h3>\n          <span class=\"text-[11px] text-slate-400\">(항목 클릭 시 내용을 즉시 수정하거나 삭제할 수 있습니다)</span>\n        </div>\n      </div>\n      <div class=\"p-3.5 sm:px-5 overflow-x-auto\" id=\"msi_returnsTableWrapper\"></div>\n    </div>\n  </section>\n\n  <!-- 뷰 4: 품목별 매입가 DB 마스터 관리 컨테이너 -->\n  <section id=\"msi_pricesViewContainer\" class=\"hidden space-y-4\">\n    <div class=\"bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm\">\n      <div class=\"flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100\">\n        <div>\n          <h3 class=\"text-sm font-bold text-slate-900 flex items-center gap-1.5\">\n            💰 품목별 매입단가(pk 기준) 마스터 DB\n          </h3>\n          <p class=\"text-xs text-slate-500 mt-0.5\">\n            한 번 입력해 두면 과거 내역과 앞으로 업로드할 엑셀의 동일 품목(상품코드/상품명)에 <b>자동으로 매입단가가 적용되어 금액(입고 pk × 단가)이 계산</b>됩니다.\n          </p>\n        </div>\n        <div class=\"flex items-center gap-2 no-print\">\n          <label class=\"flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-semibold cursor-pointer transition\">\n            <i data-lucide=\"upload\" class=\"w-3.5 h-3.5\"></i> 단가표 엑셀 일괄등록\n            <input type=\"file\" id=\"msi_priceExcelInput\" accept=\".xlsx,.xls,.csv\" class=\"hidden\" onchange=\"window.MSInbound.handlePriceExcel(this.files)\">\n          </label>\n        </div>\n      </div>\n      <div class=\"overflow-x-auto mt-3\" id=\"msi_pricesTableWrapper\"></div>\n    </div>\n  </section>\n\n  <!-- 필드 수정 모달 (인라인 에디터 + 내용 삭제 버튼 포함) -->\n  <div id=\"msi_editFieldModal\" class=\"fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4\">\n    <div class=\"bg-white rounded-2xl max-w-md w-full p-5 shadow-xl border border-slate-200\">\n      <div class=\"flex items-center justify-between mb-3\">\n        <h3 id=\"msi_editModalTitle\" class=\"text-sm font-bold text-slate-900\">항목 수정</h3>\n        <button onclick=\"window.MSInbound.closeEditModal()\" class=\"text-slate-400 hover:text-slate-600\"><i data-lucide=\"x\" class=\"w-4 h-4\"></i></button>\n      </div>\n      <textarea id=\"msi_editModalInput\" rows=\"4\" class=\"w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-blue-600 mb-1 resize-y leading-relaxed\" placeholder=\"내용을 입력하세요... (Enter로 줄바꿈 가능)\"></textarea>\n      <p class=\"text-[11px] text-slate-400 mb-3\">💡 Enter 키로 줄바꿈을 넣을 수 있습니다.</p>\n      <div class=\"flex items-center justify-between gap-2 pt-1\">\n        <button onclick=\"window.MSInbound.clearEditField()\" class=\"flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition\">\n          <i data-lucide=\"trash-2\" class=\"w-3.5 h-3.5\"></i> 내용 삭제\n        </button>\n        <div class=\"flex items-center gap-2\">\n          <button onclick=\"window.MSInbound.closeEditModal()\" class=\"px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition\">취소</button>\n          <button onclick=\"window.MSInbound.saveEditModal()\" class=\"px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition\">저장</button>\n        </div>\n      </div>\n    </div>\n  </div>\n\n  <!-- 확인(Confirm) 모달 -->\n  <div id=\"msi_confirmModal\" class=\"fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4\">\n    <div class=\"bg-white rounded-2xl max-w-sm w-full p-5 shadow-xl border border-slate-200\">\n      <h3 class=\"text-sm font-bold text-slate-900 mb-2\">확인</h3>\n      <p id=\"msi_confirmModalMsg\" class=\"text-xs text-slate-600 mb-4\">진행하시겠습니까?</p>\n      <div class=\"flex justify-end gap-2\">\n        <button onclick=\"window.MSInbound.closeConfirmModal()\" class=\"px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg\">취소</button>\n        <button id=\"msi_confirmModalBtn\" class=\"px-4 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg\">확인</button>\n      </div>\n    </div>\n  </div>\n\n  <!-- 엠즈 입고 DB 설정 모달 (통일된 심플 URL 팝업) -->\n  <div id=\"msi_cloudModal\" onclick=\"if(event.target===this) window.MSInbound.closeCloudModal()\" class=\"fixed inset-0 bg-stone-950/60 backdrop-blur-xs hidden items-center justify-center z-50 p-4\">\n    <div class=\"bg-white rounded-2xl max-w-lg w-full p-5 shadow-xl border border-stone-200 text-xs\">\n      <div class=\"flex items-center justify-between pb-3 border-b border-stone-200\">\n        <h3 class=\"text-base font-extrabold text-stone-900\">엠즈 입고 구글 스프레드시트 DB 설정</h3>\n        <button type=\"button\" onclick=\"window.MSInbound.closeCloudModal()\" class=\"text-stone-400 hover:text-stone-700 cursor-pointer\"><i data-lucide=\"x\" class=\"w-5 h-5\"></i></button>\n      </div>\n      <div class=\"mt-4 space-y-3\">\n        <div>\n          <label class=\"font-bold text-stone-700 block mb-1\">Google Apps Script 웹 앱 URL</label>\n          <input type=\"url\" id=\"msi_cloudUrlInput\" placeholder=\"https://script.google.com/macros/s/.../exec\" class=\"w-full border border-stone-300 focus:border-emerald-600 focus:outline-none rounded-xl px-3 py-2 font-mono bg-stone-50 focus:bg-white text-stone-900\">\n        </div>\n        <div class=\"flex justify-end gap-2 pt-1\">\n          <button type=\"button\" onclick=\"window.MSInbound.closeCloudModal()\" class=\"px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold cursor-pointer\">닫기</button>\n          <button type=\"button\" onclick=\"window.MSInbound.saveCloudConfig()\" class=\"px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer\">URL 저장 및 동기화</button>\n        </div>\n      </div>\n    </div>\n  </div>\n\n  <!-- 토스트 알림 -->\n  <div id=\"msi_toast\" class=\"fixed bottom-5 right-5 bg-slate-900 text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-lg opacity-0 pointer-events-none transition-opacity duration-200 flex items-center gap-2 z-50\">\n    <i data-lucide=\"check-circle-2\" class=\"w-4 h-4 text-emerald-400\"></i>\n    <span id=\"msi_toastMsg\">완료되었습니다.</span>\n  </div>\n  </div>\n</div>";
+        rootEl.innerHTML = "<style>\n  #msInboundRoot .drop-active { border-color: #2563eb !important; background-color: #eff6ff !important; }\n</style>\n<div class=\"w-full\">\n  <!-- 엠즈 입고 전용 상단 툴바 (4대 도메인 통일 DB 버튼 우측 정렬) -->\n  <div class=\"w-full bg-indigo-50/90 border-b border-indigo-200/80 no-print\">\n    <div class=\"max-w-[1600px] mx-auto px-4 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-2\">\n      <div class=\"flex items-center gap-2.5 flex-wrap\">\n        <span class=\"text-xs sm:text-sm font-extrabold text-indigo-950\">엠즈 입고 및 회송 통합 관리</span>\n        <span class=\"text-xs text-stone-600 hidden md:inline\">기본 입고 운임: 240,000원 + 10,000원(까데기) = <b>250,000원</b></span>\n      </div>\n      <div class=\"flex items-center gap-1.5 ml-auto\">\n        <button type=\"button\" id=\"msi_dbStatusBadge\" onclick=\"window.MSInbound.openCloudModal()\" class=\"flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-xl text-xs font-bold border bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100 transition cursor-pointer\">\n          <span id=\"msi_dbStatusDot\" class=\"w-2 h-2 rounded-full bg-emerald-500\"></span>\n          <span id=\"msi_dbStatusText\">DB 연동됨</span>\n          <i data-lucide=\"settings\" class=\"w-3.5 h-3.5 ml-0.5 opacity-75\"></i>\n        </button>\n        <button type=\"button\" onclick=\"window.MSInbound.pushToCloud(false)\" class=\"flex items-center gap-1.5 px-3.5 py-1.5 h-9 rounded-xl text-xs font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition cursor-pointer\">\n          <i data-lucide=\"cloud-upload\" class=\"w-3.5 h-3.5\"></i>\n          <span>DB 저장</span>\n        </button>\n        <button type=\"button\" onclick=\"window.MSInbound.pullFromCloud(false)\" title=\"구글 시트 새로고침\" class=\"flex items-center justify-center w-9 h-9 rounded-xl border border-stone-200 bg-white hover:bg-stone-100 text-stone-700 transition cursor-pointer\">\n          <span id=\"msi_syncSpinWrap\" class=\"inline-flex items-center justify-center\"><i data-lucide=\"refresh-cw\" class=\"w-4 h-4\"></i></span>\n        </button>\n      </div>\n    </div>\n  </div>\n\n  <!-- 본문 영역: 가독성 최적 좌우 폭 (max-w-6xl = 1152px 중앙 정렬) -->\n  <div class=\"max-w-6xl mx-auto px-3 sm:px-5 pt-4 pb-8\">\n  <!-- 슬림형 엑셀 업로드 & 인라인 기본 설정 툴바 -->\n  <section class=\"bg-white px-4 py-3 rounded-2xl border border-slate-200/80 shadow-sm mb-4 no-print\">\n    <div class=\"flex flex-col lg:flex-row lg:items-center justify-between gap-3\">\n      <!-- 좌측: 컴팩트 업로드 버튼/드롭존 -->\n      <label id=\"msi_dropZone\" for=\"msi_excelInput\" class=\"flex-1 border border-dashed border-blue-300 bg-blue-50/30 hover:bg-blue-50/70 hover:border-blue-500 rounded-xl px-4 py-2.5 transition cursor-pointer flex items-center justify-between gap-3\">\n        <input type=\"file\" id=\"msi_excelInput\" accept=\".xlsx,.xls,.csv\" class=\"hidden\" multiple onchange=\"window.MSInbound.handleFiles(this.files)\">\n        <div class=\"flex items-center gap-3 min-w-0\">\n          <div class=\"w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm\">\n            <i data-lucide=\"file-up\" class=\"w-4 h-4\"></i>\n          </div>\n          <div class=\"text-left truncate\">\n            <div class=\"text-xs font-bold text-slate-800 truncate\">엠즈 입고 엑셀 업로드 (.xls, .xlsx, .csv)</div>\n            <div class=\"text-[11px] text-slate-500 truncate\">클릭하거나 파일을 끌어다 놓으면 [입고요청일] 기준으로 자동 분리·합산됩니다</div>\n          </div>\n        </div>\n        <span class=\"px-2.5 py-1 bg-white text-blue-600 border border-blue-200 rounded-lg text-[11px] font-semibold shrink-0 shadow-sm\">파일 선택</span>\n      </label>\n\n      <!-- 우측: 컴팩트 인라인 설정 바 -->\n      <div class=\"flex flex-wrap items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200/70 text-xs\">\n        <div class=\"flex items-center gap-1\">\n          <span class=\"text-[11px] text-slate-400 font-medium\">입고상태</span>\n          <select id=\"msi_defaultStatus\" class=\"text-xs px-2 py-1 rounded-md border border-slate-200 bg-white font-medium\">\n            <option value=\"입고 완료\">완료</option>\n            <option value=\"입고 예정\">예정</option>\n          </select>\n        </div>\n        <div class=\"flex items-center gap-1\">\n          <span class=\"text-[11px] text-slate-400 font-medium\">기사</span>\n          <input type=\"text\" id=\"msi_defaultDriver\" value=\"김민겸 기사\" class=\"w-20 text-xs px-2 py-1 rounded-md border border-slate-200 bg-white font-medium\">\n        </div>\n        <div class=\"flex items-center gap-1\">\n          <span class=\"text-[11px] text-slate-400 font-medium\">운임</span>\n          <input type=\"number\" id=\"msi_defaultCost\" value=\"250000\" step=\"10000\" class=\"w-20 text-xs px-2 py-1 rounded-md border border-slate-200 bg-white font-medium\">\n        </div>\n        <label class=\"flex items-center gap-1.5 text-[11px] font-semibold text-slate-700 cursor-pointer px-2 py-1 bg-white rounded-md border border-slate-200\">\n          <input type=\"checkbox\" id=\"msi_mergeSameItemToggle\" checked onchange=\"window.MSInbound.renderAll()\" class=\"rounded text-blue-600\">\n          <span>동일품목 합산</span>\n        </label>\n      </div>\n    </div>\n    <div id=\"msi_uploadStatusBanner\" class=\"hidden mt-2 px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-semibold\"></div>\n  </section>\n\n  <!-- 메인 상단: KPI 요약 카드 + 품목별 누적 상위 TOP 5 간략 그래프 -->\n  <section class=\"grid grid-cols-1 lg:grid-cols-12 gap-4 mb-5\">\n    <!-- 좌측: KPI 5개 요약 그리드 (5칸) -->\n    <div class=\"lg:col-span-5 grid grid-cols-2 gap-2.5\">\n      <div class=\"bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm flex flex-col justify-between\">\n        <div class=\"text-[11px] font-medium text-slate-400\">입고 일수 (건수)</div>\n        <div class=\"text-xl font-bold text-slate-800 my-0.5\" id=\"msi_statCount\">0건</div>\n        <div class=\"text-[11px] text-slate-400\" id=\"msi_statSubCount\">완료 0 / 예정 0</div>\n      </div>\n      <div class=\"bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm flex flex-col justify-between\">\n        <div class=\"text-[11px] font-medium text-slate-400\">누적 발주 박스</div>\n        <div class=\"text-xl font-bold text-blue-600 my-0.5\" id=\"msi_statBoxes\">0 box</div>\n        <div class=\"text-[11px] text-slate-400\" id=\"msi_statAvgBoxes\">일평균 0 box</div>\n      </div>\n      <div class=\"bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm flex flex-col justify-between\">\n        <div class=\"text-[11px] font-medium text-slate-400\">누적 환산 팩(pk)</div>\n        <div class=\"text-xl font-bold text-emerald-600 my-0.5\" id=\"msi_statPks\">0 pk</div>\n        <div class=\"text-[11px] text-slate-400\" id=\"msi_statAvgPks\">일평균 0 pk</div>\n      </div>\n      <div class=\"bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm flex flex-col justify-between\">\n        <div class=\"text-[11px] font-medium text-slate-400\">취급 품목 종수</div>\n        <div class=\"text-xl font-bold text-indigo-600 my-0.5\" id=\"msi_statUniqueItems\">0종</div>\n        <div class=\"text-[11px] text-slate-400 truncate\" id=\"msi_statTopItem\">-</div>\n      </div>\n      <div class=\"bg-white px-3.5 py-3 rounded-xl border border-slate-200/80 shadow-sm flex flex-col justify-between\">\n        <div class=\"text-[11px] font-medium text-slate-400\">누적 총 운임 (입고+회송)</div>\n        <div class=\"text-lg font-bold text-slate-900 my-0.5\" id=\"msi_statCost\">0원</div>\n        <div class=\"text-[10px] text-slate-400 truncate\" id=\"msi_statCostBreakdown\">입고 0 / 회송 0</div>\n      </div>\n      <div class=\"bg-indigo-50/60 px-3.5 py-3 rounded-xl border border-indigo-200/80 shadow-sm flex flex-col justify-between\">\n        <div class=\"text-[11px] font-semibold text-indigo-700\">누적 매입 금액 (pk×단가)</div>\n        <div class=\"text-lg font-bold text-indigo-700 my-0.5\" id=\"msi_statPurchaseAmount\">0원</div>\n        <div class=\"text-[10px] text-indigo-500 truncate\" id=\"msi_statPriceSetRate\">단가 등록 0/0종</div>\n      </div>\n    </div>\n\n    <!-- 우측: 품목별 누적 통계 & 순위 TOP 10 간략 그래프 위젯 (7칸) -->\n    <div class=\"lg:col-span-7 bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex flex-col justify-between\">\n      <div class=\"flex items-center justify-between mb-2\">\n        <div class=\"flex items-center gap-2\">\n          <span class=\"text-sm font-bold text-slate-900\">📊 품목별 누적 입고 상위 TOP 10</span>\n          <span class=\"text-[11px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md font-semibold\">(pk 기준)</span>\n        </div>\n        <button onclick=\"window.MSInbound.switchMainView('ANALYTICS')\" class=\"text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5 no-print\">\n          전체 순위 보기 <i data-lucide=\"chevron-right\" class=\"w-3.5 h-3.5\"></i>\n        </button>\n      </div>\n      <div id=\"msi_top5ChartContainer\" class=\"space-y-1.5 my-auto\"></div>\n    </div>\n  </section>\n\n  <!-- 메인 뷰 전환 탭 & 검색/아코디언 컨트롤 바 -->\n  <div class=\"flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 no-print\">\n    <!-- 뷰 전환 버튼 (3개 탭) -->\n    <div class=\"inline-flex flex-wrap p-1 bg-slate-200/80 rounded-xl w-fit gap-0.5\">\n      <button id=\"msi_tabBtnDaily\" onclick=\"window.MSInbound.switchMainView('DAILY')\" class=\"flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-sm transition\">\n        <i data-lucide=\"calendar-days\" class=\"w-3.5 h-3.5 text-blue-600\"></i> 일자별 입고 내역\n      </button>\n      <button id=\"msi_tabBtnAnalytics\" onclick=\"window.MSInbound.switchMainView('ANALYTICS')\" class=\"flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition\">\n        <i data-lucide=\"bar-chart-3\" class=\"w-3.5 h-3.5 text-indigo-600\"></i> 품목별 누적 통계 & 순위\n      </button>\n      <button id=\"msi_tabBtnReturns\" onclick=\"window.MSInbound.switchMainView('RETURNS')\" class=\"flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition\">\n        <i data-lucide=\"rotate-ccw\" class=\"w-3.5 h-3.5 text-amber-600\"></i> 회송 내역 관리\n        <span id=\"msi_returnTabCountBadge\" class=\"px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded-full text-[10px] font-extrabold\">0</span>\n      </button>\n      <button id=\"msi_tabBtnPrices\" onclick=\"window.MSInbound.switchMainView('PRICES')\" class=\"flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition\">\n        <i data-lucide=\"coins\" class=\"w-3.5 h-3.5 text-emerald-600\"></i> 매입가 DB 관리\n      </button>\n    </div>\n\n    <!-- 우측 검색 및 접기/펼치기 · 정산 엑셀 컨트롤 -->\n    <div class=\"flex flex-wrap items-center gap-2\">\n      <button type=\"button\" onclick=\"window.MSInbound.downloadSettlementExcel()\" class=\"flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold bg-white border border-slate-200 rounded-lg text-emerald-700 hover:bg-emerald-50 transition cursor-pointer\" title=\"4개 시트 정산 엑셀 다운로드\">\n        <i data-lucide=\"file-spreadsheet\" class=\"w-3.5 h-3.5\"></i><span>정산 엑셀</span>\n      </button>\n      <div id=\"msi_accordionControls\" class=\"flex items-center gap-1\">\n        <button onclick=\"window.MSInbound.toggleAllCards(false)\" class=\"px-2.5 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50\">전체 펼치기</button>\n        <button onclick=\"window.MSInbound.toggleAllCards(true)\" class=\"px-2.5 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50\">전체 접기</button>\n      </div>\n      <div class=\"relative w-full sm:w-60\">\n        <i data-lucide=\"search\" class=\"w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2\"></i>\n        <input type=\"text\" id=\"msi_searchInput\" oninput=\"window.MSInbound.renderAll()\" placeholder=\"상품명, 코드, 날짜, 사유 검색...\" class=\"w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500\">\n      </div>\n    </div>\n  </div>\n\n  <!-- 월별/일자별 필터 칩 -->\n  <div class=\"flex items-center gap-1.5 overflow-x-auto pb-2 mb-4 no-print\" id=\"msi_dateTabs\"></div>\n\n  <!-- 뷰 1: 일자별 입고 내역 컨테이너 -->\n  <section id=\"msi_dailyViewContainer\" class=\"space-y-3.5\"></section>\n\n  <!-- 뷰 2: 품목별 누적 통계 & 순위 컨테이너 -->\n  <section id=\"msi_analyticsViewContainer\" class=\"hidden space-y-5\"></section>\n\n  <!-- 뷰 3: 회송 내역 관리 (수기 등록 & 이력 목록) 컨테이너 -->\n  <section id=\"msi_returnsViewContainer\" class=\"hidden space-y-4\">\n    <!-- 회송 요약 카드 (사유별 집계) -->\n    <div class=\"grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5\">\n      <div class=\"bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm\">\n        <div class=\"text-[11px] font-medium text-slate-400\">총 회송 건수</div>\n        <div class=\"text-lg font-bold text-slate-800 mt-0.5\" id=\"msi_retStatCount\">0건</div>\n      </div>\n      <div class=\"bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm\">\n        <div class=\"text-[11px] font-medium text-slate-400\">누적 회송 운임료</div>\n        <div class=\"text-lg font-bold text-rose-600 mt-0.5\" id=\"msi_retStatCost\">0원</div>\n      </div>\n      <div class=\"bg-rose-50/60 p-3.5 rounded-xl border border-rose-200/60\">\n        <div class=\"text-[11px] font-semibold text-rose-700\">소비기한 오류</div>\n        <div class=\"text-lg font-bold text-rose-800 mt-0.5\" id=\"msi_retStatReason1\">0건</div>\n      </div>\n      <div class=\"bg-amber-50/60 p-3.5 rounded-xl border border-amber-200/60\">\n        <div class=\"text-[11px] font-semibold text-amber-700\">외박스 파손</div>\n        <div class=\"text-lg font-bold text-amber-800 mt-0.5\" id=\"msi_retStatReason2\">0건</div>\n      </div>\n      <div class=\"bg-orange-50/60 p-3.5 rounded-xl border border-orange-200/60\">\n        <div class=\"text-[11px] font-semibold text-orange-700\">파레트 적재 불량</div>\n        <div class=\"text-lg font-bold text-orange-800 mt-0.5\" id=\"msi_retStatReason3\">0건</div>\n      </div>\n      <div class=\"bg-purple-50/60 p-3.5 rounded-xl border border-purple-200/60\">\n        <div class=\"text-[11px] font-semibold text-purple-700\">입고 시간 미준수</div>\n        <div class=\"text-lg font-bold text-purple-800 mt-0.5\" id=\"msi_retStatReason4\">0건</div>\n      </div>\n      <div class=\"bg-slate-100/80 p-3.5 rounded-xl border border-slate-200/80\">\n        <div class=\"text-[11px] font-semibold text-slate-600\">기타 사유</div>\n        <div class=\"text-lg font-bold text-slate-800 mt-0.5\" id=\"msi_retStatReason5\">0건</div>\n      </div>\n    </div>\n\n    <!-- 회송 수기 등록 폼 -->\n    <div class=\"bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm no-print\">\n      <div class=\"flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3.5\">\n        <div>\n          <h3 class=\"text-sm font-bold text-slate-900 flex items-center gap-1.5\">\n            <span class=\"w-2 h-2 rounded-full bg-amber-500\"></span> 회송 내역 수기 등록\n          </h3>\n          <p class=\"text-[11px] text-slate-500 mt-0.5\">입고 진행 기사에게 지불한 회송 운임료와 회송 사유를 기록하면 클라우드에 즉시 동기화됩니다.</p>\n        </div>\n        <!-- 사유 빠른 선택 버튼 -->\n        <div class=\"flex flex-wrap items-center gap-1\">\n          <span class=\"text-[11px] text-slate-400 mr-1\">사유 빠른선택:</span>\n          <button type=\"button\" onclick=\"window.MSInbound.selectReturnReason('소비기한 오류')\" class=\"px-2 py-1 rounded-md text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition\">소비기한 오류</button>\n          <button type=\"button\" onclick=\"window.MSInbound.selectReturnReason('외박스 파손')\" class=\"px-2 py-1 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition\">외박스 파손</button>\n          <button type=\"button\" onclick=\"window.MSInbound.selectReturnReason('파레트 적재 불량')\" class=\"px-2 py-1 rounded-md text-[11px] font-semibold bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100 transition\">파레트 적재 불량</button>\n          <button type=\"button\" onclick=\"window.MSInbound.selectReturnReason('입고 시간 미준수')\" class=\"px-2 py-1 rounded-md text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition\">입고 시간 미준수</button>\n        </div>\n      </div>\n\n      <div class=\"grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 items-end\">\n        <div class=\"lg:col-span-2\">\n          <label class=\"block text-[11px] font-semibold text-slate-600 mb-1\">회송일자</label>\n          <input type=\"date\" id=\"msi_retInputDate\" class=\"block w-full h-9 text-xs px-2.5 rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:border-blue-500\">\n        </div>\n        <div class=\"lg:col-span-2\">\n          <label class=\"block text-[11px] font-semibold text-slate-600 mb-1\">회송 사유</label>\n          <select id=\"msi_retInputReason\" class=\"block w-full h-9 text-xs px-2.5 rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:border-blue-500 font-medium\">\n            <option value=\"소비기한 오류\">소비기한 오류</option>\n            <option value=\"외박스 파손\">외박스 파손</option>\n            <option value=\"파레트 적재 불량\">파레트 적재 불량</option>\n            <option value=\"입고 시간 미준수\">입고 시간 미준수</option>\n            <option value=\"기타 사유\">기타 사유</option>\n          </select>\n        </div>\n        <div class=\"lg:col-span-2\">\n          <label class=\"block text-[11px] font-semibold text-slate-600 mb-1\">담당 기사</label>\n          <input type=\"text\" id=\"msi_retInputDriver\" value=\"김민겸 기사\" placeholder=\"김민겸 기사\" class=\"block w-full h-9 text-xs px-2.5 rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:border-blue-500\">\n        </div>\n        <div class=\"lg:col-span-2\">\n          <label class=\"block text-[11px] font-semibold text-slate-600 mb-1\">회송 운임료 (원)</label>\n          <input type=\"number\" id=\"msi_retInputCost\" value=\"250000\" step=\"10000\" placeholder=\"250000\" class=\"block w-full h-9 text-xs px-2.5 rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:border-blue-500 font-semibold text-rose-600\">\n        </div>\n        <div class=\"lg:col-span-3\">\n          <label class=\"block text-[11px] font-semibold text-slate-600 mb-1\">상세 내용 / 대상 품목 (Enter로 줄바꿈 가능)</label>\n          <textarea id=\"msi_retInputNote\" rows=\"1\" oninput=\"this.style.height='36px';this.style.height=Math.max(36,this.scrollHeight)+'px'\" placeholder=\"예: 크로와상 생지 2box 외박스 파손\" class=\"block w-full h-9 min-h-[36px] text-xs px-2.5 py-[8px] rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:border-blue-500 resize-none leading-[18px] overflow-hidden\"></textarea>\n        </div>\n        <div class=\"lg:col-span-1\">\n          <button type=\"button\" onclick=\"window.MSInbound.addReturnRecord()\" class=\"w-full h-9 px-3 bg-slate-900 hover:bg-blue-600 text-white font-bold text-xs rounded-lg transition shadow-sm flex items-center justify-center gap-1\">\n            <i data-lucide=\"plus\" class=\"w-3.5 h-3.5\"></i> 등록\n          </button>\n        </div>\n      </div>\n    </div>\n\n    <!-- 회송 내역 목록 테이블 -->\n    <div class=\"bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden\">\n      <div class=\"p-4 sm:px-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60\">\n        <div class=\"flex items-center gap-2\">\n          <h3 class=\"text-sm font-bold text-slate-900\">📋 회송 이력 및 운임 정산 내역</h3>\n          <span class=\"text-[11px] text-slate-400\">(항목 클릭 시 내용을 즉시 수정하거나 삭제할 수 있습니다)</span>\n        </div>\n      </div>\n      <div class=\"p-3.5 sm:px-5 overflow-x-auto\" id=\"msi_returnsTableWrapper\"></div>\n    </div>\n  </section>\n\n  <!-- 뷰 4: 품목별 매입가 DB 마스터 관리 컨테이너 -->\n  <section id=\"msi_pricesViewContainer\" class=\"hidden space-y-4\">\n    <datalist id=\"msi_recipeIdDatalist\"></datalist>\n    <div class=\"bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm\">\n      <div class=\"flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100\">\n        <div>\n          <h3 class=\"text-sm font-bold text-slate-900 flex items-center gap-1.5\">\n            💰 품목별 매입단가(pk 기준) 마스터 DB · 레시피 판매금액 연동\n          </h3>\n          <p class=\"text-xs text-slate-500 mt-0.5\">\n            상품코드 옆 <b>[레시피 내부ID(품목코드)]</b>를 입력하면 레시피 탭의 <b>판매금액(1PK)이 pk당 매입단가에 실시간 자동 연동(<span class=\"inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 align-middle\"></span>)</b>되며, 미입력 품목은 직접 단가를 입력할 수 있습니다.\n          </p>\n        </div>\n        <div class=\"flex flex-wrap items-center gap-2 no-print\">\n          <button type=\"button\" onclick=\"window.MSInbound.autoMatchRecipeCodes()\" class=\"flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-extrabold cursor-pointer transition shadow-2xs\" title=\"엠즈 상품명과 레시피 품목명을 비교해 미연결 품목의 레시피 내부ID를 자동 매칭합니다\">\n            <i data-lucide=\"link\" class=\"w-3.5 h-3.5\"></i> 레시피ID 자동매칭\n          </button>\n          <label class=\"flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-semibold cursor-pointer transition\">\n            <i data-lucide=\"upload\" class=\"w-3.5 h-3.5\"></i> 단가표 엑셀 일괄등록\n            <input type=\"file\" id=\"msi_priceExcelInput\" accept=\".xlsx,.xls,.csv\" class=\"hidden\" onchange=\"window.MSInbound.handlePriceExcel(this.files)\">\n          </label>\n        </div>\n      </div>\n      <div class=\"overflow-x-auto mt-3\" id=\"msi_pricesTableWrapper\"></div>\n    </div>\n  </section>\n\n  <!-- 필드 수정 모달 (인라인 에디터 + 내용 삭제 버튼 포함) -->\n  <div id=\"msi_editFieldModal\" class=\"fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4\">\n    <div class=\"bg-white rounded-2xl max-w-md w-full p-5 shadow-xl border border-slate-200\">\n      <div class=\"flex items-center justify-between mb-3\">\n        <h3 id=\"msi_editModalTitle\" class=\"text-sm font-bold text-slate-900\">항목 수정</h3>\n        <button onclick=\"window.MSInbound.closeEditModal()\" class=\"text-slate-400 hover:text-slate-600\"><i data-lucide=\"x\" class=\"w-4 h-4\"></i></button>\n      </div>\n      <textarea id=\"msi_editModalInput\" rows=\"4\" class=\"w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-blue-600 mb-1 resize-y leading-relaxed\" placeholder=\"내용을 입력하세요... (Enter로 줄바꿈 가능)\"></textarea>\n      <p class=\"text-[11px] text-slate-400 mb-3\">💡 Enter 키로 줄바꿈을 넣을 수 있습니다.</p>\n      <div class=\"flex items-center justify-between gap-2 pt-1\">\n        <button onclick=\"window.MSInbound.clearEditField()\" class=\"flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition\">\n          <i data-lucide=\"trash-2\" class=\"w-3.5 h-3.5\"></i> 내용 삭제\n        </button>\n        <div class=\"flex items-center gap-2\">\n          <button onclick=\"window.MSInbound.closeEditModal()\" class=\"px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition\">취소</button>\n          <button onclick=\"window.MSInbound.saveEditModal()\" class=\"px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition\">저장</button>\n        </div>\n      </div>\n    </div>\n  </div>\n\n  <!-- 확인(Confirm) 모달 -->\n  <div id=\"msi_confirmModal\" class=\"fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4\">\n    <div class=\"bg-white rounded-2xl max-w-sm w-full p-5 shadow-xl border border-slate-200\">\n      <h3 class=\"text-sm font-bold text-slate-900 mb-2\">확인</h3>\n      <p id=\"msi_confirmModalMsg\" class=\"text-xs text-slate-600 mb-4\">진행하시겠습니까?</p>\n      <div class=\"flex justify-end gap-2\">\n        <button onclick=\"window.MSInbound.closeConfirmModal()\" class=\"px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg\">취소</button>\n        <button id=\"msi_confirmModalBtn\" class=\"px-4 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg\">확인</button>\n      </div>\n    </div>\n  </div>\n\n  <!-- 엠즈 입고 DB 설정 모달 (통일된 심플 URL 팝업) -->\n  <div id=\"msi_cloudModal\" onclick=\"if(event.target===this) window.MSInbound.closeCloudModal()\" class=\"fixed inset-0 bg-stone-950/60 backdrop-blur-xs hidden items-center justify-center z-50 p-4\">\n    <div class=\"bg-white rounded-2xl max-w-lg w-full p-5 shadow-xl border border-stone-200 text-xs\">\n      <div class=\"flex items-center justify-between pb-3 border-b border-stone-200\">\n        <h3 class=\"text-base font-extrabold text-stone-900\">엠즈 입고 구글 스프레드시트 DB 설정</h3>\n        <button type=\"button\" onclick=\"window.MSInbound.closeCloudModal()\" class=\"text-stone-400 hover:text-stone-700 cursor-pointer\"><i data-lucide=\"x\" class=\"w-5 h-5\"></i></button>\n      </div>\n      <div class=\"mt-4 space-y-3\">\n        <div>\n          <label class=\"font-bold text-stone-700 block mb-1\">Google Apps Script 웹 앱 URL</label>\n          <input type=\"url\" id=\"msi_cloudUrlInput\" placeholder=\"https://script.google.com/macros/s/.../exec\" class=\"w-full border border-stone-300 focus:border-emerald-600 focus:outline-none rounded-xl px-3 py-2 font-mono bg-stone-50 focus:bg-white text-stone-900\">\n        </div>\n        <div class=\"flex justify-end gap-2 pt-1\">\n          <button type=\"button\" onclick=\"window.MSInbound.closeCloudModal()\" class=\"px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold cursor-pointer\">닫기</button>\n          <button type=\"button\" onclick=\"window.MSInbound.saveCloudConfig()\" class=\"px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer\">URL 저장 및 동기화</button>\n        </div>\n      </div>\n    </div>\n  </div>\n\n  <!-- 토스트 알림 -->\n  <div id=\"msi_toast\" class=\"fixed bottom-5 right-5 bg-slate-900 text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-lg opacity-0 pointer-events-none transition-opacity duration-200 flex items-center gap-2 z-50\">\n    <i data-lucide=\"check-circle-2\" class=\"w-4 h-4 text-emerald-400\"></i>\n    <span id=\"msi_toastMsg\">완료되었습니다.</span>\n  </div>\n  </div>\n</div>";
         _msInboundMounted = true;
         const todayStr = new Date().toISOString().slice(0, 10);
         const retDateEl = document.getElementById('msi_retInputDate');
@@ -85,7 +280,7 @@
     window.mountMsInboundApp = mountMsInboundApp;
     window.exportMsInboundExcel = downloadSettlementExcel;
     window.MSInbound = {
-      downloadSettlementExcel, pullFromCloud, pushToCloud, openCloudModal, closeCloudModal, saveCloudConfig, copyGasScript, openConfirmModal, closeConfirmModal, executeClearAll, handleFiles, renderAll, switchMainView, toggleAllCards, toggleCard, toggleRecordStatus, setFilter, selectReturnReason, addReturnRecord, requestDeleteReturn, requestDeleteRecord, handlePriceExcel, editUnitPriceModal, editRecordField, closeEditModal, clearEditField, saveEditModal, setItemUnitPrice, showToast, resetToOctData, exportData, importData
+      downloadSettlementExcel, pullFromCloud, pushToCloud, openCloudModal, closeCloudModal, saveCloudConfig, copyGasScript, openConfirmModal, closeConfirmModal, executeClearAll, handleFiles, renderAll, switchMainView, toggleAllCards, toggleCard, toggleRecordStatus, setFilter, selectReturnReason, addReturnRecord, requestDeleteReturn, requestDeleteRecord, handlePriceExcel, editUnitPriceModal, editRecordField, closeEditModal, clearEditField, saveEditModal, setItemUnitPrice, setItemRecipeCode, autoMatchRecipeCodes, showToast, resetToOctData, exportData, importData
     };
 
     if (document.readyState === 'loading') {
@@ -811,6 +1006,7 @@
                   <tr class="border-b border-slate-200 text-slate-400">
                     <th class="py-1.5 w-10">No.</th>
                     <th class="py-1.5 w-20">상품코드</th>
+                    <th class="py-1.5 w-20 text-center">레시피ID</th>
                     <th class="py-1.5">상품명</th>
                     <th class="py-1.5 text-center w-14">입수</th>
                     <th class="py-1.5 text-right w-20">발주 (box)</th>
@@ -821,12 +1017,20 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                   ${displayItems.map((item, idx) => {
-                    const uPrice = getItemUnitPrice(item);
+                    const pMeta = getItemPriceMeta(item);
+                    const uPrice = pMeta.price;
                     const rowAmt = item.pk * uPrice;
+                    const syncDot = pMeta.isRecipeSynced
+                      ? `<span class="inline-block w-1 h-1 rounded-full bg-emerald-500 mr-1 align-middle" title="레시피 [${escapeHtml(pMeta.recipeCode)}] 판매금액 자동연동"></span>`
+                      : '';
+                    const rcBadge = pMeta.recipeCode
+                      ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-mono text-[10.5px] font-extrabold ${pMeta.isRecipeSynced ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-amber-50 text-amber-800 border border-amber-200'}" title="${pMeta.recipeInfo ? escapeHtml(pMeta.recipeInfo.productName) : '레시피 미확인'}">${pMeta.isRecipeSynced ? '<span class=\"w-1 h-1 rounded-full bg-emerald-500\"></span>' : ''}${escapeHtml(pMeta.recipeCode)}</span>`
+                      : `<span class="text-slate-300 text-[11px]">-</span>`;
                     return `
                     <tr class="hover:bg-slate-50/80">
                       <td class="py-2 text-slate-400 font-medium">${idx + 1}</td>
                       <td class="py-2 text-slate-400 font-mono text-[11px]">${item.code || '-'}</td>
+                      <td class="py-2 text-center">${rcBadge}</td>
                       <td class="py-2 font-medium text-slate-800">
                         ${item.name}
                         ${item.mergedCount > 1 ? `<span class="ml-1.5 px-1.5 py-0.5 text-[10px] rounded bg-amber-100 text-amber-800 font-semibold">${item.mergedCount}건 합산됨</span>` : ''}
@@ -834,8 +1038,8 @@
                       <td class="py-2 text-center text-slate-500">${item.ipsu || '-'}</td>
                       <td class="py-2 text-right font-semibold text-blue-600">${item.box.toLocaleString()} box</td>
                       <td class="py-2 text-right font-semibold text-emerald-600">${item.pk.toLocaleString()} pk</td>
-                      <td class="py-2 text-right font-medium ${uPrice > 0 ? 'text-slate-600' : 'text-slate-300'}">
-                        ${uPrice > 0 ? uPrice.toLocaleString() + '원' : '-'}
+                      <td class="py-2 text-right font-medium ${uPrice > 0 ? (pMeta.isRecipeSynced ? 'text-emerald-800 font-bold' : 'text-slate-600') : 'text-slate-300'}">
+                        ${uPrice > 0 ? syncDot + uPrice.toLocaleString() + '원' : '-'}
                       </td>
                       <td class="py-2 text-right font-bold ${rowAmt > 0 ? 'text-indigo-700' : 'text-slate-300'}">
                         ${rowAmt > 0 ? rowAmt.toLocaleString() + '원' : '-'}
@@ -845,7 +1049,7 @@
                 </tbody>
                 <tfoot>
                   <tr class="border-t-2 border-slate-200 bg-slate-50/50 font-bold text-slate-800">
-                    <td colspan="4" class="py-2 pl-2">일일 합계 (${displayItems.length}종)</td>
+                    <td colspan="5" class="py-2 pl-2">일일 합계 (${displayItems.length}종)</td>
                     <td class="py-2 text-right text-blue-600">${rec.totalBoxes.toLocaleString()} box</td>
                     <td class="py-2 text-right text-emerald-600">${rec.totalPks.toLocaleString()} pk</td>
                     <td class="py-2 text-right text-slate-400 text-[11px]">매입 합계</td>
@@ -899,10 +1103,11 @@
       });
 
       const sortedItems = Array.from(itemStats.values()).map(st => {
-        const uPrice = getItemUnitPrice(st);
+        const pMeta = getItemPriceMeta(st);
+        const uPrice = pMeta.price;
         const totalAmt = st.totalPk * uPrice;
         grandTotalAmt += totalAmt;
-        return { ...st, uPrice, totalAmt };
+        return { ...st, uPrice, totalAmt, pMeta };
       }).sort((a, b) => b.totalPk - a.totalPk);
 
       const maxPk = sortedItems[0]?.totalPk || 1;
@@ -929,6 +1134,7 @@
                 <tr class="border-b border-slate-200 text-slate-400">
                   <th class="py-2 w-12">순위</th>
                   <th class="py-2 w-20">상품코드</th>
+                  <th class="py-2 w-20 text-center">레시피ID</th>
                   <th class="py-2">상품명</th>
                   <th class="py-2 text-center w-16">입고횟수</th>
                   <th class="py-2 text-right w-24">누적 팩 (pk)</th>
@@ -942,16 +1148,24 @@
                 ${sortedItems.map((st, idx) => {
                   const share = grandTotalPk ? ((st.totalPk / grandTotalPk) * 100).toFixed(1) : '0.0';
                   const barWidth = Math.max(4, Math.round((st.totalPk / maxPk) * 100));
+                  const pMeta = st.pMeta;
+                  const syncDot = pMeta.isRecipeSynced
+                    ? `<span class="inline-block w-1 h-1 rounded-full bg-emerald-500 mr-1 align-middle" title="레시피 [${escapeHtml(pMeta.recipeCode)}] 판매금액 자동연동"></span>`
+                    : '';
+                  const rcBadge = pMeta.recipeCode
+                    ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-mono text-[10.5px] font-extrabold ${pMeta.isRecipeSynced ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-amber-50 text-amber-800 border border-amber-200'}">${pMeta.isRecipeSynced ? '<span class=\"w-1 h-1 rounded-full bg-emerald-500\"></span>' : ''}${escapeHtml(pMeta.recipeCode)}</span>`
+                    : `<span class="text-slate-300 text-[11px]">-</span>`;
                   return `
                   <tr class="hover:bg-slate-50/80">
                     <td class="py-2.5 font-bold ${idx < 3 ? 'text-emerald-600' : 'text-slate-400'}">${idx + 1}위</td>
                     <td class="py-2.5 font-mono text-[11px] text-slate-400">${st.code}</td>
+                    <td class="py-2.5 text-center">${rcBadge}</td>
                     <td class="py-2.5 font-medium text-slate-800">${st.name}</td>
                     <td class="py-2.5 text-center text-slate-600">${st.days.size}회</td>
                     <td class="py-2.5 text-right font-bold text-emerald-600">${st.totalPk.toLocaleString()} pk</td>
                     <td class="py-2.5 text-right font-semibold text-blue-600">${st.totalBox.toLocaleString()} box</td>
-                    <td class="py-2.5 text-right font-medium ${st.uPrice > 0 ? 'text-slate-600' : 'text-slate-300'}">
-                      ${st.uPrice > 0 ? st.uPrice.toLocaleString() + '원' : '-'}
+                    <td class="py-2.5 text-right font-medium ${st.uPrice > 0 ? (pMeta.isRecipeSynced ? 'text-emerald-800 font-bold' : 'text-slate-600') : 'text-slate-300'}">
+                      ${st.uPrice > 0 ? syncDot + st.uPrice.toLocaleString() + '원' : '-'}
                     </td>
                     <td class="py-2.5 text-right font-bold ${st.totalAmt > 0 ? 'text-indigo-700' : 'text-slate-300'}">
                       ${st.totalAmt > 0 ? st.totalAmt.toLocaleString() + '원' : '-'}
@@ -969,7 +1183,7 @@
               </tbody>
               <tfoot>
                 <tr class="border-t-2 border-slate-200 bg-slate-50/70 font-bold text-slate-800">
-                  <td colspan="4" class="py-2.5 pl-2">전체 합계 (${sortedItems.length}종)</td>
+                  <td colspan="5" class="py-2.5 pl-2">전체 합계 (${sortedItems.length}종)</td>
                   <td class="py-2.5 text-right text-emerald-600">${grandTotalPk.toLocaleString()} pk</td>
                   <td class="py-2.5 text-right text-blue-600">${grandTotalBox.toLocaleString()} box</td>
                   <td class="py-2.5 text-right text-slate-400 text-[11px]">누적 매입총액</td>
@@ -983,11 +1197,24 @@
       `;
     }
 
-    // 뷰 4: 매입가 DB 마스터 관리 화면 렌더링 (전체 취급 품목의 pk 단가 일괄 입력/관리)
+    // 뷰 4: 매입가 DB 마스터 관리 화면 렌더링 (레시피 내부 아이디 연동 + pk 단가 관리)
     function renderPricesView() {
       const wrapper = document.getElementById('msi_pricesTableWrapper');
       if (!wrapper) return;
       const q = (document.getElementById('msi_searchInput')?.value || '').toLowerCase();
+
+      // 레시피 자동완성 datalist 최신화
+      const dlEl = document.getElementById('msi_recipeIdDatalist');
+      if (dlEl) {
+        const liveRcs = getLiveRecipesListForMs()
+          .filter(r => r && r.recipeType !== 'SUB' && String(r.productCode || '').trim())
+          .sort((a, b) => String(a.productCode || '').localeCompare(String(b.productCode || ''), 'ko', { numeric: true }));
+        dlEl.innerHTML = liveRcs.map(rc => {
+          const info = getRecipeSellingPriceByCode(rc.productCode);
+          const priceTxt = info && info.sellPrice > 0 ? ` · 판매금액 ${info.sellPrice.toLocaleString()}원` : '';
+          return `<option value="${escapeHtml(String(rc.productCode).trim())}">${escapeHtml(rc.productName || '')}${priceTxt}</option>`;
+        }).join('');
+      }
 
       const catalogMap = new Map();
       records.forEach(r => {
@@ -1009,7 +1236,10 @@
       });
 
       const list = Array.from(catalogMap.values())
-        .filter(it => !q || it.name.toLowerCase().includes(q) || it.code.includes(q))
+        .filter(it => {
+          const rCode = getItemRecipeCode(it);
+          return !q || it.name.toLowerCase().includes(q) || it.code.includes(q) || rCode.toLowerCase().includes(q);
+        })
         .sort((a, b) => b.totalPk - a.totalPk);
 
       if (list.length === 0) {
@@ -1021,29 +1251,63 @@
         <table class="w-full text-left border-collapse text-xs">
           <thead>
             <tr class="border-b border-slate-200 text-slate-400">
-              <th class="py-2 w-12">No.</th>
-              <th class="py-2 w-28">상품코드</th>
-              <th class="py-2">상품명</th>
+              <th class="py-2 w-10">No.</th>
+              <th class="py-2 w-24">상품코드</th>
+              <th class="py-2 w-32 text-center" title="바로가 레시피 탭의 품목코드를 입력하면 레시피 판매금액(1PK)이 pk당 매입단가에 자동 반영됩니다">레시피 내부ID</th>
+              <th class="py-2">엠즈 상품명 · 연결된 레시피</th>
               <th class="py-2 text-center w-24">박스입수</th>
-              <th class="py-2 text-right w-44">pk당 매입단가 (원)</th>
+              <th class="py-2 text-right w-48">pk당 매입단가 (원)</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
             ${list.map((it, idx) => {
-              const uPrice = getItemUnitPrice(it);
+              const pMeta = getItemPriceMeta(it);
+              const uPrice = pMeta.price;
+              const rCode = pMeta.recipeCode;
+              const rInfo = pMeta.recipeInfo;
+              const isSynced = pMeta.isRecipeSynced;
+
+              let linkSubBadge = '';
+              if (rCode && rInfo) {
+                linkSubBadge = isSynced
+                  ? `<div class="mt-0.5 inline-flex items-center gap-1 text-[11px] text-emerald-700 font-semibold"><span class="w-1 h-1 rounded-full bg-emerald-500"></span>레시피 연동: ${escapeHtml(rInfo.productName)} (출고가 ${rInfo.releasePriceEa.toLocaleString()}원 × ${rInfo.packQty}입 = ${rInfo.sellPrice.toLocaleString()}원)</div>`
+                  : `<div class="mt-0.5 text-[11px] text-amber-700 font-medium">⚠️ 레시피 [${escapeHtml(rInfo.productName)}] 연결됨 — 판매금액이 0원이라 수기 단가 사용 중</div>`;
+              } else if (rCode && !rInfo) {
+                linkSubBadge = `<div class="mt-0.5 text-[11px] text-rose-600 font-medium">⚠️ 코드 [${escapeHtml(rCode)}]와 일치하는 레시피가 없습니다</div>`;
+              }
+
+              const priceCellHtml = isSynced
+                ? `<div class="inline-flex items-center justify-end gap-1.5 px-3 py-1.5 w-36 rounded-lg border border-emerald-300 bg-emerald-50/70 font-extrabold text-emerald-900 tabular-nums cursor-help" title="레시피 [${escapeHtml(rCode)}] 판매금액 실시간 연동 중 (직접 입력하려면 레시피 내부ID를 비워주세요)">
+                     <span class="w-1 h-1 rounded-full bg-emerald-500 shrink-0"></span>
+                     <span>${uPrice.toLocaleString()}</span>
+                   </div>
+                   <span class="text-[11px] text-emerald-700 font-bold ml-0.5">원</span>`
+                : `<div class="inline-flex items-center gap-1">
+                     <input type="number" step="100" value="${uPrice > 0 ? uPrice : ''}" placeholder="단가 입력"
+                       onchange="window.MSInbound.setItemUnitPrice('${escapeQuotes(it.code)}', '${escapeQuotes(it.name)}', this.value); window.MSInbound.showToast('단가가 자동 저장되었습니다.');"
+                       class="w-36 text-right text-xs px-2.5 py-1.5 rounded-lg border ${uPrice > 0 ? 'border-indigo-300 bg-indigo-50/40 font-bold text-indigo-700' : 'border-slate-200 bg-white text-slate-700'} focus:outline-none focus:border-indigo-600 tabular-nums">
+                     <span class="text-[11px] text-slate-400">원</span>
+                   </div>`;
+
               return `
               <tr class="hover:bg-slate-50/80">
                 <td class="py-2.5 text-slate-400 font-medium">${idx + 1}</td>
                 <td class="py-2.5 font-mono text-[11px] text-slate-500">${it.code}</td>
-                <td class="py-2.5 font-medium text-slate-800">${it.name}</td>
-                <td class="py-2.5 text-center text-slate-500">${it.ipsu}pk/box</td>
-                <td class="py-2.5 text-right">
-                  <div class="inline-flex items-center gap-1">
-                    <input type="number" step="100" value="${uPrice > 0 ? uPrice : ''}" placeholder="단가 입력"
-                      onchange="window.MSInbound.setItemUnitPrice('${escapeQuotes(it.code)}', '${escapeQuotes(it.name)}', this.value); window.MSInbound.showToast('단가가 자동 저장되었습니다.');"
-                      class="w-32 text-right text-xs px-2.5 py-1.5 rounded-lg border ${uPrice > 0 ? 'border-indigo-300 bg-indigo-50/40 font-bold text-indigo-700' : 'border-slate-200 bg-white text-slate-700'} focus:outline-none focus:border-indigo-600">
-                    <span class="text-[11px] text-slate-400">원</span>
+                <td class="py-2.5 px-1.5 text-center">
+                  <div class="relative inline-flex items-center w-28">
+                    ${isSynced ? `<span class="w-1 h-1 rounded-full bg-emerald-500 absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none"></span>` : ''}
+                    <input type="text" list="msi_recipeIdDatalist" value="${escapeHtml(rCode)}" placeholder="예: 1001"
+                      onchange="window.MSInbound.setItemRecipeCode('${escapeQuotes(it.code)}', '${escapeQuotes(it.name)}', this.value)"
+                      class="w-full text-center font-mono text-xs py-1.5 rounded-lg border ${isSynced ? 'pl-3.5 pr-1.5 border-emerald-400 bg-emerald-50/60 font-extrabold text-emerald-800' : (rCode ? 'px-2 border-amber-300 bg-amber-50/50 font-bold text-amber-900' : 'px-2 border-slate-200 bg-slate-50/60 text-slate-700')} focus:bg-white focus:outline-none focus:border-emerald-600 tabular-nums">
                   </div>
+                </td>
+                <td class="py-2.5">
+                  <div class="font-medium text-slate-800">${it.name}</div>
+                  ${linkSubBadge}
+                </td>
+                <td class="py-2.5 text-center text-slate-500">${it.ipsu}pk/box</td>
+                <td class="py-2.5 text-right whitespace-nowrap">
+                  ${priceCellHtml}
                 </td>
               </tr>`;
             }).join('')}
@@ -1063,20 +1327,21 @@
           const workbook = XLSX.read(data, { type: 'array', codepage: 949 });
           const sheet = workbook.Sheets[workbook.SheetNames[0]];
           const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-          let colCode = -1, colName = -1, colPrice = -1, startRow = 1;
+          let colCode = -1, colRecipeId = -1, colName = -1, colPrice = -1, startRow = 1;
 
           for (let r = 0; r < Math.min(10, rows.length); r++) {
             rows[r].forEach((cell, idx) => {
               const s = String(cell).trim();
-              if (/상품코드|품목코드|코드/.test(s)) colCode = idx;
+              if (/레시피/.test(s)) colRecipeId = idx;
+              else if (/상품코드|품목코드|코드/.test(s)) colCode = idx;
               if (/상품명|품목명|품명/.test(s)) colName = idx;
               if (/매입가|단가|매입단가|가격|금액|price/i.test(s)) colPrice = idx;
             });
-            if (colPrice !== -1) { startRow = r + 1; break; }
+            if (colPrice !== -1 || colRecipeId !== -1) { startRow = r + 1; break; }
           }
 
-          if (colPrice === -1) {
-            showToast('엑셀에서 [매입단가/단가] 열을 찾지 못했습니다.');
+          if (colPrice === -1 && colRecipeId === -1) {
+            showToast('엑셀에서 [매입단가] 또는 [레시피ID] 열을 찾지 못했습니다.');
             return;
           }
 
@@ -1086,11 +1351,19 @@
             if (!row) continue;
             const code = colCode !== -1 ? String(row[colCode] || '').trim() : '';
             const name = colName !== -1 ? String(row[colName] || '').trim() : '';
-            const price = parseInt(String(row[colPrice] || '').replace(/[^0-9]/g, ''), 10) || 0;
-            if ((code || name) && price > 0) {
-              if (code) unitPrices[code] = price;
-              if (name) unitPrices[name] = price;
-              updated++;
+            const rcId = colRecipeId !== -1 ? String(row[colRecipeId] || '').trim() : '';
+            const price = colPrice !== -1 ? (parseInt(String(row[colPrice] || '').replace(/[^0-9]/g, ''), 10) || 0) : 0;
+            if (code || name) {
+              if (rcId) {
+                if (code) recipeLinks[code] = rcId;
+                if (name) recipeLinks[name] = rcId;
+                updated++;
+              }
+              if (price > 0) {
+                if (code) unitPrices[code] = price;
+                if (name) unitPrices[name] = price;
+                if (!rcId) updated++;
+              }
             }
           }
           saveToStorage();
@@ -1149,10 +1422,12 @@
         });
       });
       const itemRows = Array.from(itemMap.values()).sort((a, b) => b.pk - a.pk).map((st, idx) => {
-        const uPrice = getItemUnitPrice(st);
+        const pMeta = getItemPriceMeta(st);
+        const uPrice = pMeta.price;
         return {
           '순위(pk기준)': idx + 1,
           '상품코드': st.code,
+          '레시피내부ID': pMeta.recipeCode || '',
           '상품명': st.name,
           '입수': st.ipsu,
           '입고횟수': st.days.size,
@@ -1168,11 +1443,13 @@
       const detailRows = [];
       filtered.forEach(r => {
         getDisplayItems(r.items).forEach((it, idx) => {
-          const uPrice = getItemUnitPrice(it);
+          const pMeta = getItemPriceMeta(it);
+          const uPrice = pMeta.price;
           detailRows.push({
             '입고일자': r.date,
             '순번': idx + 1,
             '상품코드': it.code,
+            '레시피내부ID': pMeta.recipeCode || '',
             '상품명': it.name,
             '입수': it.ipsu,
             '발주(box)': it.box,
@@ -1265,6 +1542,7 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
       localStorage.setItem(RETURNS_STORAGE_KEY, JSON.stringify(returnRecords));
       localStorage.setItem(PRICES_STORAGE_KEY, JSON.stringify(unitPrices));
+      localStorage.setItem(RECIPE_LINKS_STORAGE_KEY, JSON.stringify(recipeLinks));
       pushToCloud(true);
     }
 
@@ -1301,6 +1579,17 @@
         }
       } else {
         unitPrices = {};
+      }
+
+      const savedLinks = localStorage.getItem(RECIPE_LINKS_STORAGE_KEY);
+      if (savedLinks) {
+        try {
+          recipeLinks = JSON.parse(savedLinks) || {};
+        } catch (e) {
+          recipeLinks = {};
+        }
+      } else {
+        recipeLinks = {};
       }
 
       renderAll();
@@ -1390,6 +1679,7 @@ function doPost(e) {
           records: records,
           returns: returnRecords,
           unitPrices: unitPrices,
+          recipeLinks: recipeLinks,
           updatedAt: new Date().toISOString()
         };
         await fetch(url, {
@@ -1446,6 +1736,10 @@ function doPost(e) {
             unitPrices = { ...unitPrices, ...data.unitPrices };
             localStorage.setItem(PRICES_STORAGE_KEY, JSON.stringify(unitPrices));
           }
+          if (data.recipeLinks && typeof data.recipeLinks === 'object') {
+            recipeLinks = { ...recipeLinks, ...data.recipeLinks };
+            localStorage.setItem(RECIPE_LINKS_STORAGE_KEY, JSON.stringify(recipeLinks));
+          }
 
           if (!hasCloudRecords && !hasCloudReturns && (records.length > 0 || returnRecords.length > 0)) {
             pushToCloud(true);
@@ -1466,6 +1760,7 @@ function doPost(e) {
         records: records,
         returns: returnRecords,
         unitPrices: unitPrices,
+        recipeLinks: recipeLinks,
         exportedAt: new Date().toISOString()
       };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -1491,6 +1786,8 @@ function doPost(e) {
           } else if (imported && typeof imported === 'object') {
             if (Array.isArray(imported.records)) records = imported.records;
             if (Array.isArray(imported.returns)) returnRecords = imported.returns;
+            if (imported.unitPrices && typeof imported.unitPrices === 'object') unitPrices = { ...unitPrices, ...imported.unitPrices };
+            if (imported.recipeLinks && typeof imported.recipeLinks === 'object') recipeLinks = { ...recipeLinks, ...imported.recipeLinks };
             saveToStorage();
             renderAll();
             showToast('입고 및 회송 데이터를 성공적으로 불러왔습니다.');
