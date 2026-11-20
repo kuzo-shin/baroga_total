@@ -1,10 +1,10 @@
 // ============================================================================
-// [VERSION: price.js v1.9 - 2026-11-20 공정상세 카드 폰트축소 · 전품목동기화 삭제 및 6시트 엑셀(.xlsx) 다운로드 탑재 · 매장매입가 볼드/1.0929(9.29%) 적용 · 제품명 열 확장]
+// [VERSION: price.js v1.10 - 2026-11-20 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 빈 DB 자동 덮어쓰기 제거)]
 // 바로가 공장 통합 관리 시스템 - 제품단가 전용 모듈 (price.js)
 // ============================================================================
 (function () {
 
-    const { useState, useMemo, useEffect } = React;
+    const { useState, useMemo, useEffect, useRef } = React;
 
     // ============================================================================
     // [시트 1] 바로가 생산원가 분석 — 기본설정 원본 초기값 (엑셀 100% 이식)
@@ -1435,6 +1435,12 @@
       const [draftPriceGasUrl, setDraftPriceGasUrl] = useState('');
 
       const [syncStatus, setSyncStatus] = useState('IDLE');
+      const [syncErrorLabel, setSyncErrorLabel] = useState('DB 연결 확인');
+      // [1단계 데이터 보호] DB를 정상적으로 불러온 뒤에만 저장 허용 + 리비전으로 다른 기기 저장분 덮어쓰기 방지
+      const priceDbLoadedRef = useRef(false);
+      const priceDbRevisionRef = useRef(null);
+      const priceDbBlockReasonRef = useRef('DB를 아직 불러오지 못했습니다');
+      const markPriceError = (label) => { setSyncErrorLabel(label); setSyncStatus('ERROR'); };
       const [lastSyncedAt, setLastSyncedAt] = useState(null);
 
       const [selectedProductIds, setSelectedProductIds] = useState({
@@ -1501,11 +1507,22 @@
         return null;
       };
 
+      const priceFetch = (url, options, timeoutMs) => {
+        if (typeof window.fetchWithTimeout === 'function') return window.fetchWithTimeout(url, options, timeoutMs);
+        return fetch(url, options);
+      };
+
       const handleSaveToGoogleSheet = async (overrideUrl = null, silent = false) => {
         const targetUrl = (typeof overrideUrl === 'string' && overrideUrl.trim())
           ? overrideUrl.trim()
           : (priceGasUrl || DEFAULT_PRICE_GAS_WEB_APP_URL);
         if (!targetUrl) return;
+
+        if (!priceDbLoadedRef.current || priceDbRevisionRef.current === null) {
+          markPriceError('저장 중지');
+          showToast(`저장하지 않았습니다: ${priceDbBlockReasonRef.current}. 변경 내용은 이 기기에만 있습니다.`);
+          return;
+        }
 
         setSyncStatus('SAVING');
         const corePayload = {
@@ -1516,50 +1533,43 @@
         };
         const bodyStr = JSON.stringify({
           action: 'replaceAll',
+          baseRevision: priceDbRevisionRef.current,
           payload: corePayload,
-          data: [{ id: '__PRICE_STATE__', date: msUpdatedDate || '2026-11-19', colA: '__PRICE_STATE__', colB: 'BAROGA_PRODUCT_PRICE_DB', colE: JSON.stringify(corePayload) }],
         });
 
         try {
-          const response = await fetch(targetUrl, {
+          const response = await priceFetch(targetUrl, {
             method: 'POST',
             redirect: 'follow',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: bodyStr,
-          });
-
-          let timeLabel = new Date().toLocaleTimeString('ko-KR');
-          try {
-            const text = await response.text();
-            if (text) {
-              const parsed = JSON.parse(text);
-              if (parsed.status === 'error' || parsed.result === 'error' || parsed.ok === false) {
-                throw new Error(parsed.message || parsed.error || '저장 응답 오류');
-              }
-              if (parsed.updatedAt) timeLabel = parsed.updatedAt;
-            }
-          } catch (parseErr) {
-            if (parseErr && parseErr.message && parseErr.message.includes('오류')) throw parseErr;
-          }
-
-          setSyncStatus('SUCCESS');
-          setLastSyncedAt(timeLabel);
-          if (!silent) showToast('제품단가 구글 스프레드시트 DB에 저장되었습니다!');
-        } catch (err) {
-          try {
-            await fetch(targetUrl, {
-              method: 'POST',
-              mode: 'no-cors',
-              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-              body: bodyStr,
-            });
+          }, 30000);
+          if (!response.ok) throw new Error(`서버 응답 오류 (HTTP ${response.status})`);
+          const parsed = await response.json();
+          if (parsed && parsed.ok === true && typeof parsed.revision === 'number') {
+            priceDbRevisionRef.current = parsed.revision;
             setSyncStatus('SUCCESS');
-            setLastSyncedAt(new Date().toLocaleTimeString('ko-KR'));
-            if (!silent) showToast('제품단가 구글 시트 저장 요청이 완료되었습니다.');
-          } catch (err2) {
-            setSyncStatus('ERROR');
-            if (!silent) showToast('구글 시트 저장 실패 — URL 또는 배포 권한("모든 사용자")을 확인해주세요.');
+            setLastSyncedAt(parsed.updatedAt || new Date().toLocaleTimeString('ko-KR'));
+            if (!silent) showToast('제품단가 구글 스프레드시트 DB에 저장되었습니다!');
+            if (parsed.warning) showToast(`저장은 완료됐지만 ${parsed.warning}`);
+          } else if (parsed && parsed.conflict) {
+            priceDbLoadedRef.current = false;
+            priceDbBlockReasonRef.current = '다른 기기에서 먼저 저장했습니다. ↻ 불러오기 후 다시 입력하세요';
+            markPriceError('충돌 · 새로고침 필요');
+            showToast('다른 기기에서 먼저 저장한 내용이 있어 저장하지 않았습니다. ↻ 불러오기 후 방금 변경한 내용을 다시 입력해 주세요.');
+          } else {
+            throw new Error((parsed && (parsed.message || parsed.error)) || '알 수 없는 응답');
           }
+        } catch (err) {
+          const isTimeout = err && err.name === 'AbortError';
+          if (isTimeout) {
+            priceDbLoadedRef.current = false;
+            priceDbBlockReasonRef.current = '저장 응답이 없어 저장 여부를 알 수 없습니다. ↻ 불러오기로 확인하세요';
+          }
+          markPriceError(isTimeout ? '저장 확인 필요' : 'DB 저장 실패');
+          showToast(isTimeout
+            ? '저장 응답이 없습니다(시간 초과). ↻ 불러오기로 실제 저장 여부를 확인해 주세요.'
+            : `구글 시트 저장 실패: ${err && err.message ? err.message : err} — 변경 내용은 이 기기에만 있습니다.`);
         }
       };
 
@@ -1574,27 +1584,27 @@
         try {
           const sep = targetUrl.includes('?') ? '&' : '?';
           const urlWithNoCache = `${targetUrl}${sep}action=getAll&t=${Date.now()}`;
-          const response = await fetch(urlWithNoCache, { method: 'GET', redirect: 'follow' });
+          const response = await priceFetch(urlWithNoCache, { method: 'GET', redirect: 'follow' }, 20000);
+          if (!response.ok) throw new Error(`서버 응답 오류 (HTTP ${response.status})`);
           const result = await response.json();
+          if (result && (result.ok === false || result.status === 'error')) {
+            throw new Error(result.message || result.error || '서버 오류');
+          }
+          const revision = (result && typeof result.revision === 'number') ? result.revision : null;
 
-          if (result && (result.status === 'empty' || result.empty === true)) {
-            setSyncStatus('IDLE');
-            if (!silentOnEmpty) {
-              showToast('시트가 비어있어 현재 데이터를 새 시트에 초기 저장합니다.');
-            }
-            handleSaveToGoogleSheet(targetUrl, silentOnEmpty);
+          const extracted0 = (result && (result.status === 'empty' || result.empty === true)) ? { __emptySheet: true } : null;
+          if (extracted0 || (extractPricePayloadFromResponse(result) || {}).__emptySheet) {
+            // [1단계] 빈 DB를 화면의 기본값으로 자동 저장하던 동작 제거 — 사용자가 직접 [구글시트 저장]을 눌러야 저장
+            priceDbLoadedRef.current = true;
+            priceDbRevisionRef.current = revision;
+            priceDbBlockReasonRef.current = revision === null ? '제품단가 GAS 스크립트가 구버전입니다 (v2.0 업데이트 필요)' : '';
+            if (revision === null) markPriceError('저장 중지 (GAS 업데이트 필요)');
+            else setSyncStatus('IDLE');
+            showToast('제품단가 DB가 비어 있습니다. 지금 화면의 데이터를 DB에 저장하려면 확인 후 [구글시트 저장]을 누르세요.');
             return;
           }
 
           const extracted = extractPricePayloadFromResponse(result);
-          if (extracted && extracted.__emptySheet) {
-            setSyncStatus('IDLE');
-            if (!silentOnEmpty) {
-              showToast('시트가 비어있어 현재 데이터를 새 시트에 초기 저장합니다.');
-            }
-            handleSaveToGoogleSheet(targetUrl, silentOnEmpty);
-            return;
-          }
 
           if (extracted) {
             if (extracted.settings) {
@@ -1643,8 +1653,15 @@
                 : rawDate;
               setMsUpdatedDate(normalizedDate);
             }
-            setSyncStatus('SUCCESS');
+            priceDbLoadedRef.current = true;
+            priceDbRevisionRef.current = revision;
+            priceDbBlockReasonRef.current = revision === null ? '제품단가 GAS 스크립트가 구버전입니다 (v2.0 업데이트 필요)' : '';
             setLastSyncedAt(result.updatedAt || new Date().toLocaleTimeString('ko-KR'));
+            if (revision === null) {
+              markPriceError('저장 중지 (GAS 업데이트 필요)');
+            } else {
+              setSyncStatus('SUCCESS');
+            }
             if (!silentOnEmpty) {
               showToast('제품단가 구글 스프레드시트에서 최신 DB를 불러왔습니다!');
             }
@@ -1652,9 +1669,13 @@
             throw new Error(result?.message || '인식할 수 없는 응답 형식');
           }
         } catch (err) {
-          setSyncStatus('ERROR');
-          if (!silentOnEmpty) {
-            showToast('제품단가 DB 불러오기 실패 — [제품단가 DB 설정]에서 URL 및 배포 권한("모든 사용자")을 확인해주세요.');
+          if (!priceDbLoadedRef.current) {
+            priceDbBlockReasonRef.current = 'DB를 불러오지 못했습니다';
+            markPriceError('DB 불러오기 실패 · 저장 중지');
+            showToast(`제품단가 DB를 불러오지 못했습니다 (${err && err.message ? err.message : err}). 화면은 이 기기에 남은 사본이며 저장은 중지됩니다.`);
+          } else {
+            markPriceError('새로고침 실패');
+            if (!silentOnEmpty) showToast(`제품단가 DB 불러오기 실패: ${err && err.message ? err.message : err}`);
           }
         }
       };
@@ -1666,6 +1687,9 @@
           localStorage.setItem(PRICE_GAS_URL_STORAGE_KEY, nextUrl);
         } catch (e) {}
         setIsPriceDbModalOpen(false);
+        priceDbLoadedRef.current = false;
+        priceDbRevisionRef.current = null;
+        priceDbBlockReasonRef.current = '새 DB 주소를 아직 불러오지 못했습니다';
         handleLoadFromGoogleSheet(false, nextUrl);
       };
 
@@ -3489,7 +3513,7 @@
                         : syncStatus === 'LOADING'
                           ? '동기화중...'
                           : syncStatus === 'ERROR'
-                            ? 'DB 연결 확인'
+                            ? syncErrorLabel
                             : `DB 연동됨 (${pkCostRows.length}종)`),
                       React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", className: "w-3.5 h-3.5 ml-0.5 opacity-75" },
                         React.createElement("path", { d: "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" }),

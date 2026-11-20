@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: ms_inbound.js v1.11 - 2026-11-20 [2. 품목별 누적 통계] 전용 가로폭 확장(1320px) 및 고정 컬럼폭 적용으로 상품명 열만 단독 확장(줄바꿈 방지)]
+// [VERSION: ms_inbound.js v1.12 - 2026-11-20 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 기본 데이터 자동탑재 제거 · 재업로드 시 수동입력 보존 · 운임 0원 버그)]
 // 바로가 공장 통합 관리 시스템 - 엠즈 입고 전용 모듈 (ms_inbound.js)
 // ============================================================================
 (function () {
@@ -17,20 +17,16 @@
     const RECIPE_LINKS_STORAGE_KEY = 'ms_recipe_code_links_v1';
     const CLOUD_URL_KEY = 'ms_inbound_cloud_url_v3';
 
-    // 11월 4일 및 10월 엠즈 입고 내역 실제 데이터 11건 기본 탑재
-    const OCT_DEFAULT_DATA = [
-      {"id": "rec_20261104", "date": "2026-11-04", "orderDate": "2026-11-03", "center": "용인 남사센터", "type": "입고", "status": "입고 완료", "title": "정기 입고 (203box)", "driver": "김민겸 기사", "cost": 250000, "memo": "", "totalBoxes": 203, "totalPks": 1056, "items": [{"code": "157779", "name": "M(곤트란)단과자생지_50g*40ea*8pk/box", "spec": "40ea*8pk/box", "unit": "BOX", "ipsu": 8, "box": 22, "pk": 176}, {"code": "157806", "name": "M(곤트란)뺑오쇼콜라생지_36ea*4pk/box", "spec": "36ea/pk", "unit": "BOX", "ipsu": 4, "box": 22, "pk": 88}, {"code": "157812", "name": "M(곤트란)올리브식빵생지_12ea*6pk/box", "spec": "12ea/pk", "unit": "BOX", "ipsu": 6, "box": 34, "pk": 204}, {"code": "163227", "name": "M(New_곤트란)깜빠뉴크랜베리아망드(대)_6ea*4pk/box", "spec": "6ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 7, "pk": 28}, {"code": "163230", "name": "M(New_곤트란)먹물치아바타생지_24ea*4pk/box", "spec": "24ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 15, "pk": 60}, {"code": "163238", "name": "M(New_곤트란)무화과트라디시옹(소)_4ea*10pk/box", "spec": "4ea*10pk/box", "unit": "BOX", "ipsu": 10, "box": 22, "pk": 220}, {"code": "163570", "name": "M(New_곤트란)빵오르방나튀렐_4ea*3pk/box", "spec": "4ea*3pk/box", "unit": "BOX", "ipsu": 3, "box": 22, "pk": 66}, {"code": "163571", "name": "M(New_곤트란)빵오르방멀티세레알_4ea*3pk/box", "spec": "4ea*3pk/box", "unit": "BOX", "ipsu": 3, "box": 22, "pk": 66}, {"code": "163572", "name": "M(New_곤트란)퀸아망생지(막대)_2ea*4pk/box", "spec": "2ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 19, "pk": 76}, {"code": "163778", "name": "M(New_곤트란)카사바생지(스틱)_20ea*4pk/box", "spec": "20ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 18, "pk": 72}]},
-      {"id": "rec_20261030", "date": "2026-10-30", "orderDate": "2026-10-29", "center": "용인 남사센터", "type": "입고", "status": "입고 완료", "title": "정기 입고 (216box)", "driver": "김민겸 기사", "cost": 250000, "memo": "", "totalBoxes": 216, "totalPks": 996, "items": [{"code": "157787", "name": "M(곤트란)먹물포카치아생지(신)_20ea*8pk/box", "spec": "20ea/pk", "unit": "BOX", "ipsu": 8, "box": 21, "pk": 168}, {"code": "157812", "name": "M(곤트란)올리브식빵생지_12ea*6pk/box", "spec": "12ea/pk", "unit": "BOX", "ipsu": 6, "box": 17, "pk": 102}, {"code": "157840", "name": "M(르미디)[생지]샌드위치용바게트생지_20ea*4pk/box", "spec": "20ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 22, "pk": 88}, {"code": "163238", "name": "M(New_곤트란)무화과트라디시옹(소)_4ea*10pk/box", "spec": "4ea*10pk/box", "unit": "BOX", "ipsu": 10, "box": 21, "pk": 210}, {"code": "163568", "name": "M(New_곤트란)밤사과패스츄리생지(막대)_3ea*4pk/box", "spec": "3ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 22, "pk": 88}, {"code": "163570", "name": "M(New_곤트란)빵오르방나튀렐_4ea*3pk/box", "spec": "4ea*3pk/box", "unit": "BOX", "ipsu": 3, "box": 23, "pk": 69}, {"code": "163571", "name": "M(New_곤트란)빵오르방멀티세레알_4ea*3pk/box", "spec": "4ea*3pk/box", "unit": "BOX", "ipsu": 3, "box": 23, "pk": 69}, {"code": "163572", "name": "M(New_곤트란)퀸아망생지(막대)_2ea*4pk/box", "spec": "2ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 22, "pk": 88}, {"code": "164053", "name": "M(New_곤트란)쇼숑오뽐므생지(합포장)_20ea*4pk/box", "spec": "20ea*4pk/box", "unit": "BOX", "ipsu": 1, "box": 13, "pk": 13}, {"code": "167077", "name": "M[곤트란]New 플레인깜빠뉴 생지(12ea*4pk/BOX)", "spec": "12ea/PK", "unit": "BOX", "ipsu": 4, "box": 23, "pk": 92}, {"code": "163309", "name": "M(New_곤트란)빵드깜빠뉴_3ea/box", "spec": "3ea/box", "unit": "BOX", "ipsu": 1, "box": 9, "pk": 9}]},
-      {"id": "rec_20261028", "date": "2026-10-28", "orderDate": "2026-10-27", "center": "용인 남사센터", "type": "입고", "status": "입고 완료", "title": "정기 입고 (218box)", "driver": "김민겸 기사", "cost": 250000, "memo": "", "totalBoxes": 218, "totalPks": 849, "items": [{"code": "157806", "name": "M(곤트란)뺑오쇼콜라생지_36ea*4pk/box", "spec": "36ea/pk", "unit": "BOX", "ipsu": 4, "box": 22, "pk": 88}, {"code": "157828", "name": "M(곤트란)프레첼생지_40ea*4pk/box", "spec": "40ea/pk", "unit": "BOX", "ipsu": 4, "box": 44, "pk": 176}, {"code": "157840", "name": "M(르미디)[생지]샌드위치용바게트생지_20ea*4pk/box", "spec": "20ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 63, "pk": 252}, {"code": "163241", "name": "M(New_곤트란)빵꽁플레_6ea*4pk/box", "spec": "6ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 21, "pk": 84}, {"code": "163311", "name": "M(New_곤트란)크로와상생지_48ea*4pk/box", "spec": "48ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 22, "pk": 88}, {"code": "163571", "name": "M(New_곤트란)빵오르방멀티세레알_4ea*3pk/box", "spec": "4ea*3pk/box", "unit": "BOX", "ipsu": 3, "box": 23, "pk": 69}, {"code": "167077", "name": "M[곤트란]New 플레인깜빠뉴 생지(12ea*4pk/BOX)", "spec": "12ea/PK", "unit": "BOX", "ipsu": 4, "box": 23, "pk": 92}]},
-      {"id": "rec_20261026", "date": "2026-10-26", "orderDate": "2026-10-23", "center": "용인 남사센터", "type": "입고", "status": "입고 완료", "title": "정기 입고 (220box)", "driver": "김민겸 기사", "cost": 250000, "memo": "", "totalBoxes": 220, "totalPks": 902, "items": [{"code": "157794", "name": "M(곤트란)바게트트라디시옹_6ea*4pk/box", "spec": "6ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 21, "pk": 84}, {"code": "157828", "name": "M(곤트란)프레첼생지_40ea*4pk/box", "spec": "40ea/pk", "unit": "BOX", "ipsu": 4, "box": 22, "pk": 88}, {"code": "157840", "name": "M(르미디)[생지]샌드위치용바게트생지_20ea*4pk/box", "spec": "20ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 22, "pk": 88}, {"code": "163227", "name": "M(New_곤트란)깜빠뉴크랜베리아망드(대)_6ea*4pk/box", "spec": "6ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 5, "pk": 20}, {"code": "163238", "name": "M(New_곤트란)무화과트라디시옹(소)_4ea*10pk/box", "spec": "4ea*10pk/box", "unit": "BOX", "ipsu": 10, "box": 12, "pk": 120}, {"code": "163241", "name": "M(New_곤트란)빵꽁플레_6ea*4pk/box", "spec": "6ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 23, "pk": 92}, {"code": "163309", "name": "M(New_곤트란)빵드깜빠뉴_3ea/box", "spec": "3ea/box", "unit": "BOX", "ipsu": 1, "box": 2, "pk": 2}, {"code": "163311", "name": "M(New_곤트란)크로와상생지_48ea*4pk/box", "spec": "48ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 22, "pk": 88}, {"code": "163570", "name": "M(New_곤트란)빵오르방나튀렐_4ea*3pk/box", "spec": "4ea*3pk/box", "unit": "BOX", "ipsu": 3, "box": 22, "pk": 66}, {"code": "163571", "name": "M(New_곤트란)빵오르방멀티세레알_4ea*3pk/box", "spec": "4ea*3pk/box", "unit": "BOX", "ipsu": 3, "box": 22, "pk": 66}, {"code": "163572", "name": "M(New_곤트란)퀸아망생지(막대)_2ea*4pk/box", "spec": "2ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 22, "pk": 88}, {"code": "169675", "name": "M[곤트란]데니쉬판생지_3ea*4pk/box", "spec": "3ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 3, "pk": 12}, {"code": "169678", "name": "M[곤트란]프리미엄_모닝빵_생지_20ea*4pk/box", "spec": "20ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 22, "pk": 88}]},
-      {"id": "rec_20261021", "date": "2026-10-21", "orderDate": "2026-10-20", "center": "용인 남사센터", "type": "입고", "status": "입고 완료", "title": "정기 입고 (221box)", "driver": "김민겸 기사", "cost": 250000, "memo": "", "totalBoxes": 221, "totalPks": 920, "items": [{"code": "157806", "name": "M(곤트란)뺑오쇼콜라생지_36ea*4pk/box", "spec": "36ea/pk", "unit": "BOX", "ipsu": 4, "box": 15, "pk": 60}, {"code": "163233", "name": "M(New_곤트란)올리브치아바타생지_24ea*4pk/box", "spec": "24ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 12, "pk": 48}, {"code": "163238", "name": "M(New_곤트란)무화과트라디시옹(소)_4ea*10pk/box", "spec": "4ea*10pk/box", "unit": "BOX", "ipsu": 10, "box": 12, "pk": 120}, {"code": "163309", "name": "M(New_곤트란)빵드깜빠뉴_3ea/box", "spec": "3ea/box", "unit": "BOX", "ipsu": 1, "box": 8, "pk": 8}, {"code": "163310", "name": "M(New_곤트란)소금버터빵생지_40ea*6pk/box", "spec": "40ea*6pk/box", "unit": "BOX", "ipsu": 6, "box": 10, "pk": 60}, {"code": "163311", "name": "M(New_곤트란)크로와상생지_48ea*4pk/box", "spec": "48ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 22, "pk": 88}, {"code": "163570", "name": "M(New_곤트란)빵오르방나튀렐_4ea*3pk/box", "spec": "4ea*3pk/box", "unit": "BOX", "ipsu": 3, "box": 22, "pk": 66}, {"code": "163571", "name": "M(New_곤트란)빵오르방멀티세레알_4ea*3pk/box", "spec": "4ea*3pk/box", "unit": "BOX", "ipsu": 3, "box": 10, "pk": 30}, {"code": "167077", "name": "M[곤트란]New 플레인깜빠뉴 생지(12ea*4pk/BOX)", "spec": "12ea/PK", "unit": "BOX", "ipsu": 4, "box": 22, "pk": 88}, {"code": "167074", "name": "M[곤트란]New 빵오멀티세레알 생지(12ea*4pk/BOX)", "spec": "12ea/PK", "unit": "BOX", "ipsu": 4, "box": 30, "pk": 120}, {"code": "167074", "name": "M[곤트란]New 빵오멀티세레알 생지(12ea*4pk/BOX)", "spec": "12ea/PK", "unit": "BOX", "ipsu": 4, "box": 58, "pk": 232}]},
-      {"id": "rec_20261019", "date": "2026-10-19", "orderDate": "2026-10-16", "center": "용인 남사센터", "type": "입고", "status": "입고 완료", "title": "정기 입고 (203box)", "driver": "김민겸 기사", "cost": 250000, "memo": "", "totalBoxes": 203, "totalPks": 920, "items": [{"code": "157787", "name": "M(곤트란)먹물포카치아생지(신)_20ea*8pk/box", "spec": "20ea/pk", "unit": "BOX", "ipsu": 8, "box": 10, "pk": 80}, {"code": "157806", "name": "M(곤트란)뺑오쇼콜라생지_36ea*4pk/box", "spec": "36ea/pk", "unit": "BOX", "ipsu": 4, "box": 14, "pk": 56}, {"code": "157812", "name": "M(곤트란)올리브식빵생지_12ea*6pk/box", "spec": "12ea/pk", "unit": "BOX", "ipsu": 6, "box": 18, "pk": 108}, {"code": "157828", "name": "M(곤트란)프레첼생지_40ea*4pk/box", "spec": "40ea/pk", "unit": "BOX", "ipsu": 4, "box": 17, "pk": 68}, {"code": "162410", "name": "M(바로가)닥터치아바타생지_2400g*4pk/box", "spec": "2400g*4pk/box", "unit": "BOX", "ipsu": 4, "box": 10, "pk": 40}, {"code": "162411", "name": "M(바로가)단과자생지_40ea*8pk/box", "spec": "40ea*8pk/box", "unit": "BOX", "ipsu": 8, "box": 3, "pk": 24}, {"code": "162414", "name": "M(바로가)소금버터빵생지_30ea*8pk/box", "spec": "30ea*8pk/box", "unit": "BOX", "ipsu": 8, "box": 5, "pk": 40}, {"code": "163234", "name": "M(New_곤트란)플레인치아바타생지_24ea*4pk/box", "spec": "24ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 8, "pk": 32}, {"code": "163311", "name": "M(New_곤트란)크로와상생지_48ea*4pk/box", "spec": "48ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 22, "pk": 88}, {"code": "163572", "name": "M(New_곤트란)퀸아망생지(막대)_2ea*4pk/box", "spec": "2ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 38, "pk": 152}, {"code": "167074", "name": "M[곤트란]New 빵오멀티세레알 생지(12ea*4pk/BOX)", "spec": "12ea/PK", "unit": "BOX", "ipsu": 4, "box": 22, "pk": 88}, {"code": "167077", "name": "M[곤트란]New 플레인깜빠뉴 생지(12ea*4pk/BOX)", "spec": "12ea/PK", "unit": "BOX", "ipsu": 4, "box": 22, "pk": 88}, {"code": "169678", "name": "M[곤트란]프리미엄_모닝빵_생지_20ea*4pk/box", "spec": "20ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 14, "pk": 56}]},
-      {"id": "rec_20261016", "date": "2026-10-16", "orderDate": "2026-10-15", "center": "용인 남사센터", "type": "입고", "status": "입고 완료", "title": "정기 입고 (216box)", "driver": "김민겸 기사", "cost": 250000, "memo": "", "totalBoxes": 216, "totalPks": 986, "items": [{"code": "157787", "name": "M(곤트란)먹물포카치아생지(신)_20ea*8pk/box", "spec": "20ea/pk", "unit": "BOX", "ipsu": 8, "box": 22, "pk": 176}, {"code": "163241", "name": "M(New_곤트란)빵꽁플레_6ea*4pk/box", "spec": "6ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 21, "pk": 84}, {"code": "163311", "name": "M(New_곤트란)크로와상생지_48ea*4pk/box", "spec": "48ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 68, "pk": 272}, {"code": "163567", "name": "M(New_곤트란)몽마르트생지(막대)_2ea*6pk/box", "spec": "2ea*6pk/box", "unit": "BOX", "ipsu": 6, "box": 20, "pk": 120}, {"code": "163570", "name": "M(New_곤트란)빵오르방나튀렐_4ea*3pk/box", "spec": "4ea*3pk/box", "unit": "BOX", "ipsu": 3, "box": 22, "pk": 66}, {"code": "163571", "name": "M(New_곤트란)빵오르방멀티세레알_4ea*3pk/box", "spec": "4ea*3pk/box", "unit": "BOX", "ipsu": 3, "box": 22, "pk": 66}, {"code": "167077", "name": "M[곤트란]New 플레인깜빠뉴 생지(12ea*4pk/BOX)", "spec": "12ea/PK", "unit": "BOX", "ipsu": 4, "box": 22, "pk": 88}, {"code": "169677", "name": "M[곤트란]밀크브리오슈_40ea*6pk/box", "spec": "40ea*6pk/box", "unit": "BOX", "ipsu": 6, "box": 19, "pk": 114}]},
-      {"id": "rec_20261014", "date": "2026-10-14", "orderDate": "2026-10-13", "center": "용인 남사센터", "type": "입고", "status": "입고 완료", "title": "정기 입고 (218box)", "driver": "김민겸 기사", "cost": 250000, "memo": "", "totalBoxes": 218, "totalPks": 1090, "items": [{"code": "157787", "name": "M(곤트란)먹물포카치아생지(신)_20ea*8pk/box", "spec": "20ea/pk", "unit": "BOX", "ipsu": 8, "box": 22, "pk": 176}, {"code": "157794", "name": "M(곤트란)바게트트라디시옹_6ea*4pk/box", "spec": "6ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 10, "pk": 40}, {"code": "157829", "name": "M(곤트란)프로마쥬블랑생지_20ea*8pk/box", "spec": "20ea/pk", "unit": "BOX", "ipsu": 8, "box": 7, "pk": 56}, {"code": "163234", "name": "M(New_곤트란)플레인치아바타생지_24ea*4pk/box", "spec": "24ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 22, "pk": 88}, {"code": "163241", "name": "M(New_곤트란)빵꽁플레_6ea*4pk/box", "spec": "6ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 21, "pk": 84}, {"code": "163310", "name": "M(New_곤트란)소금버터빵생지_40ea*6pk/box", "spec": "40ea*6pk/box", "unit": "BOX", "ipsu": 6, "box": 22, "pk": 132}, {"code": "163311", "name": "M(New_곤트란)크로와상생지_48ea*4pk/box", "spec": "48ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 22, "pk": 88}, {"code": "163567", "name": "M(New_곤트란)몽마르트생지(막대)_2ea*6pk/box", "spec": "2ea*6pk/box", "unit": "BOX", "ipsu": 6, "box": 22, "pk": 132}, {"code": "163568", "name": "M(New_곤트란)밤사과패스츄리생지(막대)_3ea*4pk/box", "spec": "3ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 15, "pk": 60}, {"code": "163570", "name": "M(New_곤트란)빵오르방나튀렐_4ea*3pk/box", "spec": "4ea*3pk/box", "unit": "BOX", "ipsu": 3, "box": 22, "pk": 66}, {"code": "169677", "name": "M[곤트란]밀크브리오슈_40ea*6pk/box", "spec": "40ea*6pk/box", "unit": "BOX", "ipsu": 6, "box": 18, "pk": 108}, {"code": "169678", "name": "M[곤트란]프리미엄_모닝빵_생지_20ea*4pk/box", "spec": "20ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 15, "pk": 60}]},
-      {"id": "rec_20261008", "date": "2026-10-08", "orderDate": "2026-10-07", "center": "용인 남사센터", "type": "입고", "status": "입고 완료", "title": "정기 입고 (218box)", "driver": "김민겸 기사", "cost": 250000, "memo": "", "totalBoxes": 218, "totalPks": 1006, "items": [{"code": "157794", "name": "M(곤트란)바게트트라디시옹_6ea*4pk/box", "spec": "6ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 8, "pk": 32}, {"code": "163227", "name": "M(New_곤트란)깜빠뉴크랜베리아망드(대)_6ea*4pk/box", "spec": "6ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 6, "pk": 24}, {"code": "163234", "name": "M(New_곤트란)플레인치아바타생지_24ea*4pk/box", "spec": "24ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 44, "pk": 176}, {"code": "163310", "name": "M(New_곤트란)소금버터빵생지_40ea*6pk/box", "spec": "40ea*6pk/box", "unit": "BOX", "ipsu": 6, "box": 66, "pk": 396}, {"code": "163311", "name": "M(New_곤트란)크로와상생지_48ea*4pk/box", "spec": "48ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 44, "pk": 176}, {"code": "163567", "name": "M(New_곤트란)몽마르트생지(막대)_2ea*6pk/box", "spec": "2ea*6pk/box", "unit": "BOX", "ipsu": 6, "box": 10, "pk": 60}, {"code": "163570", "name": "M(New_곤트란)빵오르방나튀렐_4ea*3pk/box", "spec": "4ea*3pk/box", "unit": "BOX", "ipsu": 3, "box": 22, "pk": 66}, {"code": "163572", "name": "M(New_곤트란)퀸아망생지(막대)_2ea*4pk/box", "spec": "2ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 11, "pk": 44}, {"code": "169675", "name": "M[곤트란]데니쉬판생지_3ea*4pk/box", "spec": "3ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 3, "pk": 12}, {"code": "169676", "name": "M[곤트란]만겹판생지_5ea*5pk/box", "spec": "5ea*5pk/box", "unit": "BOX", "ipsu": 5, "box": 4, "pk": 20}]},
-      {"id": "rec_20261006", "date": "2026-10-06", "orderDate": "2026-10-02", "center": "용인 남사센터", "type": "입고", "status": "입고 완료", "title": "정기 입고 (219box)", "driver": "김민겸 기사", "cost": 250000, "memo": "", "totalBoxes": 219, "totalPks": 964, "items": [{"code": "163227", "name": "M(New_곤트란)깜빠뉴크랜베리아망드(대)_6ea*4pk/box", "spec": "6ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 21, "pk": 84}, {"code": "163233", "name": "M(New_곤트란)올리브치아바타생지_24ea*4pk/box", "spec": "24ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 44, "pk": 176}, {"code": "163234", "name": "M(New_곤트란)플레인치아바타생지_24ea*4pk/box", "spec": "24ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 88, "pk": 352}, {"code": "163310", "name": "M(New_곤트란)소금버터빵생지_40ea*6pk/box", "spec": "40ea*6pk/box", "unit": "BOX", "ipsu": 6, "box": 22, "pk": 132}, {"code": "163311", "name": "M(New_곤트란)크로와상생지_48ea*4pk/box", "spec": "48ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 22, "pk": 88}, {"code": "163567", "name": "M(New_곤트란)몽마르트생지(막대)_2ea*6pk/box", "spec": "2ea*6pk/box", "unit": "BOX", "ipsu": 6, "box": 22, "pk": 132}]},
-      {"id": "rec_20261002", "date": "2026-10-02", "orderDate": "2026-10-01", "center": "용인 남사센터", "type": "입고", "status": "입고 완료", "title": "정기 입고 (209box)", "driver": "김민겸 기사", "cost": 250000, "memo": "", "totalBoxes": 209, "totalPks": 960, "items": [{"code": "157794", "name": "M(곤트란)바게트트라디시옹_6ea*4pk/box", "spec": "6ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 18, "pk": 72}, {"code": "157829", "name": "M(곤트란)프로마쥬블랑생지_20ea*8pk/box", "spec": "20ea/pk", "unit": "BOX", "ipsu": 8, "box": 5, "pk": 40}, {"code": "163233", "name": "M(New_곤트란)올리브치아바타생지_24ea*4pk/box", "spec": "24ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 22, "pk": 88}, {"code": "163241", "name": "M(New_곤트란)빵꽁플레_6ea*4pk/box", "spec": "6ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 15, "pk": 60}, {"code": "163310", "name": "M(New_곤트란)소금버터빵생지_40ea*6pk/box", "spec": "40ea*6pk/box", "unit": "BOX", "ipsu": 6, "box": 44, "pk": 264}, {"code": "163311", "name": "M(New_곤트란)크로와상생지_48ea*4pk/box", "spec": "48ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 22, "pk": 88}, {"code": "163567", "name": "M(New_곤트란)몽마르트생지(막대)_2ea*6pk/box", "spec": "2ea*6pk/box", "unit": "BOX", "ipsu": 6, "box": 17, "pk": 102}, {"code": "163568", "name": "M(New_곤트란)밤사과패스츄리생지(막대)_3ea*4pk/box", "spec": "3ea*4pk/box", "unit": "BOX", "ipsu": 4, "box": 42, "pk": 168}, {"code": "163570", "name": "M(New_곤트란)빵오르방나튀렐_4ea*3pk/box", "spec": "4ea*3pk/box", "unit": "BOX", "ipsu": 3, "box": 21, "pk": 63}, {"code": "169676", "name": "M[곤트란]만겹판생지_5ea*5pk/box", "spec": "5ea*5pk/box", "unit": "BOX", "ipsu": 5, "box": 3, "pk": 15}]}
-    ];
+    // [1단계] 코드에 고정돼 있던 10~11월 기본 데이터(OCT_DEFAULT_DATA) 자동 탑재 제거
+    //  → DB가 비었거나 연결에 실패해도 가짜/옛 데이터를 실데이터처럼 보여주거나 DB에 저장하지 않음
+
+    // [1단계] DB 보호 상태: 정상적으로 불러온 뒤에만 저장, 리비전으로 다른 기기 저장분 덮어쓰기 방지
+    let msDbLoaded = false;
+    let msDbRevision = null;
+    let msDbBlockReason = 'DB를 아직 불러오지 못했습니다';
+    let msPushTimer = null;
+    let msIsPushing = false;
+    let msPushPending = false;
 
     let records = [];
     let returnRecords = [];
@@ -280,7 +276,7 @@
     window.mountMsInboundApp = mountMsInboundApp;
     window.exportMsInboundExcel = downloadSettlementExcel;
     window.MSInbound = {
-      downloadSettlementExcel, pullFromCloud, pushToCloud, openCloudModal, closeCloudModal, openGuideModal, closeGuideModal, copyAccountInfo, saveCloudConfig, copyGasScript, openConfirmModal, closeConfirmModal, executeClearAll, handleFiles, renderAll, switchMainView, toggleAllCards, toggleCard, toggleRecordStatus, setFilter, selectReturnReason, addReturnRecord, requestDeleteReturn, requestDeleteRecord, handlePriceExcel, editUnitPriceModal, editRecordField, closeEditModal, clearEditField, saveEditModal, setItemUnitPrice, setItemRecipeCode, autoMatchRecipeCodes, showToast, resetToOctData, exportData, importData
+      downloadSettlementExcel, pullFromCloud, pushToCloud, openCloudModal, closeCloudModal, openGuideModal, closeGuideModal, copyAccountInfo, saveCloudConfig, openConfirmModal, closeConfirmModal, handleFiles, renderAll, switchMainView, toggleAllCards, toggleCard, toggleRecordStatus, setFilter, selectReturnReason, addReturnRecord, requestDeleteReturn, requestDeleteRecord, handlePriceExcel, editUnitPriceModal, editRecordField, closeEditModal, clearEditField, saveEditModal, setItemUnitPrice, setItemRecipeCode, autoMatchRecipeCodes, showToast, exportData, importData
     };
 
     if (document.readyState === 'loading') {
@@ -486,9 +482,11 @@
       const type = '입고';
       const status = document.getElementById('msi_defaultStatus').value;
       const driver = document.getElementById('msi_defaultDriver').value;
-      const cost = parseInt(document.getElementById('msi_defaultCost').value, 10) || 250000;
+      const costRaw = String(document.getElementById('msi_defaultCost').value || '').replace(/[^0-9]/g, '');
+      const cost = costRaw === '' ? 0 : (parseInt(costRaw, 10) || 0);
 
       let totalItemsParsed = 0;
+      let preservedCount = 0;
       dateKeys.forEach(dKey => {
         const grp = groupedByDate[dKey];
         totalItemsParsed += grp.items.length;
@@ -513,15 +511,29 @@
         };
 
         const existIdx = records.findIndex(r => r.date === dKey);
-        if (existIdx !== -1) records[existIdx] = newRecord;
-        else records.push(newRecord);
+        if (existIdx !== -1) {
+          // [1단계] 같은 날짜 재업로드: 품목·수량은 새 파일 기준으로 교체하고,
+          // 손으로 입력한 기사·운임·메모·상태·제목은 기존 값을 유지
+          const prev = records[existIdx];
+          const autoTitle = /^정기 입고 \(\d+box\)$/.test(String(prev.title || ''));
+          newRecord.id = prev.id || newRecord.id;
+          newRecord.driver = prev.driver !== undefined ? prev.driver : newRecord.driver;
+          newRecord.cost = prev.cost !== undefined ? prev.cost : newRecord.cost;
+          newRecord.memo = prev.memo || '';
+          newRecord.status = (prev.status === '입고 완료' || status === '입고 완료') ? '입고 완료' : (prev.status || status);
+          if (!autoTitle && prev.title) newRecord.title = prev.title;
+          records[existIdx] = newRecord;
+          preservedCount++;
+        } else {
+          records.push(newRecord);
+        }
       });
 
       records.sort((a, b) => b.date.localeCompare(a.date));
       currentFilter = 'ALL';
       saveToStorage();
       renderAll();
-      setBannerStatus(`✅ '${fileName}' 업로드 성공! 총 ${dateKeys.length}개 일자 (${totalItemsParsed}개 행) 반영 완료`);
+      setBannerStatus(`✅ '${fileName}' 업로드 성공! 총 ${dateKeys.length}개 일자 (${totalItemsParsed}개 행) 반영 완료${preservedCount ? ` · 기존 ${preservedCount}개 일자는 기사·운임·메모 유지` : ''}`);
       showToast(`총 ${dateKeys.length}개 일자 내역이 업데이트되었습니다!`);
     }
 
@@ -1573,76 +1585,35 @@
       });
     }
 
-    function resetToOctData() {
-      records = JSON.parse(JSON.stringify(OCT_DEFAULT_DATA));
-      currentFilter = 'ALL';
-      saveToStorage();
-      renderAll();
-      showToast('10월 입고 내역(10건)이 기본 복원되었습니다.');
-    }
-
-    function executeClearAll() {
-      records = [];
-      returnRecords = [];
-      saveToStorage();
-      renderAll();
-      showToast('모든 내역이 초기화되었습니다.');
-    }
-
     function saveToStorage() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
       localStorage.setItem(RETURNS_STORAGE_KEY, JSON.stringify(returnRecords));
       localStorage.setItem(PRICES_STORAGE_KEY, JSON.stringify(unitPrices));
       localStorage.setItem(RECIPE_LINKS_STORAGE_KEY, JSON.stringify(recipeLinks));
-      pushToCloud(true);
+      // 연속 수정은 0.6초 모아서 한 번에 저장
+      if (msPushTimer) clearTimeout(msPushTimer);
+      msPushTimer = setTimeout(() => { msPushTimer = null; pushToCloud(true); }, 600);
+    }
+
+    function safeParseLocal(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return fallback;
+        const v = JSON.parse(raw);
+        return v === null || v === undefined ? fallback : v;
+      } catch (e) {
+        return fallback;
+      }
     }
 
     function loadFromStorage() {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        try {
-          records = JSON.parse(saved);
-          if (!records || records.length === 0) records = JSON.parse(JSON.stringify(OCT_DEFAULT_DATA));
-        } catch (e) {
-          records = JSON.parse(JSON.stringify(OCT_DEFAULT_DATA));
-        }
-      } else {
-        records = JSON.parse(JSON.stringify(OCT_DEFAULT_DATA));
-      }
-
-      const savedReturns = localStorage.getItem(RETURNS_STORAGE_KEY);
-      if (savedReturns) {
-        try {
-          returnRecords = JSON.parse(savedReturns) || [];
-        } catch (e) {
-          returnRecords = [];
-        }
-      } else {
-        returnRecords = [];
-      }
-
-      const savedPrices = localStorage.getItem(PRICES_STORAGE_KEY);
-      if (savedPrices) {
-        try {
-          unitPrices = JSON.parse(savedPrices) || {};
-        } catch (e) {
-          unitPrices = {};
-        }
-      } else {
-        unitPrices = {};
-      }
-
-      const savedLinks = localStorage.getItem(RECIPE_LINKS_STORAGE_KEY);
-      if (savedLinks) {
-        try {
-          recipeLinks = JSON.parse(savedLinks) || {};
-        } catch (e) {
-          recipeLinks = {};
-        }
-      } else {
-        recipeLinks = {};
-      }
-
+      // 이 기기에 남아 있는 사본을 먼저 보여주고(저장은 막힘), 곧바로 DB에서 최신 데이터를 불러옴
+      records = safeParseLocal(STORAGE_KEY, []);
+      if (!Array.isArray(records)) records = [];
+      returnRecords = safeParseLocal(RETURNS_STORAGE_KEY, []);
+      if (!Array.isArray(returnRecords)) returnRecords = [];
+      unitPrices = safeParseLocal(PRICES_STORAGE_KEY, {});
+      recipeLinks = safeParseLocal(RECIPE_LINKS_STORAGE_KEY, {});
       renderAll();
       if (getActiveCloudUrl()) pullFromCloud(true);
     }
@@ -1706,122 +1677,158 @@
       }
     }
 
-    function copyGasScript() {
-      const gasCode = `// 구글 시트 A1 셀을 대용량 데이터베이스처럼 사용하는 자동 동기화 스크립트입니다.
-function doGet() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
-  const data = sheet.getRange('A1').getValue() || '[]';
-  return ContentService.createTextOutput(data).setMimeType(ContentService.MimeType.JSON);
-}
-
-function doPost(e) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
-  const contents = e.postData ? e.postData.contents : '[]';
-  sheet.getRange('A1').setValue(contents);
-  sheet.getRange('B1').setValue('최근 업데이트: ' + new Date().toLocaleString('ko-KR'));
-  return ContentService.createTextOutput(JSON.stringify({ status: 'ok' })).setMimeType(ContentService.MimeType.JSON);
-}`;
-      copyText(gasCode, '구글 Apps Script 코드가 복사되었습니다! 새 시트의 Apps Script에 붙여넣으세요.');
-    }
-
     function saveCloudConfig() {
       const url = document.getElementById('msi_cloudUrlInput').value.trim();
       closeCloudModal();
+      msDbLoaded = false;
+      msDbRevision = null;
+      msDbBlockReason = '새 DB 주소를 아직 불러오지 못했습니다';
       if (url) {
         localStorage.setItem(CLOUD_URL_KEY, url);
-        pullFromCloud(false);
       } else {
         localStorage.removeItem(CLOUD_URL_KEY);
-        checkCloudBadge();
-        showToast('로컬 저장 모드로 전환되었습니다.');
       }
+      pullFromCloud(false);
+    }
+
+    function msFetch(url, options, timeoutMs) {
+      if (typeof window.fetchWithTimeout === 'function') return window.fetchWithTimeout(url, options, timeoutMs);
+      if (typeof fetchWithTimeout === 'function') return fetchWithTimeout(url, options, timeoutMs);
+      return fetch(url, options);
+    }
+
+    function buildCloudPayload() {
+      return {
+        records: records,
+        returns: returnRecords,
+        unitPrices: unitPrices,
+        recipeLinks: recipeLinks,
+        updatedAt: new Date().toISOString()
+      };
     }
 
     async function pushToCloud(silent = true) {
-      const url = document.getElementById('msi_cloudUrlInput')?.value.trim() || getActiveCloudUrl();
+      if (msPushTimer) { clearTimeout(msPushTimer); msPushTimer = null; }
+      const url = getActiveCloudUrl();
       if (!url) {
-        if (!silent) showToast('클라우드 URL을 먼저 입력해 주세요.');
-        return;
+        showToast('엠즈 DB 주소가 없습니다. 저장하지 않았습니다.');
+        return false;
       }
+      // [1단계] 불러오기 실패·구버전 GAS·충돌 상태에서는 저장하지 않음
+      if (!msDbLoaded || msDbRevision === null) {
+        checkCloudBadge('error', '저장 중지');
+        showToast(`저장하지 않았습니다: ${msDbBlockReason}. 변경 내용은 이 기기에만 있습니다.`);
+        return false;
+      }
+      if (msIsPushing) { msPushPending = true; return; }
+      msIsPushing = true;
+      let ok = false;
       try {
         checkCloudBadge('saving', '저장중...');
-        const payload = {
-          records: records,
-          returns: returnRecords,
-          unitPrices: unitPrices,
-          recipeLinks: recipeLinks,
-          updatedAt: new Date().toISOString()
-        };
-        await fetch(url, {
+        const body = JSON.stringify({ action: 'replaceAll', baseRevision: msDbRevision, payload: buildCloudPayload() });
+        const res = await msFetch(url, {
           method: 'POST',
-          mode: 'no-cors',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payload)
-        });
-        checkCloudBadge();
-        if (!silent) showToast('클라우드 서버에 입고·회송·단가 데이터가 안전하게 저장되었습니다!');
+          body
+        }, 30000);
+        if (!res.ok) throw new Error(`서버 응답 오류 (HTTP ${res.status})`);
+        const json = await res.json();
+        if (json && json.ok === true && typeof json.revision === 'number') {
+          msDbRevision = json.revision;
+          ok = true;
+          checkCloudBadge();
+          if (!silent) showToast('엠즈 DB에 입고·회송·단가 데이터가 저장되었습니다.');
+        } else if (json && json.conflict) {
+          msDbLoaded = false;
+          msDbBlockReason = '다른 기기에서 먼저 저장했습니다. ↻ 새로고침 후 다시 입력하세요';
+          msPushPending = false;
+          checkCloudBadge('error', '충돌 · 새로고침 필요');
+          showToast('다른 기기에서 먼저 저장한 내용이 있어 저장하지 않았습니다. ↻ 새로고침 후 방금 변경한 내용을 다시 입력해 주세요.');
+        } else {
+          throw new Error((json && (json.error || json.message)) || '알 수 없는 응답');
+        }
       } catch (e) {
-        console.warn('Cloud push error:', e);
-        checkCloudBadge('error', 'DB 저장 확인');
-        if (!silent) showToast('클라우드 업로드 중 오류가 발생했습니다.');
+        const isTimeout = e && e.name === 'AbortError';
+        if (isTimeout) {
+          msDbLoaded = false;
+          msDbBlockReason = '저장 응답이 없어 저장 여부를 알 수 없습니다. ↻ 새로고침으로 확인하세요';
+        }
+        checkCloudBadge('error', isTimeout ? '저장 확인 필요' : 'DB 저장 실패');
+        showToast(isTimeout
+          ? '엠즈 DB 저장 응답이 없습니다(시간 초과). ↻ 새로고침으로 실제 저장 여부를 확인해 주세요.'
+          : `엠즈 DB 저장 실패: ${e && e.message ? e.message : e} — 변경 내용은 이 기기에만 있습니다.`);
+      } finally {
+        msIsPushing = false;
+        if (msPushPending) { msPushPending = false; if (ok) pushToCloud(true); }
       }
+      return ok;
     }
 
     async function pullFromCloud(silent = false) {
-      const url = document.getElementById('msi_cloudUrlInput')?.value.trim() || getActiveCloudUrl();
+      const url = getActiveCloudUrl();
       if (!url) {
-        if (!silent) showToast('클라우드 URL을 먼저 입력해 주세요.');
+        if (!silent) showToast('엠즈 DB 주소를 먼저 입력해 주세요.');
+        checkCloudBadge('error', 'DB 주소 없음');
+        return;
+      }
+      if (msPushTimer || msIsPushing || msPushPending) {
+        if (!silent) showToast('저장이 진행 중입니다. 저장이 끝난 뒤 다시 새로고침해 주세요.');
         return;
       }
       checkCloudBadge('syncing', '동기화중...');
       try {
-        const res = await fetch(url + (url.includes('?') ? '&' : '?') + 't=' + Date.now());
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          if (data.length > 0) {
-            records = data;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-            renderAll();
-            checkCloudBadge();
-            if ((returnRecords && returnRecords.length > 0) || Object.keys(unitPrices).length > 0) {
-              pushToCloud(true);
-            }
-            if (!silent) showToast(`클라우드에서 ${records.length}건의 최신 데이터를 불러왔습니다!`);
-          } else if ((records && records.length > 0) || (returnRecords && returnRecords.length > 0)) {
-            pushToCloud(true);
-          }
-        } else if (data && typeof data === 'object') {
-          const hasCloudRecords = Array.isArray(data.records) && data.records.length > 0;
-          const hasCloudReturns = Array.isArray(data.returns) && data.returns.length > 0;
-
-          if (hasCloudRecords) {
-            records = data.records;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-          }
-          if (Array.isArray(data.returns)) {
-            returnRecords = data.returns;
-            localStorage.setItem(RETURNS_STORAGE_KEY, JSON.stringify(returnRecords));
-          }
-          if (data.unitPrices && typeof data.unitPrices === 'object') {
-            unitPrices = { ...unitPrices, ...data.unitPrices };
-            localStorage.setItem(PRICES_STORAGE_KEY, JSON.stringify(unitPrices));
-          }
-          if (data.recipeLinks && typeof data.recipeLinks === 'object') {
-            recipeLinks = { ...recipeLinks, ...data.recipeLinks };
-            localStorage.setItem(RECIPE_LINKS_STORAGE_KEY, JSON.stringify(recipeLinks));
-          }
-
-          if (!hasCloudRecords && !hasCloudReturns && (records.length > 0 || returnRecords.length > 0)) {
-            pushToCloud(true);
-          }
-
-          renderAll();
-          checkCloudBadge();
-          if (!silent) showToast(`클라우드 동기화 완료! (입고 ${records.length}건 / 회송 ${returnRecords.length}건)`);
+        const res = await msFetch(url + (url.includes('?') ? '&' : '?') + 't=' + Date.now(), { method: 'GET' }, 20000);
+        if (!res.ok) throw new Error(`서버 응답 오류 (HTTP ${res.status})`);
+        const json = await res.json();
+        let data;
+        let revision = null;
+        if (json && typeof json === 'object' && !Array.isArray(json) && 'ok' in json) {
+          // v2.0 GAS 응답: { ok, revision, data }
+          if (json.ok !== true) throw new Error(json.error || '서버 오류');
+          data = json.data;
+          revision = typeof json.revision === 'number' ? json.revision : null;
+        } else {
+          // 구버전 GAS 응답 (A1 셀 원본) — 읽기만 하고 저장은 막음
+          data = json;
         }
+
+        if (data === null || data === undefined) {
+          records = [];
+          returnRecords = [];
+          unitPrices = {};
+          recipeLinks = {};
+        } else if (Array.isArray(data)) {
+          records = data;
+        } else if (typeof data === 'object') {
+          records = Array.isArray(data.records) ? data.records : [];
+          returnRecords = Array.isArray(data.returns) ? data.returns : [];
+          unitPrices = (data.unitPrices && typeof data.unitPrices === 'object') ? data.unitPrices : {};
+          recipeLinks = (data.recipeLinks && typeof data.recipeLinks === 'object') ? data.recipeLinks : {};
+        } else {
+          throw new Error('응답 형식을 인식할 수 없습니다');
+        }
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+        localStorage.setItem(RETURNS_STORAGE_KEY, JSON.stringify(returnRecords));
+        localStorage.setItem(PRICES_STORAGE_KEY, JSON.stringify(unitPrices));
+        localStorage.setItem(RECIPE_LINKS_STORAGE_KEY, JSON.stringify(recipeLinks));
+
+        msDbLoaded = true;
+        msDbRevision = revision;
+        msDbBlockReason = revision === null ? '엠즈 GAS 스크립트가 구버전입니다 (v2.0 업데이트 필요)' : '';
+        renderAll();
+        if (revision === null) checkCloudBadge('error', '저장 중지 (GAS 업데이트 필요)');
+        else checkCloudBadge();
+        if (!silent) showToast(`엠즈 DB 동기화 완료 (입고 ${records.length}건 / 회송 ${returnRecords.length}건)`);
       } catch (e) {
-        checkCloudBadge('error', 'DB 연결 확인');
-        if (!silent) showToast('클라우드 데이터를 불러오지 못했습니다. URL과 권한(모든 사용자)을 확인해 주세요.');
+        if (!msDbLoaded) {
+          msDbBlockReason = 'DB를 불러오지 못했습니다';
+          checkCloudBadge('error', 'DB 불러오기 실패 · 저장 중지');
+          showToast(`엠즈 DB를 불러오지 못했습니다 (${e && e.message ? e.message : e}). 화면은 이 기기에 남은 사본이며 저장은 중지됩니다.`);
+        } else {
+          checkCloudBadge('error', '새로고침 실패');
+          if (!silent) showToast(`새로고침 실패: ${e && e.message ? e.message : e}`);
+        }
       }
     }
 

@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: v3.11 - 2026-11-20 손실비율(%) 반영 실생산수량((중량합계-손실중량)÷분할중량) 및 1배합pk수량 일원화 · 전 항목 마우스오버 실시간 계산식 툴팁 탑재]
+// [VERSION: v3.12 - 2026-11-20 1단계 데이터 손실 방지 (자동 저장 · 저장 응답 확인 · 리비전 충돌 방지 · 사진 분리 저장 · 미저장 수정분 보호 · 샘플추가 버튼 제거)]
 // 바로가 공장 통합 관리 시스템 - 레시피 전용 모듈 (recipe.js)
 // ============================================================================
 
@@ -693,7 +693,6 @@ function renderRecipeWorkspace() {
                         </div>
                         <div class="flex items-center gap-1">
                             <input type="text" id="recipeListSearchInput" oninput="renderRecipeSidebarList()" placeholder="품목코드 · 품목명 검색..." class="flex-1 min-w-0 text-xs border border-stone-300 rounded-lg px-2.5 py-1 bg-white focus:outline-none focus:border-amber-500">
-                            <button type="button" onclick="insertFoodDiscoverySampleSet()" title="푸드디스커버리 다단계 반제품 샘플 넣기" class="px-2 py-1 rounded-lg text-[10px] font-bold bg-amber-50 border border-amber-300 text-amber-900 hover:bg-amber-100 cursor-pointer shrink-0">샘플추가</button>
                         </div>
                     </div>
                     <div id="recipeSidebarList" class="flex-1 min-h-0 overflow-y-auto max-h-[420px] xl:max-h-none"></div>
@@ -1429,7 +1428,7 @@ function createNewRecipeItem(type = 'PRODUCT') {
     });
     recipesData.unshift(newRc);
     selectedRecipeId = newRc.id;
-    saveLocalCache();
+    persistRecipeChange();
     renderRecipeWorkspace();
 }
 
@@ -1443,7 +1442,7 @@ function duplicateSelectedRecipe() {
     copy.updatedAt = getTodayStr();
     recipesData.unshift(copy);
     selectedRecipeId = copy.id;
-    saveLocalCache();
+    persistRecipeChange();
     renderRecipeWorkspace();
     showToast('레시피가 복제되었습니다.', 'success');
 }
@@ -1454,7 +1453,7 @@ function deleteSelectedRecipe() {
     openConfirmModal('품목 삭제', `[${target.productName}] 레시피를 삭제하시겠습니까?`, () => {
         recipesData = recipesData.filter(r => r.id !== target.id);
         selectedRecipeId = recipesData[0]?.id || null;
-        saveLocalCache();
+        persistRecipeChange();
         renderRecipeWorkspace();
     });
 }
@@ -1469,7 +1468,7 @@ function updateRecipeField(field, val) {
     if (!rc) return;
     rc[field] = val;
     rc.updatedAt = getTodayStr();
-    saveLocalCache();
+    persistRecipeChange();
     renderRecipeWorkspace();
 }
 
@@ -1500,7 +1499,7 @@ function updateRecipeNumericField(field, val) {
     }
 
     rc.updatedAt = getTodayStr();
-    saveLocalCache();
+    persistRecipeChange();
     renderRecipeWorkspace();
     if (typeof window.refreshProductPriceRecipeLinks === 'function') {
         window.refreshProductPriceRecipeLinks();
@@ -1513,7 +1512,7 @@ function updateBakingProcess(key, val) {
     ensureRecipeSchema(rc);
     rc.bakingProcess[key] = val;
     rc.updatedAt = getTodayStr();
-    saveLocalCache();
+    persistRecipeChange();
 }
 
 
@@ -1713,7 +1712,7 @@ function quickAddSingleRawFromModal(rawKey) {
     if (!found) return;
     pushCatalogItemToRecipe(rc, found);
     rc.updatedAt = getTodayStr();
-    saveLocalCache();
+    persistRecipeChange();
     renderRecipeDetailPanel();
     renderRawPickerList();
     showToast(`[${found.item}] 투입 완료`, 'success');
@@ -1736,7 +1735,7 @@ function commitSelectedRawMaterialsFromModal() {
     });
     rawPickerModalSelectedKeys.clear();
     rc.updatedAt = getTodayStr();
-    saveLocalCache();
+    persistRecipeChange();
     closeRawMaterialPickerModal();
     renderRecipeWorkspace();
     showToast(`원재료 ${addedCnt}종이 일괄 투입되었습니다.`, 'success');
@@ -1766,7 +1765,7 @@ function addBlankIngredientToRecipe() {
         weightG: 1000,
         seq: 0
     });
-    saveLocalCache();
+    persistRecipeChange();
     renderRecipeWorkspace();
 }
 
@@ -1790,7 +1789,7 @@ function addSubRecipeToFormula() {
         qty: Number((subEval.baseYieldQty || 1).toFixed(2)),
         seq: 0
     });
-    saveLocalCache();
+    persistRecipeChange();
     renderRecipeWorkspace();
     showToast(`하위 배합 [${subRc.productName}]이 투입되었습니다.`, 'success');
 }
@@ -1825,7 +1824,7 @@ function updateRecipeIngredient(idx, field, val) {
         ig[field] = val;
     }
     rc.updatedAt = getTodayStr();
-    saveLocalCache();
+    persistRecipeChange();
     renderRecipeWorkspace();
 }
 
@@ -1849,7 +1848,7 @@ function promptIngredientUnitPrice(idx) {
         ig.spec = matched.spec;
         ig.specGrams = matched.specGrams;
         ig.unitPrice = matched.unitPrice;
-        saveLocalCache();
+        persistRecipeChange();
         renderRecipeWorkspace();
         return showToast('원재료 페이지 최신 단가 자동연동으로 복원되었습니다.', 'success');
     }
@@ -1860,7 +1859,7 @@ function promptIngredientUnitPrice(idx) {
     ig.specGrams = parseSpecToGrams(ig.spec);
     ig.unitPrice = parseNumericCell(newPrice);
     ig.priceSource = 'MANUAL';
-    saveLocalCache();
+    persistRecipeChange();
     renderRecipeWorkspace();
 }
 
@@ -1868,7 +1867,7 @@ function removeRecipeIngredient(idx) {
     const rc = recipesData.find(r => r.id === selectedRecipeId);
     if (!rc) return;
     rc.ingredients.splice(idx, 1);
-    saveLocalCache();
+    persistRecipeChange();
     renderRecipeWorkspace();
 }
 
@@ -1892,7 +1891,7 @@ function addPackagingRowToRecipe(forceManual = false) {
                 usedQty: 1,
                 packType: 'UNIT'
             });
-            saveLocalCache();
+            persistRecipeChange();
             renderRecipeWorkspace();
             return;
         }
@@ -1914,7 +1913,7 @@ function addPackagingRowToRecipe(forceManual = false) {
         usedQty: 1,
         packType: 'UNIT'
     });
-    saveLocalCache();
+    persistRecipeChange();
     renderRecipeWorkspace();
 }
 
@@ -1942,7 +1941,7 @@ function updateRecipePackaging(idx, field, val) {
     } else {
         pk[field] = val;
     }
-    saveLocalCache();
+    persistRecipeChange();
     renderRecipeWorkspace();
 }
 
@@ -1957,7 +1956,7 @@ function promptPackagingPrice(idx) {
     pk.purchasePrice = parseNumericCell(p);
     pk.specQty = Math.max(1, parseNumericCell(s));
     pk.priceSource = 'MANUAL';
-    saveLocalCache();
+    persistRecipeChange();
     renderRecipeWorkspace();
 }
 
@@ -1965,7 +1964,7 @@ function removeRecipePackaging(idx) {
     const rc = recipesData.find(r => r.id === selectedRecipeId);
     if (!rc) return;
     rc.packagingList.splice(idx, 1);
-    saveLocalCache();
+    persistRecipeChange();
     renderRecipeWorkspace();
 }
 
@@ -1989,7 +1988,7 @@ function handleRecipeImageUpload(files) {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, w, h);
             rc.imageData = canvas.toDataURL('image/jpeg', 0.8);
-            saveLocalCache();
+            persistRecipeChange();
             renderRecipeDetailPanel();
             showToast('제품 이미지가 등록되었습니다.', 'success');
         };
@@ -2002,7 +2001,7 @@ function clearRecipeImage() {
     const rc = recipesData.find(r => r.id === selectedRecipeId);
     if (!rc) return;
     rc.imageData = '';
-    saveLocalCache();
+    persistRecipeChange();
     renderRecipeDetailPanel();
 }
 
@@ -2106,7 +2105,7 @@ function insertFoodDiscoverySampleSet() {
 
     recipesData.push(rcFinal, rcFilling, rcButterDough, rcBaseDough);
     selectedRecipeId = idFinal;
-    saveLocalCache();
+    persistRecipeChange();
     renderRecipeWorkspace();
     showToast('푸드디스커버리 3단 계층 샘플 세트가 추가되었습니다!', 'success');
 }
@@ -2239,7 +2238,7 @@ async function applyCurrentRawMaterialPricesToAllRecipes() {
         rc.updatedAt = getTodayStr();
     });
 
-    saveLocalCache();
+    persistRecipeChange();
     renderRecipeWorkspace();
     if (typeof window.refreshProductPriceRecipeLinks === 'function') {
         window.refreshProductPriceRecipeLinks();
@@ -2250,7 +2249,7 @@ async function applyCurrentRawMaterialPricesToAllRecipes() {
         ? ` (미매칭 수기품목 ${unmatchedNames.size}종 유지)`
         : '';
     showToast(
-        `[현재 단가 보정 완료] 총 ${totalMatched}개 항목(원재료 ${matchedRawRows} · 포장재 ${matchedPackRows}) 연동 · 단가변동 ${changedPriceRows}건 반영!${unmatchNote} — [DB 저장]을 눌러 확정하세요.`,
+        `[현재 단가 보정 완료] 총 ${totalMatched}개 항목(원재료 ${matchedRawRows} · 포장재 ${matchedPackRows}) 연동 · 단가변동 ${changedPriceRows}건 반영!${unmatchNote} — 자동 저장됩니다.`,
         'success'
     );
 }
@@ -2276,119 +2275,235 @@ function saveRecipeGasUrlConfig() {
     const v = document.getElementById('recipeGasUrlInput').value.trim() || BAROGA_DEFAULT_RECIPE_GAS_URL;
     recipeGasWebAppUrl = v;
     try { localStorage.setItem('baroga_recipe_gas_url', v); } catch (e) {}
+    recipeDbLoaded = false;
+    recipeDbRevision = null;
+    recipeDbBlockReason = '새 DB 주소를 아직 불러오지 못했습니다';
     closeRecipeDbModal();
     syncRecipesFromGoogleSheet(true);
+}
+
+// ============================================================================
+// [1단계 데이터 보호] 레시피 자동 저장 · 리비전 충돌 방지 · 미저장 수정분 보호
+// ============================================================================
+let recipeDbLoaded = false;
+let recipeDbRevision = null;
+let recipeDbBlockReason = 'DB를 아직 불러오지 못했습니다';
+let recipeSaveTimer = null;
+let recipeIsSaving = false;
+let recipeSavePending = false;
+let recipeChangeSeq = 0;
+const RECIPE_DIRTY_KEY = 'baroga_recipes_dirty_v1';
+const RECIPE_UNSAVED_BACKUP_KEY = 'baroga_recipes_unsaved_backup_v1';
+const RECIPE_AUTOSAVE_DELAY_MS = 1500;
+
+function readRecipeDirty() {
+    try { return JSON.parse(localStorage.getItem(RECIPE_DIRTY_KEY) || 'null'); } catch (e) { return null; }
+}
+function writeRecipeDirty(baseRevision) {
+    try { localStorage.setItem(RECIPE_DIRTY_KEY, JSON.stringify({ baseRevision, at: new Date().toLocaleString('ko-KR') })); } catch (e) {}
+}
+function clearRecipeDirty() {
+    try { localStorage.removeItem(RECIPE_DIRTY_KEY); } catch (e) {}
+}
+
+// 레시피 수정 시 호출: 이 기기에 즉시 보관 + 1.5초 뒤 DB 자동 저장
+function persistRecipeChange() {
+    saveLocalCache();
+    recipeChangeSeq++;
+    if (!readRecipeDirty()) writeRecipeDirty(recipeDbRevision);
+    if (recipeSaveTimer) clearTimeout(recipeSaveTimer);
+    recipeSaveTimer = setTimeout(() => { recipeSaveTimer = null; pushRecipesToGoogleSheet(true); }, RECIPE_AUTOSAVE_DELAY_MS);
+    updateRecipeDbStatusUI('syncing', '저장 대기...');
+}
+
+window.addEventListener('beforeunload', (e) => {
+    if (recipeSaveTimer || recipeIsSaving || recipeSavePending) {
+        e.preventDefault();
+        e.returnValue = '레시피 저장이 아직 끝나지 않았습니다.';
+        return e.returnValue;
+    }
+});
+
+function mapRecipeRowFromDb(r, lookup) {
+    let parsedJson = {};
+    try { parsedJson = typeof r.ingredientsJson === 'string' ? JSON.parse(r.ingredientsJson) : (r.ingredientsJson || {}); } catch (e) {}
+    const ings = Array.isArray(parsedJson) ? parsedJson : (parsedJson.ingredients || []);
+    const pkgs = parsedJson.packagingList || [];
+    return ensureRecipeSchema({
+        id: r.id || ('rc_' + Date.now() + Math.random()),
+        recipeType: parsedJson.recipeType || undefined,
+        productCode: String(r.productCode || '100001'),
+        productName: r.productName || '레시피',
+        divisionWeight: parseFloat(r.divisionWeight) || 100,
+        customProductionQty: parseFloat(r.customProductionQty) || 0,
+        packQty: parseFloat(r.packQty) || 1,
+        sellingPrice: parseFloat(r.sellingPrice) || 0,
+        lossRatio: parseFloat(r.lossRatio) || 0,
+        ingredients: ings,
+        packagingList: pkgs,
+        bakingProcess: parsedJson.bakingProcess || {},
+        imageData: r.imageData || parsedJson.imageData || '',
+        updatedAt: r.updatedAt || getTodayStr()
+    }, lookup);
 }
 
 async function syncRecipesFromGoogleSheet(showMessage = false) {
     if (!recipeGasWebAppUrl || recipeGasWebAppUrl.includes(LEGACY_DUMMY_RECIPE_URL_PART)) {
         recipeGasWebAppUrl = BAROGA_DEFAULT_RECIPE_GAS_URL;
     }
+    if (recipeSaveTimer || recipeIsSaving || recipeSavePending) {
+        if (showMessage) showToast('레시피 저장이 진행 중입니다. 저장이 끝난 뒤 다시 새로고침해 주세요.', 'error');
+        return;
+    }
     updateRecipeDbStatusUI('syncing', '동기화중...');
     try {
         const sep = recipeGasWebAppUrl.includes('?') ? '&' : '?';
-        const res = await fetchWithTimeout(`${recipeGasWebAppUrl}${sep}action=getAll&t=${Date.now()}`, { method: 'GET' }, 14000);
+        const res = await fetchWithTimeout(`${recipeGasWebAppUrl}${sep}action=getAll&t=${Date.now()}`, { method: 'GET' }, 20000);
+        if (!res.ok) throw new Error(`서버 응답 오류 (HTTP ${res.status})`);
         const json = await res.json();
-        const rows = Array.isArray(json) ? json : (json.data || json.rows || json.recipes || []);
-        if (Array.isArray(rows)) {
-            if (rows.length > 0) {
-                const lookup = buildRawCatalogLookupMaps();
-                recipesData = rows.map(r => {
-                    let parsedJson = {};
-                    try { parsedJson = typeof r.ingredientsJson === 'string' ? JSON.parse(r.ingredientsJson) : (r.ingredientsJson || {}); } catch (e) {}
-                    const ings = Array.isArray(parsedJson) ? parsedJson : (parsedJson.ingredients || []);
-                    const pkgs = parsedJson.packagingList || [];
-                    return ensureRecipeSchema({
-                        id: r.id || ('rc_' + Date.now() + Math.random()),
-                        recipeType: parsedJson.recipeType || undefined,
-                        productCode: String(r.productCode || '100001'),
-                        productName: r.productName || '레시피',
-                        divisionWeight: parseFloat(r.divisionWeight) || 100,
-                        customProductionQty: parseFloat(r.customProductionQty) || 0,
-                        packQty: parseFloat(r.packQty) || 1,
-                        sellingPrice: parseFloat(r.sellingPrice) || 0,
-                        lossRatio: parseFloat(r.lossRatio) || 0,
-                        ingredients: ings,
-                        packagingList: pkgs,
-                        bakingProcess: parsedJson.bakingProcess || {},
-                        imageData: parsedJson.imageData || '',
-                        updatedAt: r.updatedAt || getTodayStr()
-                    }, lookup);
-                });
-                if (!recipesData.some(r => r.id === selectedRecipeId)) {
-                    selectedRecipeId = recipesData[0]?.id || null;
-                }
-                saveLocalCache();
+        if (json && (json.ok === false || json.status === 'error')) throw new Error(json.error || json.message || '서버 오류');
+        const rows = Array.isArray(json) ? json : (json.data || json.rows || json.recipes);
+        if (!Array.isArray(rows)) throw new Error('응답 형식을 인식할 수 없습니다');
+        const revision = (json && typeof json.revision === 'number') ? json.revision : null;
+
+        const dirty = readRecipeDirty();
+        const localCount = (recipesData || []).length;
+
+        if (dirty && localCount > 0) {
+            if (revision !== null && dirty.baseRevision === revision) {
+                // 이 기기의 미저장 수정분이 있고, 그 사이 DB가 바뀌지 않았음 → 이 기기 내용을 유지하고 저장
+                recipeDbLoaded = true;
+                recipeDbRevision = revision;
+                recipeDbBlockReason = '';
                 if (activeMasterDomain === 'RECIPE') renderRecipeWorkspace();
-                if (showMessage) showToast(`레시피 DB에서 ${recipesData.length}종 동기화 완료`, 'success');
-            } else if (showMessage) {
-                showToast('레시피 DB가 연결되었습니다 (저장된 데이터 0건).', 'info');
+                showToast(`저장되지 않았던 레시피 수정분(${dirty.at || ''})을 DB에 저장합니다.`, 'info');
+                pushRecipesToGoogleSheet(false);
+                return;
             }
-            updateRecipeDbStatusUI('connected', `DB 연동됨 (${recipesData.length}종)`);
+            // 그 사이 다른 곳에서 DB가 바뀜 → DB 기준으로 맞추고, 이 기기 수정분은 별도 백업
+            try { localStorage.setItem(RECIPE_UNSAVED_BACKUP_KEY, JSON.stringify({ savedAt: new Date().toLocaleString('ko-KR'), recipes: recipesData })); } catch (e) {}
+            clearRecipeDirty();
+            showToast(`다른 곳에서 레시피 DB가 변경되어, 이 기기의 미저장 수정분(${dirty.at || ''})은 반영하지 않았습니다. (브라우저에 백업 보관)`, 'error');
         }
+
+        if (rows.length > 0) {
+            const lookup = buildRawCatalogLookupMaps();
+            recipesData = rows.map(r => mapRecipeRowFromDb(r, lookup));
+            if (!recipesData.some(r => r.id === selectedRecipeId)) {
+                selectedRecipeId = recipesData[0]?.id || null;
+            }
+            saveLocalCache();
+            if (showMessage) showToast(`레시피 DB에서 ${recipesData.length}종 동기화 완료`, 'success');
+        } else if (localCount > 0) {
+            // DB는 비어 있는데 이 기기에는 레시피가 남아 있음 → 지우지 않고 그대로 보여줌 (복원 가능)
+            showToast(`레시피 DB가 비어 있습니다. 이 기기에 남아 있는 ${localCount}종을 DB에 복원하려면 [DB 저장]을 누르세요.`, 'error');
+        } else if (showMessage) {
+            showToast('레시피 DB가 연결되었습니다 (저장된 데이터 0건).', 'info');
+        }
+
+        recipeDbLoaded = true;
+        recipeDbRevision = revision;
+        recipeDbBlockReason = revision === null ? '레시피 GAS 스크립트가 구버전입니다 (v2.0 업데이트 필요)' : '';
+        if (activeMasterDomain === 'RECIPE') renderRecipeWorkspace();
+        if (revision === null) updateRecipeDbStatusUI('error', '저장 중지 (GAS 업데이트 필요)');
+        else updateRecipeDbStatusUI('connected', `DB 연동됨 (${recipesData.length}종)`);
     } catch (e) {
-        updateRecipeDbStatusUI('error', 'DB 연결 확인');
-        if (showMessage) showToast('레시피 DB 연결 또는 배포 권한을 확인해 주세요.', 'error');
+        if (!recipeDbLoaded) {
+            recipeDbBlockReason = 'DB를 불러오지 못했습니다';
+            updateRecipeDbStatusUI('error', 'DB 불러오기 실패 · 저장 중지');
+            showToast(`레시피 DB를 불러오지 못했습니다 (${e && e.message ? e.message : e}). 화면은 이 기기에 남은 사본이며 저장은 중지됩니다.`, 'error');
+        } else {
+            updateRecipeDbStatusUI('error', '새로고침 실패');
+            if (showMessage) showToast(`레시피 새로고침 실패: ${e && e.message ? e.message : e}`, 'error');
+        }
     }
 }
 
 async function pushRecipesToGoogleSheet(silent = false) {
+    if (recipeSaveTimer) { clearTimeout(recipeSaveTimer); recipeSaveTimer = null; }
     saveLocalCache();
     if (!recipeGasWebAppUrl || recipeGasWebAppUrl.includes(LEGACY_DUMMY_RECIPE_URL_PART)) {
         recipeGasWebAppUrl = BAROGA_DEFAULT_RECIPE_GAS_URL;
     }
+    if (!recipeDbLoaded || recipeDbRevision === null) {
+        updateRecipeDbStatusUI('error', '저장 중지');
+        showToast(`레시피를 저장하지 않았습니다: ${recipeDbBlockReason}. 변경 내용은 이 기기에만 있습니다.`, 'error');
+        return false;
+    }
+    if (recipeIsSaving) { recipeSavePending = true; return; }
+    recipeIsSaving = true;
     updateRecipeDbStatusUI('syncing', '저장중...');
-    const lookup = buildRawCatalogLookupMaps();
-    const payloadRows = (recipesData || []).map(rc => {
-        ensureRecipeSchema(rc, lookup);
-        const m = calculateRecipeMetrics(rc);
-        return {
-            productCode: rc.productCode,
-            productName: rc.productName,
-            divisionWeight: rc.divisionWeight,
-            customProductionQty: rc.customProductionQty || 0,
-            packQty: rc.packQty,
-            sellingPrice: rc.sellingPrice,
-            lossRatio: rc.lossRatio,
-            unitPackCost: Math.round(m.unitPackCost),
-            totalPackCost: Math.round(m.totalPackCost),
-            productionCost: Math.round(m.productionCost),
-            weightTotalG: Math.round(m.weightTotalG),
-            ingredientsJson: JSON.stringify({
-                recipeType: rc.recipeType,
-                ingredients: rc.ingredients,
-                packagingList: rc.packagingList,
-                bakingProcess: rc.bakingProcess,
-                imageData: rc.imageData || ''
-            }),
-            updatedAt: rc.updatedAt || getTodayStr(),
-            id: rc.id
-        };
-    });
-    const bodyStr = JSON.stringify({ action: 'replaceAll', data: payloadRows, recipes: payloadRows });
+    const sentSeq = recipeChangeSeq;
+    let ok = false;
     try {
-        await fetchWithTimeout(recipeGasWebAppUrl, {
+        const lookup = buildRawCatalogLookupMaps();
+        const images = [];
+        const payloadRows = (recipesData || []).map(rc => {
+            ensureRecipeSchema(rc, lookup);
+            const m = calculateRecipeMetrics(rc);
+            if (rc.imageData) images.push({ id: rc.id, data: rc.imageData });
+            return {
+                productCode: rc.productCode,
+                productName: rc.productName,
+                divisionWeight: rc.divisionWeight,
+                customProductionQty: rc.customProductionQty || 0,
+                packQty: rc.packQty,
+                sellingPrice: rc.sellingPrice,
+                lossRatio: rc.lossRatio,
+                unitPackCost: Math.round(m.unitPackCost),
+                totalPackCost: Math.round(m.totalPackCost),
+                productionCost: Math.round(m.productionCost),
+                weightTotalG: Math.round(m.weightTotalG),
+                // 사진은 셀 한도(5만자) 문제로 별도 시트에 저장 → 여기서는 제외
+                ingredientsJson: JSON.stringify({
+                    recipeType: rc.recipeType,
+                    ingredients: rc.ingredients,
+                    packagingList: rc.packagingList,
+                    bakingProcess: rc.bakingProcess
+                }),
+                updatedAt: rc.updatedAt || getTodayStr(),
+                id: rc.id
+            };
+        });
+        const bodyStr = JSON.stringify({ action: 'replaceAll', baseRevision: recipeDbRevision, data: payloadRows, images });
+        const res = await fetchWithTimeout(recipeGasWebAppUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: bodyStr
-        }, 16000);
-        updateRecipeDbStatusUI('connected', `DB 연동됨 (${recipesData.length}종)`);
-        if (!silent) showToast('레시피 DB에 저장되었습니다.', 'success');
-    } catch (e) {
-        try {
-            await fetch(recipeGasWebAppUrl, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: bodyStr
-            });
+        }, 30000);
+        if (!res.ok) throw new Error(`서버 응답 오류 (HTTP ${res.status})`);
+        const json = await res.json();
+        if (json && json.ok === true && typeof json.revision === 'number') {
+            recipeDbRevision = json.revision;
+            ok = true;
+            if (recipeChangeSeq === sentSeq) clearRecipeDirty();
+            else writeRecipeDirty(recipeDbRevision);
             updateRecipeDbStatusUI('connected', `DB 연동됨 (${recipesData.length}종)`);
-            if (!silent) showToast('레시피 DB 저장 완료', 'success');
-        } catch (e2) {
-            updateRecipeDbStatusUI('error', 'DB 저장 확인');
-            if (!silent) showToast('레시피 DB 저장 실패', 'error');
+            if (!silent) showToast('레시피 DB에 저장되었습니다.', 'success');
+        } else if (json && json.conflict) {
+            recipeDbLoaded = false;
+            recipeDbBlockReason = '다른 기기에서 먼저 저장했습니다. ↻ 새로고침 후 다시 입력하세요';
+            recipeSavePending = false;
+            updateRecipeDbStatusUI('error', '충돌 · 새로고침 필요');
+            showToast('다른 기기에서 먼저 저장한 레시피가 있어 저장하지 않았습니다. ↻ 새로고침하면 이 기기 수정분은 브라우저에 백업되고 DB 내용으로 맞춰집니다.', 'error');
+        } else {
+            throw new Error((json && (json.error || json.message)) || '알 수 없는 응답');
         }
+    } catch (e) {
+        const isTimeout = e && e.name === 'AbortError';
+        if (isTimeout) {
+            recipeDbLoaded = false;
+            recipeDbBlockReason = '저장 응답이 없어 저장 여부를 알 수 없습니다. ↻ 새로고침으로 확인하세요';
+        }
+        updateRecipeDbStatusUI('error', isTimeout ? '저장 확인 필요' : 'DB 저장 실패');
+        showToast(isTimeout
+            ? '레시피 저장 응답이 없습니다(시간 초과). ↻ 새로고침으로 실제 저장 여부를 확인해 주세요.'
+            : `레시피 DB 저장 실패: ${e && e.message ? e.message : e} — 변경 내용은 이 기기에만 있습니다.`, 'error');
+    } finally {
+        recipeIsSaving = false;
+        if (recipeSavePending) { recipeSavePending = false; if (ok) pushRecipesToGoogleSheet(true); }
     }
+    return ok;
 }
 
 function exportRecipesCsv() {
