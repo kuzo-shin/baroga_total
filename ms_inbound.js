@@ -27,6 +27,10 @@
     let msPushTimer = null;
     let msIsPushing = false;
     let msPushPending = false;
+    let msUnsaved = false; // [A] DB 저장 확인 전 변경
+    window.barogaUnsavedCheckers = window.barogaUnsavedCheckers || {};
+    window.barogaUnsavedCheckers.ms = () => Boolean(msPushTimer || msIsPushing || msPushPending || msUnsaved);
+    const msNowHm = () => (typeof window.barogaNowHm === 'function' ? window.barogaNowHm() : new Date().toTimeString().slice(0, 5));
 
     let records = [];
     let returnRecords = [];
@@ -1658,6 +1662,8 @@
       localStorage.setItem(PRICES_STORAGE_KEY, JSON.stringify(unitPrices));
       localStorage.setItem(RECIPE_LINKS_STORAGE_KEY, JSON.stringify(recipeLinks));
       // 연속 수정은 0.6초 모아서 한 번에 저장
+      msUnsaved = true;
+      checkCloudBadge('saving', '저장 대기...');
       if (msPushTimer) clearTimeout(msPushTimer);
       msPushTimer = setTimeout(() => { msPushTimer = null; pushToCloud(true); }, 600);
     }
@@ -1732,7 +1738,7 @@
       if (effState === 'syncing' || effState === 'saving') {
         dot.className = 'w-2 h-2 rounded-full bg-amber-500 animate-pulse';
         badge.className = 'flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-xl text-xs font-bold border bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100 transition cursor-pointer';
-        label.textContent = customText || (effState === 'saving' ? '저장중...' : '동기화중...');
+        label.textContent = customText || (effState === 'saving' ? '저장 중...' : '불러오는 중...');
       } else if (effState === 'error' || !url) {
         dot.className = 'w-2 h-2 rounded-full bg-rose-500';
         badge.className = 'flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-xl text-xs font-bold border bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100 transition cursor-pointer';
@@ -1791,12 +1797,13 @@
       msIsPushing = true;
       let ok = false;
       try {
-        checkCloudBadge('saving', '저장중...');
+        checkCloudBadge('saving', '저장 중...');
         const json = await msApi(url, { action: 'replaceAll', baseRevision: msDbRevision, payload: buildCloudPayload() }, 30000);
         if (json && json.ok === true && typeof json.revision === 'number') {
           msDbRevision = json.revision;
           ok = true;
-          checkCloudBadge();
+          if (!msPushPending) msUnsaved = false;
+          checkCloudBadge('connected', `저장됨 ${msNowHm()} · ${records.length}건`);
           if (!silent) showToast('엠즈 DB에 입고·회송·단가 데이터가 저장되었습니다.');
         } else if (json && json.conflict) {
           msDbLoaded = false;
@@ -1835,7 +1842,7 @@
         if (!silent) showToast('저장이 진행 중입니다. 저장이 끝난 뒤 다시 새로고침해 주세요.');
         return;
       }
-      checkCloudBadge('syncing', '동기화중...');
+      checkCloudBadge('syncing', '불러오는 중...');
       try {
         const json = await msApi(url, { action: 'getAll' }, 20000);
         let data;
@@ -1872,11 +1879,12 @@
         localStorage.setItem(RECIPE_LINKS_STORAGE_KEY, JSON.stringify(recipeLinks));
 
         msDbLoaded = true;
+        msUnsaved = false;
         msDbRevision = revision;
         msDbBlockReason = revision === null ? '엠즈 GAS 스크립트가 구버전입니다 (v2.0 업데이트 필요)' : '';
         renderAll();
         if (revision === null) checkCloudBadge('error', '저장 중지 (GAS 업데이트 필요)');
-        else checkCloudBadge();
+        else checkCloudBadge('connected', `불러옴 ${msNowHm()} · ${records.length}건`);
         if (!silent) showToast(`엠즈 DB 동기화 완료 (입고 ${records.length}건 / 회송 ${returnRecords.length}건)`);
       } catch (e) {
         if (e && e.unauthorized) {

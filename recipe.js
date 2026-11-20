@@ -2362,13 +2362,10 @@ function persistRecipeChange() {
     if (typeof window.refreshProductPriceRecipeLinks === 'function') window.refreshProductPriceRecipeLinks(); // [3단계 Q4] 제품단가 재료비 실시간 반영
 }
 
-window.addEventListener('beforeunload', (e) => {
-    if (recipeSaveTimer || recipeIsSaving || recipeSavePending) {
-        e.preventDefault();
-        e.returnValue = '레시피 저장이 아직 끝나지 않았습니다.';
-        return e.returnValue;
-    }
-});
+// [A1] 창 닫기 경고는 index.html 공통 처리기에 등록 (저장 대기·저장 중·저장 실패로 남은 변경 포함)
+window.barogaUnsavedCheckers = window.barogaUnsavedCheckers || {};
+window.barogaUnsavedCheckers.recipe = () => Boolean(recipeSaveTimer || recipeIsSaving || recipeSavePending || readRecipeDirty());
+const recipeNowHm = () => (typeof window.barogaNowHm === 'function' ? window.barogaNowHm() : new Date().toTimeString().slice(0, 5));
 
 function mapRecipeRowFromDb(r, lookup) {
     let parsedJson = {};
@@ -2401,7 +2398,7 @@ async function syncRecipesFromGoogleSheet(showMessage = false) {
         if (showMessage) showToast('레시피 저장이 진행 중입니다. 저장이 끝난 뒤 다시 새로고침해 주세요.', 'error');
         return;
     }
-    updateRecipeDbStatusUI('syncing', '동기화중...');
+    updateRecipeDbStatusUI('syncing', '불러오는 중...');
     try {
         const json = await barogaApi(recipeGasWebAppUrl, { action: 'getAll' }, 20000);
         if (json && (json.ok === false || json.status === 'error')) throw new Error(json.error || json.message || '서버 오류');
@@ -2450,7 +2447,7 @@ async function syncRecipesFromGoogleSheet(showMessage = false) {
         recipeDbBlockReason = revision === null ? '레시피 GAS 스크립트가 구버전입니다 (v2.0 업데이트 필요)' : '';
         if (activeMasterDomain === 'RECIPE') renderRecipeWorkspace();
         if (revision === null) updateRecipeDbStatusUI('error', '저장 중지 (GAS 업데이트 필요)');
-        else updateRecipeDbStatusUI('connected', `DB 연동됨 (${recipesData.length}종)`);
+        else updateRecipeDbStatusUI('connected', `불러옴 ${recipeNowHm()} · ${recipesData.length}종`);
     } catch (e) {
         if (e && e.unauthorized) {
             recipeDbBlockReason = '접속 코드가 필요합니다';
@@ -2479,7 +2476,7 @@ async function pushRecipesToGoogleSheet(silent = false) {
     }
     if (recipeIsSaving) { recipeSavePending = true; return; }
     recipeIsSaving = true;
-    updateRecipeDbStatusUI('syncing', '저장중...');
+    updateRecipeDbStatusUI('syncing', '저장 중...');
     const sentSeq = recipeChangeSeq;
     let ok = false;
     try {
@@ -2518,7 +2515,7 @@ async function pushRecipesToGoogleSheet(silent = false) {
             ok = true;
             if (recipeChangeSeq === sentSeq) clearRecipeDirty();
             else writeRecipeDirty(recipeDbRevision);
-            updateRecipeDbStatusUI('connected', `DB 연동됨 (${recipesData.length}종)`);
+            updateRecipeDbStatusUI('connected', `저장됨 ${recipeNowHm()} · ${recipesData.length}종`);
             if (!silent) showToast('레시피 DB에 저장되었습니다.', 'success');
         } else if (json && json.conflict) {
             recipeDbLoaded = false;

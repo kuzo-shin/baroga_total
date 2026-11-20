@@ -570,6 +570,18 @@
         let saveDebounceTimer = null;
         let isSavingToDb = false;
         let hasPendingDbSave = false;
+        let rawUnsaved = false; // [A] DB에 아직 저장 확인이 안 된 변경이 있음
+
+        // [A2] 4개 탭 공통 저장 상태 문구 · [A1] 저장 안 된 변경이 있으면 창 닫기 경고
+        function barogaNowHm() { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+        window.barogaNowHm = barogaNowHm;
+        window.barogaUnsavedCheckers = window.barogaUnsavedCheckers || {};
+        window.addEventListener('beforeunload', (e) => {
+            const names = { raw: '원재료', ms: '엠즈 입고', recipe: '레시피', price: '제품단가' };
+            const pending = Object.keys(window.barogaUnsavedCheckers).filter(k => { try { return window.barogaUnsavedCheckers[k](); } catch (err) { return false; } });
+            if (pending.length) { e.preventDefault(); e.returnValue = `${pending.map(k => names[k] || k).join('·')} 변경 내용이 아직 DB에 저장되지 않았습니다.`; return e.returnValue; }
+        });
+        window.barogaUnsavedCheckers.raw = () => Boolean(saveDebounceTimer || isSavingToDb || hasPendingDbSave || rawUnsaved);
         // [1단계 데이터 보호] DB를 정상적으로 불러온 뒤에만 저장 허용 + 리비전으로 다른 기기 저장분 덮어쓰기 방지
         let rawDbLoaded = false;
         let rawDbRevision = null;
@@ -934,7 +946,7 @@
                 return;
             }
             isSyncing = true;
-            updateDbStatusUI('syncing', '동기화중...');
+            updateDbStatusUI('syncing', '불러오는 중...');
             try {
                 const json = await barogaApi(gasWebAppUrl, { action: 'getAll' }, 20000);
                 if (json && json.ok === false) throw new Error(json.error || '서버 오류');
@@ -947,6 +959,7 @@
                 usageLogsData = usageLogs;
                 inventoryAdjustLogs = adjustLogs;
                 rawDbLoaded = true;
+                rawUnsaved = false;
                 rawDbRevision = (json && typeof json.revision === 'number') ? json.revision : null;
                 rawDbBlockReason = rawDbRevision === null ? '원재료 GAS 스크립트가 구버전입니다 (v2.0 업데이트 필요)' : '';
                 saveLocalCache();
@@ -955,7 +968,7 @@
                 if (brokenSnapshots && brokenSnapshots.length) showToast(`월말 스냅샷 일부를 읽지 못했습니다: ${brokenSnapshots.join(', ')}`, 'error');
                 if (showMessage) showToast(`원재료 DB에서 ${ordersData.length}건 동기화 완료`, 'success');
                 if (rawDbRevision === null) updateDbStatusUI('error', '저장 중지 (GAS 업데이트 필요)');
-                else updateDbStatusUI('connected', `DB 연동됨 (${ordersData.length}건)`);
+                else updateDbStatusUI('connected', `불러옴 ${barogaNowHm()} · ${ordersData.length}건`);
             } catch (err) {
                 restoreLocalCacheIfEmpty();
                 reconcileManufacturerHistory();
@@ -981,6 +994,8 @@
         async function pushAllToGoogleSheet(silent = false) {
             saveLocalCache();
             if (!gasWebAppUrl) return;
+            rawUnsaved = true;
+            if (silent && !isSavingToDb) updateDbStatusUI('syncing', '저장 대기...');
             if (silent) {
                 if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
                 saveDebounceTimer = setTimeout(() => { saveDebounceTimer = null; executePushToGoogleSheet(true); }, 450);
@@ -998,7 +1013,7 @@
             }
             if (isSavingToDb) { hasPendingDbSave = true; return; }
             isSavingToDb = true;
-            updateDbStatusUI('syncing', '저장중...');
+            updateDbStatusUI('syncing', '저장 중...');
             const combinedRows = buildCombinedRowsForSheet();
             let ok = false;
             try {
@@ -1006,7 +1021,8 @@
                 if (json && json.ok === true && typeof json.revision === 'number') {
                     rawDbRevision = json.revision;
                     ok = true;
-                    updateDbStatusUI('connected', `DB 연동됨 (${ordersData.length}건)`);
+                    if (!hasPendingDbSave) rawUnsaved = false;
+                    updateDbStatusUI('connected', `저장됨 ${barogaNowHm()} · ${ordersData.length}건`);
                     if (!silent) showToast('구글 시트 DB에 저장되었습니다.', 'success');
                 } else if (json && json.conflict) {
                     rawDbLoaded = false;
