@@ -1727,6 +1727,7 @@
       // 접속 코드 입력 직후 다시 불러오기용 (index.html의 reloadAllDomainsFromDb에서 호출)
       useEffect(() => {
         window.reloadProductPriceDb = () => handleLoadFromGoogleSheet(true, priceGasUrl);
+        window.saveProductPriceDb = () => handleSaveToGoogleSheet(null, false); // [C2] Ctrl+S
       });
 
       // [A1] 불러온 직후의 내용을 기준점으로 기록

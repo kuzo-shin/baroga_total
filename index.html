@@ -1,4 +1,4 @@
-<!-- [VERSION: index.html v2.12 - 2026-11-20 디자인 통일: 회색 stone 통일·남색→파랑·최소 글자 12px·굵기 한 단계 낮춤·표 숫자 자릿수 정렬·포커스 표시·알림 1종 / v2.11 - 2026-11-20 저장 안전: 4개 탭 저장 상태 문구 통일(저장됨 HH:MM), 미저장 변경 시 창 닫기 경고, 공통 입력창(openFormModal) / v2.10 - 2026-11-20 모바일 UI: 일일 사용 보고 카드형 입력·하단 확정 바, 상단 탭 한 줄 가로 스크롤, 헤더 고정 해제, KPI 2열 / v2.9 - 2026-11-20 원재료 업로드 양식(매입처·과세구분) 인식, 과세구분 열 그대로 사용, 수량 없는 양식 등록 차단 / v2.8 - 2026-11-20 3~5단계 정확성 (발주서 동일 줄·업로드 오류 표시·로트별 소진금액·월말 기준 재고 역산·제조원 추정 표시·재고 변동 이력·부가세 줄별 통일·CSV 안전 처리) / v2.7 2단계 보안 (DB 접속 코드 인증 · SRM 계정정보 삭제 · 급여/고정비 기본값 제거 · 화면 출력 이스케이프) / v2.6.1 DB 주소 4종 새 배포로 교체 · 각 기기 저장 주소 일괄 초기화 / v2.6 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 스냅샷 분할 저장 · 샘플 레시피 제거)] -->
+<!-- [VERSION: index.html v2.13 - 2026-11-20 버튼·입력칸 모서리/포커스 통일, 원재료 표 머리글 고정, Ctrl+S 저장, 표 숫자칸 Enter 이동 / v2.12 - 2026-11-20 디자인 통일: 회색 stone 통일·남색→파랑·최소 글자 12px·굵기 한 단계 낮춤·표 숫자 자릿수 정렬·포커스 표시·알림 1종 / v2.11 - 2026-11-20 저장 안전: 4개 탭 저장 상태 문구 통일(저장됨 HH:MM), 미저장 변경 시 창 닫기 경고, 공통 입력창(openFormModal) / v2.10 - 2026-11-20 모바일 UI: 일일 사용 보고 카드형 입력·하단 확정 바, 상단 탭 한 줄 가로 스크롤, 헤더 고정 해제, KPI 2열 / v2.9 - 2026-11-20 원재료 업로드 양식(매입처·과세구분) 인식, 과세구분 열 그대로 사용, 수량 없는 양식 등록 차단 / v2.8 - 2026-11-20 3~5단계 정확성 (발주서 동일 줄·업로드 오류 표시·로트별 소진금액·월말 기준 재고 역산·제조원 추정 표시·재고 변동 이력·부가세 줄별 통일·CSV 안전 처리) / v2.7 2단계 보안 (DB 접속 코드 인증 · SRM 계정정보 삭제 · 급여/고정비 기본값 제거 · 화면 출력 이스케이프) / v2.6.1 DB 주소 4종 새 배포로 교체 · 각 기기 저장 주소 일괄 초기화 / v2.6 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 스냅샷 분할 저장 · 샘플 레시피 제거)] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -33,6 +33,20 @@
         html .font-semibold { font-weight: 500; }
         /* [B] 표 숫자 자릿수 세로 정렬 */
         td, th { font-variant-numeric: tabular-nums; }
+        /* [B5] 모서리 통일: 버튼·입력칸 8px, 카드 16px, 배지 원형 */
+        button.rounded-xl, button.rounded-md, label.rounded-xl,
+        input.rounded-xl, select.rounded-xl, textarea.rounded-xl, input.rounded-md, select.rounded-md { border-radius: 0.5rem; }
+        /* [B5] 입력칸 포커스 색 통일 (주황) */
+        input:not([type=checkbox]):not([type=radio]):focus, select:focus, textarea:focus { border-color: #f59e0b; }
+        /* [B5] 비활성 버튼 */
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        /* [C1] 원재료 탭 표: 스크롤해도 머리글 고정 (PC) */
+        @media (min-width: 640px) {
+            #mainContentContainer .overflow-x-auto { overflow: visible; }
+            #mainContentContainer { overflow: auto; }
+            #mainContentContainer thead th { position: sticky; top: -16px; z-index: 2; box-shadow: inset 0 -1px 0 #e7e5e4; }
+            :where(#mainContentContainer) thead th { background-color: #f5f5f4; }
+        }
         /* [C3] 키보드로 이동할 때 현재 위치 표시 */
         button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid #f59e0b; outline-offset: 1px; }
         /* [UI v2.10] 모바일(640px 미만) 전용 */
@@ -66,7 +80,7 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-base sm:text-lg font-extrabold tracking-tight text-stone-900">바로가 공장 통합 관리 시스템</h1>
-                        <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.12.0</span>
+                        <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.13.0</span>
                     </div>
                     <p class="text-xs text-stone-500 hidden sm:block">원재료 발주/재고 · 엠즈 입고/회송 · 레시피 배합비 · 제품단가 출고마진 통합 관리</p>
                 </div>
@@ -742,6 +756,46 @@
             setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 250); }, kind === 'error' ? 6000 : 3000);
         }
         window.barogaToast = showToast;
+
+        // [C2] 키보드 편의
+        //  · Ctrl+S(맥 ⌘S): 지금 보고 있는 탭을 DB에 바로 저장 (브라우저 '페이지 저장' 대신)
+        //  · 표 안의 숫자 입력칸에서 Enter: 값 반영 후 아래 칸으로 이동 (Shift+Enter는 위 칸)
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 's' || e.key === 'S')) {
+                e.preventDefault();
+                const d = typeof activeMasterDomain === 'string' ? activeMasterDomain : 'RAW';
+                if (d === 'RAW') pushAllToGoogleSheet(false);
+                else if (d === 'MS_INBOUND' && window.MSInbound && typeof window.MSInbound.pushToCloud === 'function') window.MSInbound.pushToCloud(false);
+                else if (d === 'RECIPE' && typeof window.pushRecipesToGoogleSheet === 'function') window.pushRecipesToGoogleSheet(false);
+                else if (d === 'PRODUCT_PRICE' && typeof window.saveProductPriceDb === 'function') window.saveProductPriceDb();
+                return;
+            }
+            if (e.key !== 'Enter' || e.isComposing || e.keyCode === 229 || e.ctrlKey || e.metaKey || e.altKey) return;
+            const el = e.target;
+            if (!(el instanceof HTMLInputElement) || !el.closest('td')) return;
+            if (!/^(number|text)$/.test(el.type) || el.closest('#barogaFormModal')) return;
+            if (el.type === 'text' && !(el.inputMode === 'decimal' || el.inputMode === 'numeric' || /tabular-nums|text-right/.test(el.className))) return; // 글자 입력칸(비고 등)은 제외
+            const table = el.closest('table');
+            if (!table) return;
+            const sameCol = (inp) => inp.closest('td') && inp.closest('td').cellIndex === el.closest('td').cellIndex;
+            const list = [...table.querySelectorAll('input')].filter(i => i.type === el.type && sameCol(i));
+            const idx = list.indexOf(el);
+            if (idx < 0) return;
+            e.preventDefault();
+            const targetIdx = idx + (e.shiftKey ? -1 : 1);
+            const tableIdx = [...document.querySelectorAll('table')].indexOf(table);
+            const colIdx = el.closest('td').cellIndex;
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            el.blur();
+            // 값 반영 후 표가 다시 그려질 수 있으므로 다음 화면에서 같은 위치를 다시 찾음
+            setTimeout(() => {
+                const t = document.querySelectorAll('table')[tableIdx];
+                if (!t) return;
+                const again = [...t.querySelectorAll('input')].filter(i => i.type === el.type && i.closest('td') && i.closest('td').cellIndex === colIdx);
+                const next = again[targetIdx];
+                if (next) { next.focus(); if (typeof next.select === 'function') next.select(); }
+            }, 30);
+        });
         function openConfirmModal(title, message, onConfirm) {
             document.getElementById('confirmModalTitle').textContent = title;
             document.getElementById('confirmModalMessage').textContent = message;
