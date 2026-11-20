@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: v3.13 - 2026-11-20 2단계 보안 (DB 요청에 접속 코드 첨부) / v3.12 1단계 데이터 손실 방지 (자동 저장 · 저장 응답 확인 · 리비전 충돌 방지 · 사진 분리 저장 · 미저장 수정분 보호 · 샘플추가 버튼 제거)]
+// [VERSION: v3.14 - 2026-11-20 3~5단계 (단가 일괄적용 시 기존 연결·수동고정 보존·포장재 5원 자동보정 제거·규격 인식 경고·반제품 손실률·품목코드 중복 방지·CSV 안전 처리·원가 계산 캐시) / v3.13 2단계 보안 (DB 요청에 접속 코드 첨부) / v3.12 1단계 데이터 손실 방지 (자동 저장 · 저장 응답 확인 · 리비전 충돌 방지 · 사진 분리 저장 · 미저장 수정분 보호 · 샘플추가 버튼 제거)]
 // 바로가 공장 통합 관리 시스템 - 레시피 전용 모듈 (recipe.js)
 // ============================================================================
 
@@ -56,6 +56,11 @@ function parseSpecToGrams(specStr) {
         return (m[2] === 'kg' || m[2] === 'l') ? val * 1000 : val;
     }
     return 1000;
+}
+
+// [3단계 P4] 규격에서 중량을 읽을 수 있는지 (못 읽으면 parseSpecToGrams가 1kg으로 가정함)
+function isSpecWeightParseable(specStr) {
+    return /(\d+(?:\.\d+)?)\s*(kg|g|l|ml)/i.test(String(specStr || '').replace(/,/g, ''));
 }
 
 function parsePackagingSpecQty() {
@@ -161,7 +166,20 @@ function getRawMaterialCatalogForRecipe() {
     return Object.values(map).sort((a, b) => a.item.localeCompare(b.item, 'ko'));
 }
 
+// [5단계] 성능: 원재료 데이터가 바뀌지 않았으면 단가 카탈로그를 다시 만들지 않음
+//  (엠즈 화면이 품목마다 레시피 원가를 계산하며 매번 전체 발주내역을 다시 훑던 문제)
+let _rawCatalogCache = null;
 function buildRawCatalogLookupMaps() {
+    const ver = window.__rawDataVersion || 0;
+    const src = Array.isArray(ordersData) ? ordersData : null;
+    if (_rawCatalogCache && _rawCatalogCache.ver === ver && _rawCatalogCache.src === src && _rawCatalogCache.len === (src ? src.length : -1)) {
+        return _rawCatalogCache.maps;
+    }
+    const maps = buildRawCatalogLookupMapsUncached();
+    _rawCatalogCache = { ver, src, len: src ? src.length : -1, maps };
+    return maps;
+}
+function buildRawCatalogLookupMapsUncached() {
     const list = getRawMaterialCatalogForRecipe();
     const byKey = new Map();
     const byCode = new Map();
@@ -283,11 +301,8 @@ function syncPackagingWithRawCatalog(pk, lookup) {
         matched = lookup.findBestByName(pk.name, pk.spec);
     }
 
-    // 기존에 1EA 단가(예: 80원)가 200매 등으로 중복 나눗셈되어 개당 5원 미만(0.4원 등)으로 잘못 저장된 항목 자동 복원
-    if ((parseFloat(pk.specQty) || 1) > 1 && (parseFloat(pk.purchasePrice) || 0) > 0 && ((parseFloat(pk.purchasePrice) || 0) / (parseFloat(pk.specQty) || 1)) < 5) {
-        pk.specQty = 1;
-        if (pk.priceSource === 'MANUAL') pk.priceSource = 'RAW_DB';
-    }
+    // [3단계 P3] '개당 5원 미만이면 규격수량을 1로 바꾸고 수동설정을 해제'하던 자동 보정 제거
+    //  (스티커 1,000매 4,000원 = 개당 4원처럼 정상적인 저가 포장재까지 바뀌던 문제)
 
     if (matched) {
         pk.rawKey = matched.rawKey;
@@ -308,7 +323,7 @@ function syncPackagingWithRawCatalog(pk, lookup) {
 // 레시피 스키마 표준화 (하위호환 + 내부코드 자동보강)
 function ensureRecipeSchema(rc, lookup = null) {
     if (!rc) return null;
-    if (!rc.productCode) rc.productCode = '100001';
+    if (!rc.productCode) rc.productCode = getNextUnusedRecipeCode(); // [3단계 P7] 고정값 '100001' 대신 미사용 코드
     if (!rc.productName) rc.productName = '신규 제품 레시피';
     if (!rc.recipeType) {
         rc.recipeType = /(반제품|충전물|필링|앙금|크림|소스|시럽)/.test(rc.productName) ? 'SUB' : 'PRODUCT';
@@ -368,7 +383,7 @@ function evaluateRecipeBaseTotals(rc, visitedIds = new Set(), lookup = null) {
     if (!lookup) lookup = buildRawCatalogLookupMaps();
     ensureRecipeSchema(rc, lookup);
     if (visitedIds.has(rc.id)) {
-        return { weightTotalG: 0, fillingWeightG: 0, rawCostTotal: 0, baseYieldQty: 1, itemBreakdown: [] };
+        return { weightTotalG: 0, netWeightG: 0, fillingWeightG: 0, rawCostTotal: 0, baseYieldQty: 1, itemBreakdown: [] };
     }
     const nextVisited = new Set(visitedIds);
     nextVisited.add(rc.id);
@@ -386,9 +401,12 @@ function evaluateRecipeBaseTotals(rc, visitedIds = new Set(), lookup = null) {
                 const subEval = evaluateRecipeBaseTotals(subRc, nextVisited, lookup);
                 let scale = 1;
                 const unitUpper = String(ig.unit || 'EA').toUpperCase();
+                // [3단계 P6] 반제품은 손실 차감 후 가용중량(netWeightG) 기준으로 사용량 비율을 계산
+                //  (손실률 0%면 기존과 동일)
+                const subNetG = subEval.netWeightG > 0 ? subEval.netWeightG : subEval.weightTotalG;
                 if (unitUpper === 'G' || unitUpper === 'KG') {
                     const targetG = unitUpper === 'KG' ? qty * 1000 : qty;
-                    scale = subEval.weightTotalG > 0 ? (targetG / subEval.weightTotalG) : 0;
+                    scale = subNetG > 0 ? (targetG / subNetG) : 0;
                 } else {
                     if (subEval.weightTotalG > 0 && Math.abs(qty - subEval.weightTotalG) < 1 && subEval.baseYieldQty !== qty) {
                         scale = 1;
@@ -397,7 +415,7 @@ function evaluateRecipeBaseTotals(rc, visitedIds = new Set(), lookup = null) {
                         scale = qty / baseYield;
                     }
                 }
-                const effWeightG = subEval.weightTotalG * scale;
+                const effWeightG = subNetG * scale;
                 const effCost = subEval.rawCostTotal * scale;
                 const isFilling = /(충전물|필링|앙금|크림|잼)/.test(subRc.productName || ig.item || '');
                 weightTotalG += effWeightG;
@@ -810,6 +828,7 @@ function compareRecipeProductCode(a, b) {
 }
 
 function renderRecipeSidebarList() {
+    const dupCodes = getDuplicateRecipeCodes(); // [3단계 P7] 중복 품목코드 표시
     const q = (document.getElementById('recipeListSearchInput')?.value || '').trim().toLowerCase();
     const sub = document.getElementById('recipeCountSub');
     if (sub) sub.textContent = `${recipesData.length}종`;
@@ -842,7 +861,7 @@ function renderRecipeSidebarList() {
                     const isSub = r.recipeType === 'SUB';
                     return `
                         <tr onclick="selectRecipeItem('${escapeHtml(r.id)}')" class="cursor-pointer transition ${active ? 'bg-amber-100/80 font-extrabold' : 'hover:bg-stone-50'}">
-                            <td class="fd-td py-1.5 px-2 text-center font-mono text-[11px] text-stone-700 truncate">${escapeHtml(r.productCode)}</td>
+                            <td class="fd-td py-1.5 px-2 text-center font-mono text-[11px] ${dupCodes.has(String(r.productCode || '').trim()) ? 'text-rose-700 font-extrabold bg-rose-50' : 'text-stone-700'} truncate" title="${dupCodes.has(String(r.productCode || '').trim()) ? '품목코드 중복! 엠즈·제품단가 연동이 잘못될 수 있습니다' : ''}">${dupCodes.has(String(r.productCode || '').trim()) ? '⚠' : ''}${escapeHtml(r.productCode)}</td>
                             <td class="fd-td py-1.5 px-2.5 ${isSub ? 'text-rose-700 font-bold' : 'text-stone-900 font-semibold'} truncate" title="${escapeHtml(r.productName)}">
                                 ${escapeHtml(r.productName)}
                             </td>
@@ -996,6 +1015,8 @@ function renderRecipeDetailPanel() {
                 const perGramPrice = specGVal > 0 ? ((parseFloat(ig.unitPrice) || 0) / specGVal) : 0;
                 const isLinked = Boolean(entry.linkedRaw && ig.priceSource !== 'MANUAL');
                 const unitUpperStr = String(ig.unit || 'G').toUpperCase();
+                const specWarn = unitUpperStr !== 'EA' && ig.priceSource !== 'MANUAL' && !isSpecWeightParseable(ig.spec);
+                const specWarnHtml = specWarn ? `<span class="shrink-0 px-1 rounded bg-rose-100 text-rose-700 text-[9.5px] font-extrabold" title="규격 '${escapeHtml(ig.spec || '없음')}'에서 중량을 읽지 못해 1kg(1,000g)으로 가정해 계산 중입니다. 원재료 발주서 규격을 '20kg', '500g×10'처럼 입력하거나 재료원가를 눌러 직접 설정하세요.">⚠규격</span>` : '';
                 const costCalcLine = unitUpperStr === 'EA'
                     ? `${formatCurrency(ig.unitPrice)} × ${fmtDec(ig.qty, 2)}EA = ${fmtDec(entry.effCost, 1)}원`
                     : `(${formatCurrency(ig.unitPrice)} ÷ ${fmtDec(specGVal, 0)}g = ${perGramPrice.toFixed(2)}원/g) × ${fmtDec(entry.effWeightG, 1)}g = ${fmtDec(entry.effCost, 1)}원`;
@@ -1010,7 +1031,7 @@ ${fmtDec(entry.effWeightG, 1)}g ÷ ${fmtDec(topDenomG, 1)}g × 100 = ${fmtDec(pc
                     <tr class="hover:bg-amber-50/30">
                         <td class="fd-td py-1 px-2 pl-3">
                             <div class="flex items-center gap-1 min-w-0" title="${escapeHtml(ig.item || '')} (내부코드: ${escapeHtml(ig.itemCode || '-')})">
-                                <span class="w-1.5 h-1.5 rounded-full shrink-0 ${isLinked ? 'bg-emerald-500' : 'bg-stone-300'}" title="${isLinked ? '원재료 페이지 최신단가 공유중' : '수기/개별 단가'}"></span>
+                                <span class="w-1.5 h-1.5 rounded-full shrink-0 ${isLinked ? 'bg-emerald-500' : 'bg-stone-300'}" title="${isLinked ? '원재료 페이지 최신단가 공유중' : '수기/개별 단가'}"></span>${specWarnHtml}
                                 <input type="text" value="${escapeHtml(ig.item || '')}" onchange="updateRecipeIngredient(${idx}, 'item', this.value)" class="w-full min-w-0 font-bold text-stone-900 bg-transparent focus:bg-white focus:outline-amber-500 truncate">
                             </div>
                         </td>
@@ -1408,8 +1429,23 @@ function selectRecipeItem(id) {
     renderRecipeWorkspace();
 }
 
+// [3단계 P7] 품목코드 중복 방지: 기존 숫자 코드 중 가장 큰 값 + 1
+function getNextUnusedRecipeCode(base = 100000) {
+    const used = new Set((recipesData || []).map(r => String(r.productCode || '').trim()));
+    let maxNum = base;
+    used.forEach(c => { if (/^\d+$/.test(c)) maxNum = Math.max(maxNum, parseInt(c, 10)); });
+    let next = maxNum + 1;
+    while (used.has(String(next))) next++;
+    return String(next);
+}
+function getDuplicateRecipeCodes() {
+    const cnt = {};
+    (recipesData || []).forEach(r => { const c = String(r.productCode || '').trim(); if (c) cnt[c] = (cnt[c] || 0) + 1; });
+    return new Set(Object.keys(cnt).filter(c => cnt[c] > 1));
+}
+
 function createNewRecipeItem(type = 'PRODUCT') {
-    const nextCode = String(100000 + (recipesData.length + 1));
+    const nextCode = getNextUnusedRecipeCode();
     const isSub = type === 'SUB';
     const newRc = ensureRecipeSchema({
         id: 'rc_' + Date.now(),
@@ -1437,7 +1473,7 @@ function duplicateSelectedRecipe() {
     if (!src) return showToast('복제할 품목을 먼저 선택해 주세요.', 'error');
     const copy = JSON.parse(JSON.stringify(src));
     copy.id = 'rc_' + Date.now();
-    copy.productCode = String((parseInt(src.productCode, 10) || 100000) + 1);
+    copy.productCode = getNextUnusedRecipeCode();
     copy.productName = `${src.productName} (복사본)`;
     copy.updatedAt = getTodayStr();
     recipesData.unshift(copy);
@@ -1466,6 +1502,13 @@ function deleteCurrentRecipeItem(id) {
 function updateRecipeField(field, val) {
     const rc = recipesData.find(r => r.id === selectedRecipeId);
     if (!rc) return;
+    if (field === 'productCode') {
+        const code = String(val || '').trim();
+        const dup = (recipesData || []).find(r => r.id !== rc.id && String(r.productCode || '').trim() === code);
+        if (!code) { showToast('품목코드는 비워둘 수 없습니다.', 'error'); renderRecipeWorkspace(); return; }
+        if (dup) { showToast(`품목코드 ${code}는 이미 [${dup.productName}]에서 사용 중입니다. 다른 코드를 입력하세요.`, 'error'); renderRecipeWorkspace(); return; }
+        val = code;
+    }
     rc[field] = val;
     rc.updatedAt = getTodayStr();
     persistRecipeChange();
@@ -2169,6 +2212,7 @@ async function applyCurrentRawMaterialPricesToAllRecipes() {
     let matchedRawRows = 0;
     let changedPriceRows = 0;
     let matchedPackRows = 0;
+    let manualKeptRows = 0;
     const unmatchedNames = new Set();
 
     (recipesData || []).forEach(rc => {
@@ -2180,10 +2224,13 @@ async function applyCurrentRawMaterialPricesToAllRecipes() {
             const rawName = String(ig.item || '').trim();
             if (!rawName || /^(식수|물|정제수|수돗물|얼음|파지)/.test(rawName)) return;
 
+            // [3단계 P2] 이미 연결된 원재료(rawKey → 내부코드)를 먼저 사용하고, 연결이 없을 때만 이름으로 찾음.
+            //  수동 고정 단가(MANUAL)는 덮어쓰지 않음
+            if (ig.priceSource === 'MANUAL') { manualKeptRows++; return; }
             const hit =
-                lookup.findBestByName(rawName, ig.spec) ||
                 (ig.rawKey && lookup.byKey.get(ig.rawKey)) ||
                 (ig.itemCode && lookup.byCode.get(ig.itemCode)) ||
+                lookup.findBestByName(rawName, ig.spec) ||
                 null;
 
             if (hit) {
@@ -2191,7 +2238,6 @@ async function applyCurrentRawMaterialPricesToAllRecipes() {
                 const prevSpecG = parseFloat(ig.specGrams) || 0;
                 ig.rawKey = hit.rawKey;
                 ig.itemCode = hit.itemCode;
-                ig.priceSource = 'RAW_DB';
                 ig.unitPrice = hit.unitPrice;
                 if (hit.spec) {
                     ig.spec = hit.spec;
@@ -2212,17 +2258,17 @@ async function applyCurrentRawMaterialPricesToAllRecipes() {
             const pkName = String(pk.name || '').trim();
             if (!pkName) return;
 
+            if (pk.priceSource === 'MANUAL') { manualKeptRows++; return; }
             const hit =
-                lookup.findBestByName(pkName, pk.spec) ||
                 (pk.rawKey && lookup.byKey.get(pk.rawKey)) ||
                 (pk.code && lookup.byCode.get(pk.code)) ||
+                lookup.findBestByName(pkName, pk.spec) ||
                 null;
 
             if (hit) {
                 const prevPrice = parseFloat(pk.purchasePrice) || 0;
                 pk.rawKey = hit.rawKey;
                 pk.code = hit.itemCode;
-                pk.priceSource = 'RAW_DB';
                 pk.purchasePrice = hit.unitPrice;
                 pk.spec = hit.spec || '';
                 pk.specQty = 1;
@@ -2245,9 +2291,8 @@ async function applyCurrentRawMaterialPricesToAllRecipes() {
     }
 
     const totalMatched = matchedRawRows + matchedPackRows;
-    const unmatchNote = unmatchedNames.size > 0
-        ? ` (미매칭 수기품목 ${unmatchedNames.size}종 유지)`
-        : '';
+    const unmatchNote = (unmatchedNames.size > 0 ? ` (미매칭 수기품목 ${unmatchedNames.size}종 유지)` : '')
+        + (manualKeptRows > 0 ? ` · 수동 고정 단가 ${manualKeptRows}건은 그대로 유지` : '');
     showToast(
         `[현재 단가 보정 완료] 총 ${totalMatched}개 항목(원재료 ${matchedRawRows} · 포장재 ${matchedPackRows}) 연동 · 단가변동 ${changedPriceRows}건 반영!${unmatchNote} — 자동 저장됩니다.`,
         'success'
@@ -2314,6 +2359,7 @@ function persistRecipeChange() {
     if (recipeSaveTimer) clearTimeout(recipeSaveTimer);
     recipeSaveTimer = setTimeout(() => { recipeSaveTimer = null; pushRecipesToGoogleSheet(true); }, RECIPE_AUTOSAVE_DELAY_MS);
     updateRecipeDbStatusUI('syncing', '저장 대기...');
+    if (typeof window.refreshProductPriceRecipeLinks === 'function') window.refreshProductPriceRecipeLinks(); // [3단계 Q4] 제품단가 재료비 실시간 반영
 }
 
 window.addEventListener('beforeunload', (e) => {
@@ -2390,6 +2436,7 @@ async function syncRecipesFromGoogleSheet(showMessage = false) {
                 selectedRecipeId = recipesData[0]?.id || null;
             }
             saveLocalCache();
+            if (typeof window.refreshProductPriceRecipeLinks === 'function') window.refreshProductPriceRecipeLinks();
             if (showMessage) showToast(`레시피 DB에서 ${recipesData.length}종 동기화 완료`, 'success');
         } else if (localCount > 0) {
             // DB는 비어 있는데 이 기기에는 레시피가 남아 있음 → 지우지 않고 그대로 보여줌 (복원 가능)
@@ -2504,7 +2551,7 @@ function exportRecipesCsv() {
     [...(recipesData || [])].sort(compareRecipeProductCode).forEach(rc => {
         const m = calculateRecipeMetrics(rc);
         const typeLabel = rc.recipeType === 'SUB' ? '반제품/충전물' : '완제품';
-        csv += `"${typeLabel}","${rc.productCode}","${rc.productName}",${rc.divisionWeight},${m.prodQty.toFixed(1)},${rc.packQty},${m.batchPkQty.toFixed(1)},${m.sellPrice},${m.costRatioPct.toFixed(2)},${m.unitCost.toFixed(2)},${Math.round(m.salesCost)},${Math.round(m.unitPackCost)},${Math.round(m.totalPackCost)},${m.productionCost.toFixed(2)},${Math.round(m.weightTotalG)},${Math.round(m.fillingWeightG)}\n`;
+        csv += [typeLabel, String(rc.productCode || ''), rc.productName, Number(rc.divisionWeight) || 0, Number(m.prodQty.toFixed(1)), Number(rc.packQty) || 0, Number(m.batchPkQty.toFixed(1)), m.sellPrice, Number(m.costRatioPct.toFixed(2)), Number(m.unitCost.toFixed(2)), Math.round(m.salesCost), Math.round(m.unitPackCost), Math.round(m.totalPackCost), Number(m.productionCost.toFixed(2)), Math.round(m.weightTotalG), Math.round(m.fillingWeightG)].map(csvCell).join(',') + '\n';
     });
     triggerCsvDownload(csv, `바로가공장_배합비원가표_${getTodayStr()}.csv`);
 }
