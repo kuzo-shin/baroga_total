@@ -788,13 +788,13 @@
             el.dispatchEvent(new Event('change', { bubbles: true }));
             el.blur();
             // 값 반영 후 표가 다시 그려질 수 있으므로 다음 화면에서 같은 위치를 다시 찾음
-            requestAnimationFrame(() => setTimeout(() => {
+            setTimeout(() => {
                 const t = document.querySelectorAll('table')[tableIdx];
                 if (!t) return;
                 const again = [...t.querySelectorAll('input')].filter(i => i.type === el.type && i.closest('td') && i.closest('td').cellIndex === colIdx);
                 const next = again[targetIdx];
                 if (next) { next.focus(); if (typeof next.select === 'function') next.select(); }
-            }, 0));
+            }, 30);
         });
         function openConfirmModal(title, message, onConfirm) {
             document.getElementById('confirmModalTitle').textContent = title;
