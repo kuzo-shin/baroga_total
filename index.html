@@ -2127,7 +2127,6 @@
         function openDbConfigModal() { document.getElementById('gasUrlInput').value = gasWebAppUrl; const m = document.getElementById('dbConfigModal'); m.classList.remove('hidden'); m.classList.add('flex'); }
         function closeDbConfigModal() { const m = document.getElementById('dbConfigModal'); m.classList.add('hidden'); m.classList.remove('flex'); }
         function saveGasUrlConfig() { const v = document.getElementById('gasUrlInput').value.trim(); if (v) { gasWebAppUrl = v; persistGasUrl(v); rawDbLoaded = false; rawDbRevision = null; rawDbBlockReason = '새 DB 주소를 아직 불러오지 못했습니다'; closeDbConfigModal(); syncFromGoogleSheet(true); } }
-        function reclassifyAllTaxTypesAndSave() { ordersData.forEach(o => { o.taxType = inferStandardTaxType(o.colB); o.id = buildIdWithMeta(o); }); closeDbConfigModal(); renderDashboard(); pushAllToGoogleSheet(false); }
 
         let _editingOrderOrigQty = 0;
         let _editingOrderOrigRem = 0;
