@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: v3.7 - 2026-11-19 상단 DB 버튼 3종 UI/UX 통일 (DB 연동됨 배지 h-9 · 초록 DB저장 · 우측 회전 동기화 아이콘 스핀 연동)]
+// [VERSION: v3.8 - 2026-11-20 좌측 제품내역 높이 배합비내역과 1:1 정렬 및 한화면 스크롤 적용 · DB연동됨 좌측 [원재료 현재 단가 적용] 자동보정 버튼 탑재]
 // 바로가 공장 통합 관리 시스템 - 레시피 전용 모듈 (recipe.js)
 // ============================================================================
 
@@ -65,17 +65,51 @@ function parsePackagingSpecQty() {
     return 1;
 }
 
-// 원재료 페이지(ordersData)에서 일자순 최신 단가 기준 카탈로그 및 내부코드 맵 생성
+// 품목명 정규화 헬퍼 (공백·특수기호 제거 및 단어 순서 무관 비교용)
+function normalizeRawItemName(str) {
+    return String(str || '')
+        .toLowerCase()
+        .replace(/^[*★●▪•\-\s]+/, '')
+        .replace(/\s+/g, '')
+        .trim();
+}
+
+function normalizeRawItemAlphaNum(str) {
+    return String(str || '')
+        .toLowerCase()
+        .replace(/[^가-힣a-z0-9]/g, '');
+}
+
+function extractRawItemTokens(str) {
+    return String(str || '')
+        .toLowerCase()
+        .split(/[^가-힣a-z0-9]+/)
+        .filter(t => t.length >= 2 && !/^\d+(kg|g|ml|l|ea|포|매|장|박스|입)$/.test(t));
+}
+
+// 원재료 [4. 제품 단가 · 변동 이력]과 100% 동일한 기준(u > 0 일자순 최신 현재단가)으로 카탈로그 및 맵 생성
 function getRawMaterialCatalogForRecipe() {
+    let sourceOrders = Array.isArray(ordersData) ? ordersData : [];
+    if (sourceOrders.length === 0) {
+        try {
+            const cached = localStorage.getItem('baroga_orders_cache_v18');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (Array.isArray(parsed)) sourceOrders = parsed;
+            }
+        } catch (e) {}
+    }
+
     const map = {};
-    const sortedOrders = [...(ordersData || [])].sort((a, b) =>
+    const sortedOrders = [...sourceOrders].sort((a, b) =>
         String(a.date || '').localeCompare(String(b.date || ''))
     );
     sortedOrders.forEach(o => {
         const u = parseFloat(o.amount) || 0;
         const itemName = String(o.colB || '').trim();
         const specName = String(o.colC || '').trim();
-        if (u < 0 || !itemName) return;
+        // 4. 제품단가·변동이력(getFilteredPriceCatalogList)과 동일하게 0원 초과 유효 단가 기준 최신값 적용
+        if (u <= 0 || !itemName) return;
         const rawKey = `${itemName}||${specName}`;
         const combinedText = `${itemName} ${specName}`;
         const isPack = (
@@ -105,16 +139,72 @@ function buildRawCatalogLookupMaps() {
     const byKey = new Map();
     const byCode = new Map();
     const byName = new Map();
+    const byNormName = new Map();
+    const byAlphaNum = new Map();
+
     list.forEach(entry => {
         byKey.set(entry.rawKey, entry);
         byCode.set(entry.itemCode, entry);
-        // 동일 품명이 여러 규격일 경우 가장 최근 발주 건 우선
+
         const prev = byName.get(entry.item);
         if (!prev || String(entry.latestDate).localeCompare(String(prev.latestDate)) >= 0) {
             byName.set(entry.item, entry);
         }
+
+        const norm = normalizeRawItemName(entry.item);
+        if (norm) {
+            const prevN = byNormName.get(norm);
+            if (!prevN || String(entry.latestDate).localeCompare(String(prevN.latestDate)) >= 0) {
+                byNormName.set(norm, entry);
+            }
+        }
+
+        const alpha = normalizeRawItemAlphaNum(entry.item);
+        if (alpha) {
+            const prevA = byAlphaNum.get(alpha);
+            if (!prevA || String(entry.latestDate).localeCompare(String(prevA.latestDate)) >= 0) {
+                byAlphaNum.set(alpha, entry);
+            }
+        }
     });
-    return { list, byKey, byCode, byName };
+
+    // 스마트 품목명 매칭 (정확 일치 -> 공백/기호 무시 일치 -> 핵심 토큰 모두 포함 일치)
+    const findBestByName = (rawName, specHint = '') => {
+        const clean = String(rawName || '').trim();
+        if (!clean || /^(식수|물|정제수|수돗물|얼음|파지)/.test(clean)) return null;
+        const exactKey = `${clean}||${String(specHint || '').trim()}`;
+        if (byKey.has(exactKey)) return byKey.get(exactKey);
+        if (byName.has(clean)) return byName.get(clean);
+
+        const norm = normalizeRawItemName(clean);
+        if (norm && byNormName.has(norm)) return byNormName.get(norm);
+
+        const alpha = normalizeRawItemAlphaNum(clean);
+        if (alpha && byAlphaNum.has(alpha)) return byAlphaNum.get(alpha);
+
+        // 토큰 순서 무관 매칭 (예: 'T45(포리쉐)' ↔ '포리쉐 T45', '냉동이스트(고당)' ↔ '하이룬델)고당냉동이스트')
+        const tokens = extractRawItemTokens(clean);
+        if (tokens.length >= 1) {
+            let bestHit = null;
+            let bestScore = 0;
+            list.forEach(cand => {
+                const candAlpha = normalizeRawItemAlphaNum(cand.item);
+                if (!candAlpha) return;
+                const allIncluded = tokens.every(tk => candAlpha.includes(tk));
+                if (allIncluded) {
+                    const score = tokens.reduce((s, t) => s + t.length, 0) * 100 - Math.abs(candAlpha.length - alpha.length);
+                    if (score > bestScore || (score === bestScore && bestHit && String(cand.latestDate).localeCompare(String(bestHit.latestDate)) > 0)) {
+                        bestScore = score;
+                        bestHit = cand;
+                    }
+                }
+            });
+            if (bestHit && (tokens.length >= 2 || alpha.length >= 3)) return bestHit;
+        }
+        return null;
+    };
+
+    return { list, byKey, byCode, byName, byNormName, byAlphaNum, findBestByName };
 }
 
 // 원재료 페이지(ordersData) 단가와 레시피 내부코드 실시간 동기화
@@ -128,9 +218,7 @@ function syncIngredientWithRawCatalog(ig, lookup) {
     } else if (ig.itemCode && lookup.byCode.has(ig.itemCode)) {
         matched = lookup.byCode.get(ig.itemCode);
     } else if (ig.item) {
-        const exactKey = `${String(ig.item).trim()}||${String(ig.spec || '').trim()}`;
-        if (lookup.byKey.has(exactKey)) matched = lookup.byKey.get(exactKey);
-        else if (lookup.byName.has(String(ig.item).trim())) matched = lookup.byName.get(String(ig.item).trim());
+        matched = lookup.findBestByName(ig.item, ig.spec);
     }
 
     if (matched) {
@@ -162,9 +250,7 @@ function syncPackagingWithRawCatalog(pk, lookup) {
     } else if (pk.code && lookup.byCode.has(pk.code)) {
         matched = lookup.byCode.get(pk.code);
     } else if (pk.name) {
-        const exactKey = `${String(pk.name).trim()}||${String(pk.spec || '').trim()}`;
-        if (lookup.byKey.has(exactKey)) matched = lookup.byKey.get(exactKey);
-        else if (lookup.byName.has(String(pk.name).trim())) matched = lookup.byName.get(String(pk.name).trim());
+        matched = lookup.findBestByName(pk.name, pk.spec);
     }
 
     // 기존에 1EA 단가(예: 80원)가 200매 등으로 중복 나눗셈되어 개당 5원 미만(0.4원 등)으로 잘못 저장된 항목 자동 복원
@@ -466,7 +552,8 @@ function renderRecipeWorkspace() {
 
     const mainEl = document.getElementById('recipeMainSection');
     if (!mainEl) return;
-    mainEl.className = `${activeMasterDomain === 'RECIPE' ? 'flex' : 'hidden'} max-w-[1880px] w-full mx-auto px-3 sm:px-5 py-3.5 flex-1 flex-col gap-3`;
+    ensureApplyRawPriceHeaderButton();
+    mainEl.className = `${activeMasterDomain === 'RECIPE' ? 'flex' : 'hidden'} max-w-[1880px] w-full mx-auto px-3 sm:px-5 py-2.5 flex-1 flex-col gap-2.5`;
 
     if (!document.getElementById('fdThreeColRoot')) {
         mainEl.innerHTML = `
@@ -478,10 +565,10 @@ function renderRecipeWorkspace() {
                 .fd-kv-input { width: 100%; min-width: 0; text-align: right; font-weight: 800; background: #FFFBEB; border: 1px solid #F59E0B; border-radius: 4px; padding: 1px 5px; font-size: 11.5px; color: #1C1917; }
                 .fd-kv-input:focus { outline: 2px solid #D97706; background: #FFFFFF; }
             </style>
-            <div id="fdThreeColRoot" class="grid grid-cols-1 xl:grid-cols-12 gap-3.5 items-start flex-1">
-                <!-- [1] 좌측: 제품내역 (체크박스·배합비 열 제거로 깔끔한 목차) -->
-                <div class="xl:col-span-3 bg-white rounded-xl border border-stone-300 shadow-2xs flex flex-col overflow-hidden">
-                    <div class="px-3 py-2.5 bg-stone-100 border-b border-stone-300 flex flex-wrap items-center justify-between gap-1.5">
+            <div id="fdThreeColRoot" class="grid grid-cols-1 xl:grid-cols-12 gap-3.5 xl:items-stretch xl:h-[calc(100vh-172px)] xl:min-h-[580px]">
+                <!-- [1] 좌측: 제품내역 (제품 배합비내역과 상하 높이 1:1 일치 + 내부 스크롤) -->
+                <div class="xl:col-span-3 xl:h-full bg-white rounded-xl border border-stone-300 shadow-2xs flex flex-col overflow-hidden">
+                    <div class="px-3 py-2.5 bg-stone-100 border-b border-stone-300 flex flex-wrap items-center justify-between gap-1.5 shrink-0">
                         <div class="flex items-center gap-1.5">
                             <h3 class="text-xs sm:text-sm font-black text-stone-900">제품내역</h3>
                             <span id="recipeCountSub" class="px-1.5 py-0.5 rounded bg-stone-200 text-stone-700 text-[10px] font-extrabold">0종</span>
@@ -493,7 +580,7 @@ function renderRecipeWorkspace() {
                             <button type="button" onclick="deleteSelectedRecipe()" class="px-2 py-1 rounded-lg text-[11px] font-bold bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 cursor-pointer">삭제</button>
                         </div>
                     </div>
-                    <div class="p-2 border-b border-stone-200 bg-stone-50/70 flex flex-col gap-1.5">
+                    <div class="p-2 border-b border-stone-200 bg-stone-50/70 flex flex-col gap-1.5 shrink-0">
                         <div class="grid grid-cols-3 gap-1">
                             <button type="button" onclick="setRecipeCategoryFilter('ALL')" id="rcCat_ALL" class="py-1 rounded text-[11px] font-extrabold bg-stone-900 text-white cursor-pointer">전체</button>
                             <button type="button" onclick="setRecipeCategoryFilter('PRODUCT')" id="rcCat_PRODUCT" class="py-1 rounded text-[11px] font-bold bg-white border border-stone-200 text-stone-600 cursor-pointer">완제품</button>
@@ -504,14 +591,18 @@ function renderRecipeWorkspace() {
                             <button type="button" onclick="insertFoodDiscoverySampleSet()" title="푸드디스커버리 다단계 반제품 샘플 넣기" class="px-2 py-1 rounded-lg text-[10px] font-bold bg-amber-50 border border-amber-300 text-amber-900 hover:bg-amber-100 cursor-pointer shrink-0">샘플추가</button>
                         </div>
                     </div>
-                    <div id="recipeSidebarList" class="overflow-y-auto max-h-[740px]"></div>
+                    <div id="recipeSidebarList" class="flex-1 min-h-0 overflow-y-auto max-h-[420px] xl:max-h-none"></div>
+                    <div class="px-3 py-1.5 bg-stone-50 border-t border-stone-200 text-[11px] text-stone-500 flex items-center justify-between shrink-0">
+                        <span>클릭하여 배합비 조회 · 편집</span>
+                        <span class="font-mono text-[10.5px] text-stone-400">스크롤 이동 ↕</span>
+                    </div>
                 </div>
 
-                <!-- [2] 중앙: 제품 배합비내역 -->
-                <div id="fdCenterFormulaPanel" class="xl:col-span-5 bg-white rounded-xl border border-stone-300 shadow-2xs flex flex-col overflow-hidden"></div>
+                <!-- [2] 중앙: 제품 배합비내역 (좌측 제품내역과 동일 높이 · 내부 스크롤) -->
+                <div id="fdCenterFormulaPanel" class="xl:col-span-5 xl:h-full bg-white rounded-xl border border-stone-300 shadow-2xs flex flex-col overflow-hidden"></div>
 
                 <!-- [3] 우측: 원가·수율 요약 + 이미지 + 제빵공정 -->
-                <div id="fdRightMetricsPanel" class="xl:col-span-4 flex flex-col gap-3"></div>
+                <div id="fdRightMetricsPanel" class="xl:col-span-4 xl:h-full flex flex-col gap-2.5 overflow-y-auto"></div>
             </div>
 
             <!-- [모달] 레시피 원재료 검색 · 다중 투입 팝업 -->
@@ -877,7 +968,7 @@ function renderRecipeDetailPanel() {
 
     centerEl.innerHTML = `
         <!-- 상단 현재 선택 품목 헤더 -->
-        <div class="px-3.5 py-2.5 bg-stone-100 border-b border-stone-300 flex items-center justify-between gap-2">
+        <div class="px-3.5 py-2.5 bg-stone-100 border-b border-stone-300 flex items-center justify-between gap-2 shrink-0">
             <div class="flex items-center gap-1.5 flex-1 min-w-0">
                 <h3 class="text-xs sm:text-sm font-black text-stone-900 shrink-0">제품 배합비내역</h3>
                 <select onchange="updateRecipeField('recipeType', this.value)" class="text-[11px] font-extrabold rounded-lg px-2 py-1 border shrink-0 ${rc.recipeType === 'SUB' ? 'bg-rose-50 text-rose-700 border-rose-300' : 'bg-white text-stone-800 border-stone-300'}">
@@ -890,7 +981,7 @@ function renderRecipeDetailPanel() {
         </div>
 
         <!-- 배합비 투입 컨트롤 박스 (3줄 수직 정렬 그리드 · 줄바꿈 깨짐 방지) -->
-        <div class="p-2.5 bg-amber-50/50 border-b border-stone-200 space-y-1.5 text-xs">
+        <div class="p-2.5 bg-amber-50/50 border-b border-stone-200 space-y-1.5 text-xs shrink-0">
             <!-- 1열: 원재료 투입 (팝업 검색창 호출 방식) -->
             <div class="flex items-center gap-1.5">
                 <div class="w-[132px] shrink-0 h-7 px-2 rounded-lg bg-amber-100/80 border border-amber-300 flex items-center justify-center font-extrabold text-[11px] text-amber-950 whitespace-nowrap">
@@ -939,8 +1030,8 @@ function renderRecipeDetailPanel() {
             </div>
         </div>
 
-        <!-- 배합비 메인 그리드 (table-fixed + 최적 열 비율로 원재료·수량 과도한 확장 방지) -->
-        <div class="overflow-y-auto max-h-[680px]">
+        <!-- 배합비 메인 그리드 (내부 독립 스크롤 · 상하 높이 1:1 고정) -->
+        <div class="flex-1 min-h-0 overflow-y-auto max-h-[540px] xl:max-h-none">
             <table class="w-full table-fixed border-collapse text-left">
                 <colgroup>
                     <col class="w-[33%]">
@@ -969,8 +1060,8 @@ function renderRecipeDetailPanel() {
                 </tbody>
             </table>
         </div>
-        <div class="px-3 py-1.5 bg-stone-50 border-t border-stone-200 text-[11px] text-stone-500 flex flex-wrap items-center justify-between gap-1">
-            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>원재료 페이지 최신 발주단가 자동 공유중 (재료원가 클릭 시 개별 설정)</span>
+        <div class="px-3 py-1.5 bg-stone-50 border-t border-stone-200 text-[11px] text-stone-500 flex flex-wrap items-center justify-between gap-1 shrink-0">
+            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>원재료 [4. 제품단가·변동이력] 현재 단가 연동중 (재료원가 클릭 시 개별 설정)</span>
             <span>배합 재료원가 합계: <strong class="text-stone-900">${fmtDec(m.rawMaterialCost, 1)}원</strong></span>
         </div>
     `;
@@ -1074,7 +1165,7 @@ function renderRecipeDetailPanel() {
         </div>
 
         <!-- 하단: 제빵공정 테이블 -->
-        <div class="bg-white rounded-xl border border-stone-300 shadow-2xs p-2.5">
+        <div class="bg-white rounded-xl border border-stone-300 shadow-2xs p-2.5 flex-1 flex flex-col justify-between">
             <h4 class="text-xs sm:text-sm font-black text-stone-900 mb-2 px-0.5">제빵공정</h4>
             <div class="overflow-x-auto">
                 <table class="w-full table-fixed border-collapse text-xs">
@@ -1858,6 +1949,122 @@ function updateRecipeDbStatusUI(state, text) {
     }
 }
 
+// 상단 [DB 연동됨] 버튼 바로 왼쪽에 [원재료 현재 단가 적용] 버튼 자동 생성 및 바인딩
+function ensureApplyRawPriceHeaderButton() {
+    const badgeBtn = document.getElementById('recipeDbStatusBadge');
+    if (!badgeBtn || !badgeBtn.parentElement) return;
+    if (document.getElementById('applyCurrentRawPricesBtn')) return;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'applyCurrentRawPricesBtn';
+    btn.onclick = () => applyCurrentRawMaterialPricesToAllRecipes();
+    btn.title = '전 레시피(완제품·반제품·포장재)의 품목명을 원재료 탭 [4. 제품 단가 · 변동 이력]의 현재 단가로 일괄 자동 보정합니다';
+    btn.className = 'flex items-center gap-1.5 px-3.5 py-1.5 h-9 rounded-xl text-xs font-extrabold bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition cursor-pointer';
+    btn.innerHTML = `<i data-lucide="refresh-ccw" class="w-3.5 h-3.5"></i><span>원재료 현재 단가 적용</span>`;
+    badgeBtn.parentElement.insertBefore(btn, badgeBtn);
+    if (window.lucide) lucide.createIcons();
+}
+
+// [핵심 기능] 전체 레시피 내 원재료·포장재 품목명을 원재료 [4. 제품 단가 · 변동 이력]의 '현재 단가' 값으로 일괄 자동 보정
+async function applyCurrentRawMaterialPricesToAllRecipes() {
+    if ((!Array.isArray(ordersData) || ordersData.length === 0) && typeof syncFromGoogleSheet === 'function') {
+        try { await syncFromGoogleSheet(false); } catch (e) {}
+    }
+
+    const lookup = buildRawCatalogLookupMaps();
+    if (!lookup.list || lookup.list.length === 0) {
+        return showToast('원재료 발주/단가 데이터가 없습니다. 원재료 탭의 DB 연동을 먼저 확인해 주세요.', 'error');
+    }
+
+    let matchedRawRows = 0;
+    let changedPriceRows = 0;
+    let matchedPackRows = 0;
+    const unmatchedNames = new Set();
+
+    (recipesData || []).forEach(rc => {
+        if (!rc) return;
+
+        // 1) 배합 원재료(RAW) 현재 단가 일괄 보정 (수동 고정 상태였더라도 원재료 DB에 매칭되면 현재 단가로 갱신)
+        (rc.ingredients || []).forEach(ig => {
+            if (!ig || ig.rowType === 'SUB_RECIPE') return;
+            const rawName = String(ig.item || '').trim();
+            if (!rawName || /^(식수|물|정제수|수돗물|얼음|파지)/.test(rawName)) return;
+
+            const hit =
+                lookup.findBestByName(rawName, ig.spec) ||
+                (ig.rawKey && lookup.byKey.get(ig.rawKey)) ||
+                (ig.itemCode && lookup.byCode.get(ig.itemCode)) ||
+                null;
+
+            if (hit) {
+                const prevPrice = parseFloat(ig.unitPrice) || 0;
+                const prevSpecG = parseFloat(ig.specGrams) || 0;
+                ig.rawKey = hit.rawKey;
+                ig.itemCode = hit.itemCode;
+                ig.priceSource = 'RAW_DB';
+                ig.unitPrice = hit.unitPrice;
+                if (hit.spec) {
+                    ig.spec = hit.spec;
+                    ig.specGrams = hit.specGrams;
+                }
+                matchedRawRows++;
+                if (Math.abs(prevPrice - hit.unitPrice) > 0.01 || Math.abs(prevSpecG - hit.specGrams) > 0.01) {
+                    changedPriceRows++;
+                }
+            } else {
+                unmatchedNames.add(rawName);
+            }
+        });
+
+        // 2) 포장지·부자재 현재 단가 일괄 보정
+        (rc.packagingList || []).forEach(pk => {
+            if (!pk) return;
+            const pkName = String(pk.name || '').trim();
+            if (!pkName) return;
+
+            const hit =
+                lookup.findBestByName(pkName, pk.spec) ||
+                (pk.rawKey && lookup.byKey.get(pk.rawKey)) ||
+                (pk.code && lookup.byCode.get(pk.code)) ||
+                null;
+
+            if (hit) {
+                const prevPrice = parseFloat(pk.purchasePrice) || 0;
+                pk.rawKey = hit.rawKey;
+                pk.code = hit.itemCode;
+                pk.priceSource = 'RAW_DB';
+                pk.purchasePrice = hit.unitPrice;
+                pk.spec = hit.spec || '';
+                pk.specQty = 1;
+                matchedPackRows++;
+                if (Math.abs(prevPrice - hit.unitPrice) > 0.01) {
+                    changedPriceRows++;
+                }
+            } else {
+                unmatchedNames.add(pkName);
+            }
+        });
+
+        rc.updatedAt = getTodayStr();
+    });
+
+    saveLocalCache();
+    renderRecipeWorkspace();
+    if (typeof window.refreshProductPriceRecipeLinks === 'function') {
+        window.refreshProductPriceRecipeLinks();
+    }
+
+    const totalMatched = matchedRawRows + matchedPackRows;
+    const unmatchNote = unmatchedNames.size > 0
+        ? ` (미매칭 수기품목 ${unmatchedNames.size}종 유지)`
+        : '';
+    showToast(
+        `[현재 단가 보정 완료] 총 ${totalMatched}개 항목(원재료 ${matchedRawRows} · 포장재 ${matchedPackRows}) 연동 · 단가변동 ${changedPriceRows}건 반영!${unmatchNote} — [DB 저장]을 눌러 확정하세요.`,
+        'success'
+    );
+}
+
 function openRecipeDbModal() {
     const urlToUse = (!recipeGasWebAppUrl || recipeGasWebAppUrl.includes(LEGACY_DUMMY_RECIPE_URL_PART))
         ? BAROGA_DEFAULT_RECIPE_GAS_URL
@@ -2008,6 +2215,13 @@ window.calculateRecipeMetrics = calculateRecipeMetrics;
 window.renderRecipeDetailPanel = renderRecipeDetailPanel;
 
 // 초기 구동 시 레시피 DB 자동 동기화 연결
+window.applyCurrentRawMaterialPricesToAllRecipes = applyCurrentRawMaterialPricesToAllRecipes;
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ensureApplyRawPriceHeaderButton);
+} else {
+    ensureApplyRawPriceHeaderButton();
+}
 window.addEventListener('load', () => {
+    ensureApplyRawPriceHeaderButton();
     setTimeout(() => { syncRecipesFromGoogleSheet(false); }, 350);
 });
