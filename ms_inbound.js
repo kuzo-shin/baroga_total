@@ -1385,7 +1385,7 @@
             <tr class="border-b border-stone-200 text-stone-500 font-bold">
               <th class="py-2.5 w-12 text-center">No.</th>
               <th class="py-2.5 w-28 text-center">상품코드</th>
-              <th class="py-2.5 w-36 text-center" title="바로가 레시피 탭의 품목코드를 입력하면 레시피 판매금액(1PK)이 pk당 매입단가에 자동 반영됩니다">레시피 품목코드</th>
+              <th class="py-2.5 w-24 text-center leading-tight" title="바로가 레시피 탭의 품목코드를 입력하면 레시피 판매금액(1PK)이 pk당 매입단가에 자동 반영됩니다">레시피<br>품목코드</th>
               <th class="py-2.5">엠즈 상품명 · 연결된 레시피</th>
               <th class="py-2.5 text-center w-24">박스입수</th>
               <th class="py-2.5 text-right w-52">pk당 매입단가 (원)</th>
@@ -1425,13 +1425,11 @@
               <tr class="hover:bg-stone-50/80">
                 <td class="py-2.5 text-center text-stone-400 font-semibold tabular-nums">${idx + 1}</td>
                 <td class="py-2.5 text-center font-mono text-[13.5px] font-bold text-stone-700 tabular-nums">${escapeHtml(it.code)}</td>
-                <td class="py-2.5 px-1.5 text-center">
-                  <div class="relative inline-flex items-center w-32">
-                    ${isSynced ? `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"></span>` : ''}
-                    <input type="text" list="msi_recipeIdDatalist" value="${escapeHtml(rCode)}" placeholder="예: 1001"
-                      onchange="window.MSInbound.setItemRecipeCode('${escapeQuotes(it.code)}', '${escapeQuotes(it.name)}', this.value)"
-                      class="w-full text-center font-mono text-[13.5px] py-1.5 rounded-lg border ${isSynced ? 'pl-4 pr-2 border-emerald-400 bg-emerald-50/60 font-extrabold text-emerald-800' : (rCode ? 'px-2 border-amber-300 bg-amber-50/50 font-extrabold text-amber-900' : 'px-2 border-stone-200 bg-stone-50/60 font-semibold text-stone-700')} focus:bg-white focus:outline-none focus:border-emerald-600 tabular-nums">
-                  </div>
+                <td class="py-2.5 px-1 text-center align-middle">
+                  <input type="text" list="msi_recipeIdDatalist" value="${escapeHtml(rCode)}" placeholder="코드" aria-label="레시피 품목코드"
+                    title="${isSynced ? '레시피 판매금액과 연동 중' : (rCode ? '연결됐지만 판매금액이 없어 수기 단가 사용' : '레시피 품목코드를 입력하면 판매금액이 자동 연동됩니다')}"
+                    onchange="window.MSInbound.setItemRecipeCode('${escapeQuotes(it.code)}', '${escapeQuotes(it.name)}', this.value)"
+                    class="mx-auto block w-[72px] h-8 px-1 text-center font-mono text-[13.5px] rounded-lg border ${isSynced ? 'border-emerald-300 bg-emerald-50 font-bold text-emerald-800' : (rCode ? 'border-amber-300 bg-amber-50 font-bold text-amber-900' : 'border-stone-200 bg-white font-medium text-stone-700 placeholder:text-stone-300')} focus:bg-white focus:outline-none tabular-nums">
                 </td>
                 <td class="py-2.5">
                   <div class="font-semibold text-stone-800 text-[13px]">${escapeHtml(it.name)}</div>
