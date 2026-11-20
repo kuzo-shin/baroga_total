@@ -1,4 +1,4 @@
-<!-- [VERSION: index.html v2.9 - 2026-11-20 원재료 업로드 양식(매입처·과세구분) 인식, 과세구분 열 그대로 사용, 수량 없는 양식 등록 차단 / v2.8 - 2026-11-20 3~5단계 정확성 (발주서 동일 줄·업로드 오류 표시·로트별 소진금액·월말 기준 재고 역산·제조원 추정 표시·재고 변동 이력·부가세 줄별 통일·CSV 안전 처리) / v2.7 2단계 보안 (DB 접속 코드 인증 · SRM 계정정보 삭제 · 급여/고정비 기본값 제거 · 화면 출력 이스케이프) / v2.6.1 DB 주소 4종 새 배포로 교체 · 각 기기 저장 주소 일괄 초기화 / v2.6 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 스냅샷 분할 저장 · 샘플 레시피 제거)] -->
+<!-- [VERSION: index.html v2.10 - 2026-11-20 모바일 UI: 일일 사용 보고 카드형 입력·하단 확정 바, 상단 탭 한 줄 가로 스크롤, 헤더 고정 해제, KPI 2열 / v2.9 - 2026-11-20 원재료 업로드 양식(매입처·과세구분) 인식, 과세구분 열 그대로 사용, 수량 없는 양식 등록 차단 / v2.8 - 2026-11-20 3~5단계 정확성 (발주서 동일 줄·업로드 오류 표시·로트별 소진금액·월말 기준 재고 역산·제조원 추정 표시·재고 변동 이력·부가세 줄별 통일·CSV 안전 처리) / v2.7 2단계 보안 (DB 접속 코드 인증 · SRM 계정정보 삭제 · 급여/고정비 기본값 제거 · 화면 출력 이스케이프) / v2.6.1 DB 주소 4종 새 배포로 교체 · 각 기기 저장 주소 일괄 초기화 / v2.6 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 스냅샷 분할 저장 · 샘플 레시피 제거)] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -26,10 +26,28 @@
         input[type="date"].expiry-input::-webkit-datetime-edit { display: inline-flex; justify-content: center; text-align: center; width: 100%; cursor: pointer; }
         input[type="date"].expiry-input::-webkit-datetime-edit-fields-wrapper { display: inline-flex; justify-content: center; }
         input[type="date"].expiry-input::-webkit-calendar-picker-indicator { cursor: pointer; }
+        /* [UI v2.10] 모바일(640px 미만) 전용 */
+        #mUsageBar { display: none; }
+        @media (max-width: 639px) {
+            header.app-header { position: static; }
+            .m-scroll-row { flex-wrap: nowrap !important; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+            .m-scroll-row::-webkit-scrollbar { display: none; }
+            .m-scroll-row > * { flex-shrink: 0; white-space: nowrap; }
+            #masterTabRow > button { padding-left: 0.75rem; padding-right: 0.75rem; }
+            #kpiGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
+            #kpiGrid > div { padding: 0.75rem; border-radius: 0.875rem; }
+            #kpiGrid > div > div:first-child > div { display: none; }
+            #kpiGrid [id$="Value"] { font-size: 1.15rem; line-height: 1.5rem; }
+            #kpiGrid [id$="Sub"] { font-size: 12px; }
+            #mainContentContainer { max-height: none; overflow: visible; padding: 0.75rem; }
+            body.m-usage-active { padding-bottom: 76px; }
+            body.m-usage-active #mUsageBar { display: flex; }
+            .m-input { font-size: 16px; } /* iOS 입력 시 화면 확대 방지 */
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
-    <header class="bg-white border-b border-stone-200 sticky top-0 z-30 shadow-sm">
+    <header class="app-header bg-white border-b border-stone-200 sticky top-0 z-30 shadow-sm">
         <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center gap-3.5">
                 <div class="px-3.5 py-1.5 rounded-xl bg-[#FAF8F5] border border-stone-200/90 shadow-xs flex flex-col items-center justify-center select-none shrink-0">
@@ -39,7 +57,7 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-base sm:text-lg font-extrabold tracking-tight text-stone-900">바로가 공장 통합 관리 시스템</h1>
-                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.9.0</span>
+                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.10.0</span>
                     </div>
                     <p class="text-xs text-stone-500 hidden sm:block">원재료 발주/재고 · 엠즈 입고/회송 · 레시피 배합비 · 제품단가 출고마진 통합 관리</p>
                 </div>
@@ -59,7 +77,7 @@
         <!-- 제목 아래 대항목 탭 바 (원재료 / 레시피) -->
         <div class="bg-stone-900 text-white border-t border-stone-800">
             <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-1.5 flex items-center justify-between gap-2">
-                <div class="flex items-center gap-2">
+                <div id="masterTabRow" class="m-scroll-row min-w-0 flex items-center gap-2">
                     <button type="button" onclick="switchMasterDomain('RAW')" id="masterTab_RAW" class="flex items-center gap-2 px-5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition cursor-pointer bg-amber-500 text-stone-950 shadow-xs">
                         <i data-lucide="package" class="w-4 h-4"></i><span>원재료</span>
                     </button>
@@ -79,7 +97,7 @@
         <!-- 원재료 하위 4대 워크스페이스 바 + 우측 원재료 DB 버튼 -->
         <div id="rawSubWorkspaceBar" class="bg-stone-100/90 border-t border-stone-200">
             <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-2">
-                <div class="flex flex-wrap items-center gap-1.5">
+                <div class="m-scroll-row w-full sm:w-auto flex flex-wrap items-center gap-1.5">
                     <button type="button" onclick="switchWorkspace('ORDER')" id="wsBtn_ORDER" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-extrabold transition cursor-pointer bg-stone-900 text-white shadow-xs">
                         <i data-lucide="clipboard-list" class="w-4 h-4"></i><span>1. 발주 이력 관리</span>
                     </button>
@@ -135,7 +153,7 @@
     </header>
     <!-- [A] 원재료 메인 영역 -->
     <main id="rawMaterialMainSection" class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-4 flex-1 flex flex-col gap-4">
-        <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
+        <section id="kpiGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
             <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs flex flex-col justify-between">
                 <div class="flex items-center justify-between"><span id="kpi1Title" class="text-xs font-bold text-stone-500">조회 기간 총 발주 건수</span><div class="w-8 h-8 rounded-xl bg-stone-100 text-stone-700 flex items-center justify-center"><i data-lucide="layers" class="w-4 h-4"></i></div></div>
                 <div class="mt-2 flex items-baseline gap-2"><span id="kpi1Value" class="text-2xl font-black text-stone-900">0건</span><span id="kpi1Sub" class="text-xs font-semibold text-stone-500">총 수량 0</span></div>
@@ -1018,6 +1036,7 @@
         function switchMasterDomain(domain) {
             activeMasterDomain = domain;
             window.activeMasterDomain = domain;
+            updateMobileUsageBar(0, 0);
             const activeCls = 'flex items-center gap-2 px-5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition cursor-pointer bg-amber-500 text-stone-950 shadow-xs';
             const idleCls = 'flex items-center gap-2 px-5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition cursor-pointer text-stone-300 hover:text-white hover:bg-stone-800';
             const btnRaw = document.getElementById('masterTab_RAW');
@@ -1165,6 +1184,7 @@
             });
         }
         function renderDashboard() {
+            updateMobileUsageBar(0, 0);
             reconcileManufacturerHistory();
             if (activeWorkspace === 'ORDER') renderOrderWorkspace();
             else if (activeWorkspace === 'USAGE') renderUsageWorkspace();
@@ -1424,6 +1444,61 @@
                 renderDashboard(); pushAllToGoogleSheet(false);
             });
         }
+        // [UI v2.10] 모바일 카드형 입력 (640px 미만에서만 보임, PC 표는 그대로)
+        function renderUsageCardsMobile(list) {
+            return `<div class="sm:hidden space-y-2">${list.map(st => {
+                const uq = pendingUsageInputs[st.key]?.qty || 0, nv = pendingUsageInputs[st.key]?.note || '', afterR = Number((st.totalRemainQty - uq).toFixed(2));
+                return `<div class="rounded-xl border p-3 ${uq > 0 ? 'bg-amber-50 border-amber-300' : 'bg-white border-stone-200'}">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0">
+                            <div class="text-[15px] font-extrabold text-stone-900 leading-snug break-keep">${escapeHtml(st.item)}</div>
+                            <div class="text-[13px] text-stone-500 mt-0.5">${escapeHtml(st.vendor)} · ${escapeHtml(st.spec || '-')}</div>
+                        </div>
+                        <div class="shrink-0 text-right">
+                            <div class="text-[12px] text-stone-500">현재고</div>
+                            <div class="text-[15px] font-extrabold text-emerald-800 tabular-nums">${formatNumber(st.totalRemainQty)}</div>
+                        </div>
+                    </div>
+                    <div class="mt-2.5 flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" aria-label="1 줄이기" onclick="adjustPendingUsageQty(${jsArg(st.key)}, -1, ${st.totalRemainQty})" class="w-11 h-11 rounded-xl border border-stone-300 bg-white text-xl font-bold text-stone-700 active:bg-stone-100 cursor-pointer">−</button>
+                            <input type="number" inputmode="decimal" step="any" value="${uq > 0 ? uq : ''}" placeholder="0" onchange="setPendingUsageQty(${jsArg(st.key)}, this.value)" class="m-input no-spinner w-20 h-11 text-center font-extrabold border border-stone-300 rounded-xl bg-white">
+                            <button type="button" aria-label="1 늘리기" onclick="adjustPendingUsageQty(${jsArg(st.key)}, 1, ${st.totalRemainQty})" class="w-11 h-11 rounded-xl border border-stone-300 bg-white text-xl font-bold text-stone-700 active:bg-stone-100 cursor-pointer">+</button>
+                        </div>
+                        <div class="text-right text-[13px] leading-tight">
+                            ${uq > 0 ? `<div class="text-stone-500">잔여 <b class="text-stone-900 tabular-nums">${formatNumber(afterR)}</b></div><div class="font-extrabold text-amber-800 tabular-nums">${formatCurrency(estimateUsageCost(st, uq))}</div>` : `<div class="text-stone-400 tabular-nums">${formatCurrency(st.unitAmt)}/개</div>`}
+                        </div>
+                    </div>
+                    ${uq > 0 ? `<input type="text" value="${escapeHtml(nv)}" oninput="setPendingUsageNote(${jsArg(st.key)}, this.value)" placeholder="비고 (선택)" class="m-input mt-2 w-full h-10 border border-stone-300 rounded-xl px-3 bg-white">` : ''}
+                </div>`;
+            }).join('')}</div>`;
+        }
+        function renderUsageHistoryCardsMobile(logs) {
+            return `<div class="sm:hidden space-y-2">${logs.map(u => `<div class="rounded-xl border border-stone-200 bg-white p-3">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <div class="text-[13px] text-stone-500">${escapeHtml(u.date)} · ${escapeHtml(u.vendor)}</div>
+                        <div class="text-[15px] font-extrabold text-stone-900 leading-snug break-keep">${escapeHtml(u.item)} <span class="text-[13px] font-semibold text-stone-500">${escapeHtml(u.spec)}</span></div>
+                    </div>
+                    <div class="shrink-0 text-right">
+                        <div class="text-[15px] font-extrabold text-rose-700 tabular-nums">-${formatNumber(u.usedQty)}</div>
+                        <div class="text-[13px] font-bold text-stone-700 tabular-nums">${formatCurrency(u.totalAmt)}</div>
+                    </div>
+                </div>
+                <div class="mt-2 flex items-center justify-between gap-2">
+                    <div class="text-[13px] text-stone-500 min-w-0 truncate">${escapeHtml(u.memo || '-')}</div>
+                    <button type="button" onclick="revertSingleUsageLog(${jsArg(u.id)})" class="shrink-0 h-9 px-3 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 text-[13px] font-bold cursor-pointer">원복</button>
+                </div>
+            </div>`).join('')}</div>`;
+        }
+        function updateMobileUsageBar(pendingCnt, pendingAmt) {
+            const on = activeMasterDomain === 'RAW' && activeWorkspace === 'USAGE' && activeUsageSubTab === 'SHEET';
+            document.body.classList.toggle('m-usage-active', on);
+            if (!on) return;
+            const c = document.getElementById('mUsageBarCount'), a = document.getElementById('mUsageBarAmt');
+            if (c) c.textContent = pendingCnt > 0 ? `${pendingCnt}종 입력 · 예상 소진액` : '사용수량을 입력하세요';
+            if (a) a.textContent = formatCurrency(pendingAmt || 0);
+        }
         function renderUsageWorkspace() {
             const reportDate = document.getElementById('usageReportDate')?.value || getTodayStr(), q = (document.getElementById('usageSearchInput')?.value || '').trim().toLowerCase();
             const todayLogs = usageLogsData.filter(u => u.date === reportDate), monthLogs = usageLogsData.filter(u => String(u.date || '').startsWith(reportDate.slice(0, 7)));
@@ -1446,13 +1521,14 @@
             document.getElementById('footerCountBadge').textContent = `${pendingCnt}종 선택됨`;
             document.getElementById('footerSupplyTotal').textContent = formatCurrency(pendingAmt);
             document.getElementById('footerVatIncludedTotal').textContent = formatCurrency(pendingAmt);
+            updateMobileUsageBar(pendingCnt, pendingAmt);
             const container = document.getElementById('mainContentContainer');
             if (activeUsageSubTab === 'SHEET') {
                 const list = stockItems.filter(st => !q || `${st.item} ${st.vendor} ${st.spec}`.toLowerCase().includes(q));
-                container.innerHTML = list.length === 0 ? `<div class="py-16 text-center text-stone-400 text-sm font-bold">현재고(>0) 보유 품목이 없습니다.</div>` : `<div class="overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b border-stone-200 font-extrabold text-stone-600"><th class="py-2.5 px-3">거래처</th><th class="py-2.5 px-3">원재료명</th><th class="py-2.5 px-2 text-center">규격</th><th class="py-2.5 px-2 text-center">가용 현재고</th><th class="py-2.5 px-2 text-center bg-amber-100/70">금일 사용수량</th><th class="py-2.5 px-2 text-center">차감 후 잔여</th><th class="py-2.5 px-2.5 text-right">소진 금액</th><th class="py-2.5 px-2">품목 비고</th></tr></thead><tbody>${list.map(st => { const uq = pendingUsageInputs[st.key]?.qty || 0, nv = pendingUsageInputs[st.key]?.note || '', afterR = Number((st.totalRemainQty - uq).toFixed(2)); return `<tr class="border-b border-stone-100 ${uq > 0 ? 'bg-amber-50/70' : 'hover:bg-stone-50'}"><td class="py-2 px-3 font-bold">${escapeHtml(st.vendor)}</td><td class="py-2 px-3 font-extrabold">${escapeHtml(st.item)}</td><td class="py-2 px-2 text-center">${escapeHtml(st.spec)}</td><td class="py-2 px-2 text-center font-extrabold text-emerald-800">${formatNumber(st.totalRemainQty)}</td><td class="py-2 px-2 text-center"><div class="flex items-center justify-center gap-1"><button type="button" onclick="adjustPendingUsageQty(${jsArg(st.key)}, -1, ${st.totalRemainQty})" class="w-6 h-6 rounded border bg-white font-bold cursor-pointer">-</button><input type="number" step="any" value="${uq > 0 ? uq : ''}" placeholder="0" onchange="setPendingUsageQty(${jsArg(st.key)}, this.value)" class="no-spinner w-14 text-center font-extrabold border rounded py-1"><button type="button" onclick="adjustPendingUsageQty(${jsArg(st.key)}, 1, ${st.totalRemainQty})" class="w-6 h-6 rounded border bg-white font-bold cursor-pointer">+</button></div></td><td class="py-2 px-2 text-center font-extrabold">${formatNumber(afterR)}</td><td class="py-2 px-2.5 text-right font-bold">${uq > 0 ? formatCurrency(estimateUsageCost(st, uq)) : formatCurrency(st.unitAmt) + '/개'}</td><td class="py-2 px-2"><input type="text" value="${escapeHtml(nv)}" oninput="setPendingUsageNote(${jsArg(st.key)}, this.value)" placeholder="비고" class="w-full border rounded px-2 py-1"></td></tr>`; }).join('')}</tbody></table></div>`;
+                container.innerHTML = list.length === 0 ? `<div class="py-16 text-center text-stone-400 text-sm font-bold">현재고(>0) 보유 품목이 없습니다.</div>` : renderUsageCardsMobile(list) + `<div class="hidden sm:block overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b border-stone-200 font-extrabold text-stone-600"><th class="py-2.5 px-3">거래처</th><th class="py-2.5 px-3">원재료명</th><th class="py-2.5 px-2 text-center">규격</th><th class="py-2.5 px-2 text-center">가용 현재고</th><th class="py-2.5 px-2 text-center bg-amber-100/70">금일 사용수량</th><th class="py-2.5 px-2 text-center">차감 후 잔여</th><th class="py-2.5 px-2.5 text-right">소진 금액</th><th class="py-2.5 px-2">품목 비고</th></tr></thead><tbody>${list.map(st => { const uq = pendingUsageInputs[st.key]?.qty || 0, nv = pendingUsageInputs[st.key]?.note || '', afterR = Number((st.totalRemainQty - uq).toFixed(2)); return `<tr class="border-b border-stone-100 ${uq > 0 ? 'bg-amber-50/70' : 'hover:bg-stone-50'}"><td class="py-2 px-3 font-bold">${escapeHtml(st.vendor)}</td><td class="py-2 px-3 font-extrabold">${escapeHtml(st.item)}</td><td class="py-2 px-2 text-center">${escapeHtml(st.spec)}</td><td class="py-2 px-2 text-center font-extrabold text-emerald-800">${formatNumber(st.totalRemainQty)}</td><td class="py-2 px-2 text-center"><div class="flex items-center justify-center gap-1"><button type="button" onclick="adjustPendingUsageQty(${jsArg(st.key)}, -1, ${st.totalRemainQty})" class="w-6 h-6 rounded border bg-white font-bold cursor-pointer">-</button><input type="number" step="any" value="${uq > 0 ? uq : ''}" placeholder="0" onchange="setPendingUsageQty(${jsArg(st.key)}, this.value)" class="no-spinner w-14 text-center font-extrabold border rounded py-1"><button type="button" onclick="adjustPendingUsageQty(${jsArg(st.key)}, 1, ${st.totalRemainQty})" class="w-6 h-6 rounded border bg-white font-bold cursor-pointer">+</button></div></td><td class="py-2 px-2 text-center font-extrabold">${formatNumber(afterR)}</td><td class="py-2 px-2.5 text-right font-bold">${uq > 0 ? formatCurrency(estimateUsageCost(st, uq)) : formatCurrency(st.unitAmt) + '/개'}</td><td class="py-2 px-2"><input type="text" value="${escapeHtml(nv)}" oninput="setPendingUsageNote(${jsArg(st.key)}, this.value)" placeholder="비고" class="w-full border rounded px-2 py-1"></td></tr>`; }).join('')}</tbody></table></div>`;
             } else {
                 const logs = usageLogsData.filter(u => !q || `${u.item} ${u.vendor} ${u.memo} ${u.date}`.toLowerCase().includes(q)).sort((a, b) => String(b.date).localeCompare(String(a.date)));
-                container.innerHTML = logs.length === 0 ? `<div class="py-16 text-center text-stone-400 text-sm font-bold">사용 보고 이력이 없습니다.</div>` : `<div class="overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b font-extrabold text-stone-600"><th class="py-2 px-3">사용일자</th><th class="py-2 px-3">거래처</th><th class="py-2 px-3">원재료명</th><th class="py-2 px-2 text-center">규격</th><th class="py-2 px-2 text-center">사용수량</th><th class="py-2 px-2.5 text-right">소진금액</th><th class="py-2 px-3">비고</th><th class="py-2 px-2 text-center">취소</th></tr></thead><tbody>${logs.map(u => `<tr class="border-b hover:bg-stone-50"><td class="py-2 px-3 font-bold">${escapeHtml(u.date)}</td><td class="py-2 px-3">${escapeHtml(u.vendor)}</td><td class="py-2 px-3 font-extrabold">${escapeHtml(u.item)}</td><td class="py-2 px-2 text-center">${escapeHtml(u.spec)}</td><td class="py-2 px-2 text-center font-extrabold text-rose-700">-${formatNumber(u.usedQty)}</td><td class="py-2 px-2.5 text-right font-extrabold">${formatCurrency(u.totalAmt)}</td><td class="py-2 px-3">${escapeHtml(u.memo || '-')}</td><td class="py-2 px-2 text-center"><button type="button" onclick="revertSingleUsageLog(${jsArg(u.id)})" class="px-2 py-1 rounded bg-rose-50 text-rose-700 border border-rose-200 font-bold cursor-pointer">원복</button></td></tr>`).join('')}</tbody></table></div>`;
+                container.innerHTML = logs.length === 0 ? `<div class="py-16 text-center text-stone-400 text-sm font-bold">사용 보고 이력이 없습니다.</div>` : renderUsageHistoryCardsMobile(logs) + `<div class="hidden sm:block overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b font-extrabold text-stone-600"><th class="py-2 px-3">사용일자</th><th class="py-2 px-3">거래처</th><th class="py-2 px-3">원재료명</th><th class="py-2 px-2 text-center">규격</th><th class="py-2 px-2 text-center">사용수량</th><th class="py-2 px-2.5 text-right">소진금액</th><th class="py-2 px-3">비고</th><th class="py-2 px-2 text-center">취소</th></tr></thead><tbody>${logs.map(u => `<tr class="border-b hover:bg-stone-50"><td class="py-2 px-3 font-bold">${escapeHtml(u.date)}</td><td class="py-2 px-3">${escapeHtml(u.vendor)}</td><td class="py-2 px-3 font-extrabold">${escapeHtml(u.item)}</td><td class="py-2 px-2 text-center">${escapeHtml(u.spec)}</td><td class="py-2 px-2 text-center font-extrabold text-rose-700">-${formatNumber(u.usedQty)}</td><td class="py-2 px-2.5 text-right font-extrabold">${formatCurrency(u.totalAmt)}</td><td class="py-2 px-3">${escapeHtml(u.memo || '-')}</td><td class="py-2 px-2 text-center"><button type="button" onclick="revertSingleUsageLog(${jsArg(u.id)})" class="px-2 py-1 rounded bg-rose-50 text-rose-700 border border-rose-200 font-bold cursor-pointer">원복</button></td></tr>`).join('')}</tbody></table></div>`;
 
                 // [4단계 R7] 재고 변동 이력 (수동 조정·발주 수정·삭제·사용 보고 취소)
                 const typeLabel = { ADJUST: '현재고 조정', EDIT: '발주 수정', DELETE: '발주 삭제', USAGE_REVERT: '사용보고 취소' };
@@ -2058,5 +2134,13 @@
     <script src="./ms_inbound.js"></script>
     <script src="./recipe.js"></script>
     <script src="./price.js"></script>
+    <!-- [UI v2.10] 모바일 일일 사용 보고 하단 고정 바 -->
+    <div id="mUsageBar" class="fixed bottom-0 inset-x-0 z-40 bg-stone-900 text-white px-4 py-3 items-center justify-between gap-3 shadow-[0_-4px_12px_rgba(0,0,0,0.15)]">
+        <div class="min-w-0">
+            <div id="mUsageBarCount" class="text-[13px] font-bold text-amber-300">0종 입력</div>
+            <div id="mUsageBarAmt" class="text-base font-extrabold tabular-nums">0원</div>
+        </div>
+        <button type="button" onclick="submitDailyBatchUsage()" class="shrink-0 h-12 px-5 rounded-xl bg-amber-500 active:bg-amber-600 text-stone-950 text-[15px] font-extrabold cursor-pointer">사용 보고 확정</button>
+    </div>
 </body>
 </html>
