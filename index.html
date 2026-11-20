@@ -1,4 +1,4 @@
-<!-- [VERSION: index.html v2.5 - 2026-11-19 4대 도메인 DB 버튼 UI/UX 통일 (DB설정 · 초록 DB저장 · 회전동기화 아이콘 + 심플 URL 팝업)] -->
+<!-- [VERSION: index.html v2.6 - 2026-11-20 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 스냅샷 분할 저장 · 샘플 레시피 제거)] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -39,7 +39,7 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-base sm:text-lg font-extrabold tracking-tight text-stone-900">바로가 공장 통합 관리 시스템</h1>
-                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.5.0</span>
+                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.6.0</span>
                     </div>
                     <p class="text-xs text-stone-500 hidden sm:block">원재료 발주/재고 · 엠즈 입고/회송 · 레시피 배합비 · 제품단가 출고마진 통합 관리</p>
                 </div>
@@ -518,6 +518,23 @@
         let saveDebounceTimer = null;
         let isSavingToDb = false;
         let hasPendingDbSave = false;
+        // [1단계 데이터 보호] DB를 정상적으로 불러온 뒤에만 저장 허용 + 리비전으로 다른 기기 저장분 덮어쓰기 방지
+        let rawDbLoaded = false;
+        let rawDbRevision = null;
+        let rawDbBlockReason = 'DB를 아직 불러오지 못했습니다';
+        const SHEET_CHUNK_SIZE = 40000;
+        function splitTextChunks(str, size = SHEET_CHUNK_SIZE) {
+            const out = [];
+            let i = 0;
+            while (i < str.length) {
+                let end = Math.min(i + size, str.length);
+                const code = str.charCodeAt(end - 1);
+                if (end < str.length && code >= 0xD800 && code <= 0xDBFF) end -= 1;
+                out.push(str.slice(i, end));
+                i = end;
+            }
+            return out.length ? out : [''];
+        }
         const STANDARD_TAX_FREE_KEYWORDS = ['강력분','중력분','박력분','호밀가루','통밀가루','쌀가루','찹쌀가루','밀가루','전립분','무염버터','가염버터','발효버터','버터','생크림','우유','연유','전지분유','탈지분유','계란','달걀','전란','난황','난백','소금(천일염)','천일염','대파','양파','마늘','생강','감자','고구마','당근','양배추','시금치','부추','청양고추','홍고추','사과','바나나','딸기','블루베리','레몬','오렌지','밤','호두','아몬드','땅콩','건포도','크랜베리','대두','검은콩','팥','녹두','참깨','검은깨','흑임자','꿀','사양벌꿀'];
         const STANDARD_TAXABLE_KEYWORDS = ['대두완배기','완두배기','적앙금','백앙금','앙금','팥앙금','고구마앙금','밤앙금','설탕','백설탕','황설탕','흑설탕','분당','슈가파우더','데코슈가','물엿','올리고당','메이플시럽','시럽','생이스트','드라이이스트','이스트','베이킹파우더','소다','제빵개량제','개량제','유화제','바닐라향','바닐라에센스','럼주','초코칩','초콜릿','코코아파우더','코코아분말','커스터드','카스타드','필링','잼','딸기잼','사과잼','마가린','쇼트닝','식용유','카놀라유','올리브유','포도씨유','참기름','소시지','햄','베이컨','페퍼로니','마요네즈','케첩','머스타드','소스','롤치즈','체다치즈','모짜렐라','크림치즈','파마산','치즈','옥수수콘','스위트콘','피클','할라피뇨','올리브','통조림','캔','박스','비닐','포장','봉투','테이프','유산지','패드','트레이','스티커'];
         function formatNumber(n) { return (Number(n) || 0).toLocaleString('ko-KR', { maximumFractionDigits: 2 }); }
@@ -670,29 +687,8 @@
                 const cr = localStorage.getItem('baroga_recipes_cache_v18');
                 if (cr && recipesData.length === 0) { const pr = JSON.parse(cr); if (Array.isArray(pr)) recipesData = pr; }
             } catch (e) {}
-            if (recipesData.length === 0) {
-                recipesData = [{
-                    id: 'rc_default_1',
-                    productCode: '1001',
-                    productName: '표준 식빵 (1배합)',
-                    divisionWeight: 154,
-                    customProductionQty: 174,
-                    packQty: 16,
-                    sellingPrice: 36890,
-                    lossRatio: 10,
-                    activeProcesses: ['반죽', '토핑'],
-                    ingredients: [
-                        { rowId: 'ri_1', process: '반죽', item: '강력분(메티에)', spec: '20kg', unitPrice: 24500, specGrams: 20000, isFlour: true, weightG: 15000 },
-                        { rowId: 'ri_2', process: '반죽', item: '무염버터', spec: '15kg', unitPrice: 148000, specGrams: 15000, isFlour: false, weightG: 1800 }
-                    ],
-                    packagingList: [
-                        { rowId: 'pk_1', name: '식빵 전용 비닐(소)', spec: '1,000매', purchasePrice: 38000, specQty: 1000, usedQty: 16, packType: 'UNIT' },
-                        { rowId: 'pk_2', name: '외포장 골판지 박스', spec: '50매', purchasePrice: 42500, specQty: 50, usedQty: 1, packType: 'BOX' }
-                    ],
-                    updatedAt: getTodayStr()
-                }];
-                selectedRecipeId = recipesData[0].id;
-            } else if (!selectedRecipeId && recipesData.length > 0) {
+            // [1단계] 샘플 레시피('표준 식빵') 자동 삽입 제거 — DB가 비어 있으면 빈 목록 그대로 표시
+            if (!selectedRecipeId && recipesData.length > 0) {
                 selectedRecipeId = recipesData[0].id;
             }
             window.recipesData = recipesData;
@@ -717,15 +713,21 @@
         }
         function extractSnapshotsFromRawRows(rawRows) {
             const normalOrders = [], snapshots = {}, usageLogs = [];
+            const snapshotParts = {};
+            const brokenSnapshots = [];
             (rawRows || []).forEach(r => {
                 if (isSampleDummyOrder(r)) return;
                 const rawId = String(r.id || '');
                 if (rawId.startsWith('__SNAPSHOT__') || r.colA === '__SNAPSHOT__') {
-                    try {
-                        const mKey = r.date ? String(r.date).slice(0, 7) : rawId.replace('__SNAPSHOT__', '');
-                        const payload = typeof r.colE === 'string' && r.colE.startsWith('{') ? JSON.parse(r.colE) : null;
-                        if (mKey && payload) snapshots[mKey] = payload;
-                    } catch (e) {}
+                    // 스냅샷은 셀 한도(5만자)를 넘지 않도록 '#순번/총개수'로 나눠 저장될 수 있음
+                    const idBody = rawId.replace('__SNAPSHOT__', '');
+                    const [keyPart, partInfo] = idBody.split('#');
+                    const mKey = /^\d{4}-\d{2}$/.test(keyPart) ? keyPart : (r.date ? String(r.date).slice(0, 7) : keyPart);
+                    let idx = 1, total = 1;
+                    if (partInfo) { const m = partInfo.match(/^(\d+)\/(\d+)$/); if (m) { idx = Number(m[1]); total = Number(m[2]); } }
+                    if (!snapshotParts[mKey]) snapshotParts[mKey] = { total, parts: {} };
+                    snapshotParts[mKey].total = total;
+                    snapshotParts[mKey].parts[idx] = typeof r.colE === 'string' ? r.colE : String(r.colE || '');
                     return;
                 }
                 if (rawId.startsWith('__USAGE__') || r.colA === '__USAGE__') {
@@ -750,7 +752,19 @@
                 cleanOrder.id = buildIdWithMeta(cleanOrder);
                 if (cleanOrder.colB) normalOrders.push(cleanOrder);
             });
-            return { normalOrders, snapshots, usageLogs };
+            Object.keys(snapshotParts).forEach(mKey => {
+                const { total, parts } = snapshotParts[mKey];
+                const pieces = [];
+                for (let i = 1; i <= total; i++) {
+                    if (parts[i] === undefined) { brokenSnapshots.push(mKey); return; }
+                    pieces.push(parts[i]);
+                }
+                try {
+                    const payload = JSON.parse(pieces.join(''));
+                    if (payload && typeof payload === 'object') snapshots[mKey] = payload;
+                } catch (e) { brokenSnapshots.push(mKey); }
+            });
+            return { normalOrders, snapshots, usageLogs, brokenSnapshots };
         }
         function buildCombinedRowsForSheet() {
             reconcileManufacturerHistory();
@@ -761,7 +775,11 @@
             }));
             Object.keys(monthlySnapshots).forEach(mKey => {
                 const snap = monthlySnapshots[mKey];
-                rows.push({ id: `__SNAPSHOT__${mKey}`, date: `${mKey}-28`, colA: '__SNAPSHOT__', colB: `${mKey} 월말재고확정`, colC: `${snap.totalQty || 0}`, colD: 0, colE: JSON.stringify(snap), amount: snap.supplyTotal || 0 });
+                const parts = splitTextChunks(JSON.stringify(snap));
+                parts.forEach((part, i) => {
+                    const id = parts.length === 1 ? `__SNAPSHOT__${mKey}` : `__SNAPSHOT__${mKey}#${i + 1}/${parts.length}`;
+                    rows.push({ id, date: `${mKey}-28`, colA: '__SNAPSHOT__', colB: `${mKey} 월말재고확정${parts.length > 1 ? ` (${i + 1}/${parts.length})` : ''}`, colC: `${snap.totalQty || 0}`, colD: 0, colE: part, amount: i === 0 ? (snap.supplyTotal || 0) : 0 });
+                });
             });
             usageLogsData.forEach(u => {
                 rows.push({ id: `__USAGE__${u.id}`, date: u.date || getTodayStr(), colA: '__USAGE__', colB: `${u.item || ''} (${u.usedQty || 0}사용)`, colC: u.spec || '', colD: 0, colE: JSON.stringify(u), amount: u.totalAmt || 0 });
@@ -786,31 +804,48 @@
         }
         async function syncFromGoogleSheet(showMessage = false) {
             if (!gasWebAppUrl || (isSyncing && !showMessage)) return;
+            if (saveDebounceTimer || isSavingToDb || hasPendingDbSave) {
+                if (showMessage) showToast('저장이 진행 중입니다. 저장이 끝난 뒤 다시 새로고침해 주세요.', 'error');
+                return;
+            }
             isSyncing = true;
             updateDbStatusUI('syncing', '동기화중...');
             try {
                 const sep = gasWebAppUrl.includes('?') ? '&' : '?';
-                const res = await fetchWithTimeout(`${gasWebAppUrl}${sep}action=getAll&t=${Date.now()}`, { method: 'GET' }, 14000);
+                const res = await fetchWithTimeout(`${gasWebAppUrl}${sep}action=getAll&t=${Date.now()}`, { method: 'GET' }, 20000);
+                if (!res.ok) throw new Error(`서버 응답 오류 (HTTP ${res.status})`);
                 const json = await res.json();
-                const rows = Array.isArray(json) ? json : (json.data || json.rows || json.orders || []);
-                if (Array.isArray(rows)) {
-                    const { normalOrders, snapshots, usageLogs } = extractSnapshotsFromRawRows(rows);
-                    ordersData = normalOrders;
-                    reconcileManufacturerHistory();
-                    monthlySnapshots = { ...monthlySnapshots, ...snapshots };
-                    usageLogsData = usageLogs;
-                    saveLocalCache();
-                    initYearAndMonthControls();
-                    renderDashboard();
-                    if (showMessage) showToast(`원재료 DB에서 ${ordersData.length}건 동기화 완료`, 'success');
-                }
-                updateDbStatusUI('connected', `DB 연동됨 (${ordersData.length}건)`);
+                if (json && json.ok === false) throw new Error(json.error || '서버 오류');
+                const rows = Array.isArray(json) ? json : (json.orders || json.data || json.rows);
+                if (!Array.isArray(rows)) throw new Error('응답 형식을 인식할 수 없습니다');
+                const { normalOrders, snapshots, usageLogs, brokenSnapshots } = extractSnapshotsFromRawRows(rows);
+                ordersData = normalOrders;
+                reconcileManufacturerHistory();
+                monthlySnapshots = snapshots; // 서버 기준으로 교체 (다른 기기에서 삭제한 스냅샷이 되살아나지 않도록)
+                usageLogsData = usageLogs;
+                rawDbLoaded = true;
+                rawDbRevision = (json && typeof json.revision === 'number') ? json.revision : null;
+                rawDbBlockReason = rawDbRevision === null ? '원재료 GAS 스크립트가 구버전입니다 (v2.0 업데이트 필요)' : '';
+                saveLocalCache();
+                initYearAndMonthControls();
+                renderDashboard();
+                if (brokenSnapshots && brokenSnapshots.length) showToast(`월말 스냅샷 일부를 읽지 못했습니다: ${brokenSnapshots.join(', ')}`, 'error');
+                if (showMessage) showToast(`원재료 DB에서 ${ordersData.length}건 동기화 완료`, 'success');
+                if (rawDbRevision === null) updateDbStatusUI('error', '저장 중지 (GAS 업데이트 필요)');
+                else updateDbStatusUI('connected', `DB 연동됨 (${ordersData.length}건)`);
             } catch (err) {
                 restoreLocalCacheIfEmpty();
                 reconcileManufacturerHistory();
                 initYearAndMonthControls();
                 renderDashboard();
-                updateDbStatusUI('error', 'DB 연결 확인');
+                if (!rawDbLoaded) {
+                    rawDbBlockReason = 'DB를 불러오지 못했습니다';
+                    updateDbStatusUI('error', 'DB 불러오기 실패 · 저장 중지');
+                    showToast(`원재료 DB를 불러오지 못했습니다 (${err && err.message ? err.message : err}). 화면은 이 기기에 남은 사본이며, 저장은 중지됩니다. ↻ 버튼으로 다시 시도하세요.`, 'error');
+                } else {
+                    updateDbStatusUI('error', '새로고침 실패');
+                    if (showMessage) showToast(`새로고침 실패: ${err && err.message ? err.message : err}`, 'error');
+                }
             } finally {
                 isSyncing = false;
                 const spin = document.getElementById('syncSpinWrap');
@@ -829,22 +864,51 @@
             await executePushToGoogleSheet(false);
         }
         async function executePushToGoogleSheet(silent = false) {
+            // [1단계] 불러오기에 실패했거나 GAS가 구버전이면 저장하지 않음 (낡은 사본으로 DB를 덮어쓰는 것 방지)
+            if (!rawDbLoaded || rawDbRevision === null) {
+                updateDbStatusUI('error', '저장 중지');
+                showToast(`저장하지 않았습니다: ${rawDbBlockReason || 'DB 연결 상태를 확인하세요'}. 변경 내용은 이 기기에만 있습니다.`, 'error');
+                return false;
+            }
             if (isSavingToDb) { hasPendingDbSave = true; return; }
             isSavingToDb = true;
             updateDbStatusUI('syncing', '저장중...');
             const combinedRows = buildCombinedRowsForSheet();
-            const payload = JSON.stringify({ action: 'replaceAll', data: combinedRows, orders: combinedRows });
+            const payload = JSON.stringify({ action: 'replaceAll', baseRevision: rawDbRevision, data: combinedRows });
+            let ok = false;
             try {
-                await fetchWithTimeout(gasWebAppUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: payload }, 18000);
-                updateDbStatusUI('connected', `DB 연동됨 (${ordersData.length}건)`);
-                if (!silent) showToast('구글 시트 DB에 저장되었습니다.', 'success');
+                const res = await fetchWithTimeout(gasWebAppUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: payload }, 30000);
+                if (!res.ok) throw new Error(`서버 응답 오류 (HTTP ${res.status})`);
+                const json = await res.json();
+                if (json && json.ok === true && typeof json.revision === 'number') {
+                    rawDbRevision = json.revision;
+                    ok = true;
+                    updateDbStatusUI('connected', `DB 연동됨 (${ordersData.length}건)`);
+                    if (!silent) showToast('구글 시트 DB에 저장되었습니다.', 'success');
+                } else if (json && json.conflict) {
+                    rawDbLoaded = false;
+                    rawDbBlockReason = '다른 기기에서 먼저 저장했습니다. ↻ 새로고침 후 다시 입력하세요';
+                    hasPendingDbSave = false;
+                    updateDbStatusUI('error', '충돌 · 새로고침 필요');
+                    showToast('다른 기기에서 먼저 저장한 내용이 있어 저장하지 않았습니다. ↻ 새로고침 후 방금 변경한 내용을 다시 입력해 주세요.', 'error');
+                } else {
+                    throw new Error((json && (json.error || json.message)) || '알 수 없는 응답');
+                }
             } catch (err) {
-                try { await fetch(gasWebAppUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: payload }); updateDbStatusUI('connected', `DB 연동됨 (${ordersData.length}건)`); }
-                catch (e2) { updateDbStatusUI('error', 'DB 저장 지연'); }
+                const isTimeout = err && err.name === 'AbortError';
+                if (isTimeout) {
+                    rawDbLoaded = false;
+                    rawDbBlockReason = '저장 응답이 없어 저장 여부를 알 수 없습니다. ↻ 새로고침으로 확인하세요';
+                }
+                updateDbStatusUI('error', isTimeout ? '저장 확인 필요' : 'DB 저장 실패');
+                showToast(isTimeout
+                    ? '저장 응답이 없습니다(시간 초과). ↻ 새로고침으로 실제 저장 여부를 확인해 주세요.'
+                    : `구글 시트 저장 실패: ${err && err.message ? err.message : err} — 변경 내용은 이 기기에만 있습니다.`, 'error');
             } finally {
                 isSavingToDb = false;
-                if (hasPendingDbSave) { hasPendingDbSave = false; executePushToGoogleSheet(true); }
+                if (hasPendingDbSave) { hasPendingDbSave = false; if (ok) executePushToGoogleSheet(true); }
             }
+            return ok;
         }
         function switchMasterDomain(domain) {
             activeMasterDomain = domain;
@@ -1614,9 +1678,8 @@
         }
         function openDbConfigModal() { document.getElementById('gasUrlInput').value = gasWebAppUrl; const m = document.getElementById('dbConfigModal'); m.classList.remove('hidden'); m.classList.add('flex'); }
         function closeDbConfigModal() { const m = document.getElementById('dbConfigModal'); m.classList.add('hidden'); m.classList.remove('flex'); }
-        function saveGasUrlConfig() { const v = document.getElementById('gasUrlInput').value.trim(); if (v) { gasWebAppUrl = v; persistGasUrl(v); closeDbConfigModal(); syncFromGoogleSheet(true); } }
+        function saveGasUrlConfig() { const v = document.getElementById('gasUrlInput').value.trim(); if (v) { gasWebAppUrl = v; persistGasUrl(v); rawDbLoaded = false; rawDbRevision = null; rawDbBlockReason = '새 DB 주소를 아직 불러오지 못했습니다'; closeDbConfigModal(); syncFromGoogleSheet(true); } }
         function reclassifyAllTaxTypesAndSave() { ordersData.forEach(o => { o.taxType = inferStandardTaxType(o.colB); o.id = buildIdWithMeta(o); }); closeDbConfigModal(); renderDashboard(); pushAllToGoogleSheet(false); }
-        function confirmResetAllData() { openConfirmModal('전체 데이터 초기화', '모든 데이터를 초기화하시겠습니까?', () => { ordersData = []; monthlySnapshots = {}; usageLogsData = []; closeDbConfigModal(); renderDashboard(); pushAllToGoogleSheet(false); }); }
 
         let _editingOrderOrigQty = 0;
         let _editingOrderOrigRem = 0;
