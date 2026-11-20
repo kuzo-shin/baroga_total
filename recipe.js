@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: v3.10 - 2026-11-20 원재료 검색창에서 0원 품목(식수·얼음·파지 등) 누락 버그 수정 및 유상원재료 증정(0원) 단가 보호 적용]
+// [VERSION: v3.11 - 2026-11-20 손실비율(%) 반영 실생산수량((중량합계-손실중량)÷분할중량) 및 1배합pk수량 일원화 · 전 항목 마우스오버 실시간 계산식 툴팁 탑재]
 // 바로가 공장 통합 관리 시스템 - 레시피 전용 모듈 (recipe.js)
 // ============================================================================
 
@@ -424,10 +424,13 @@ function evaluateRecipeBaseTotals(rc, visitedIds = new Set(), lookup = null) {
     });
 
     const divW = parseFloat(rc.divisionWeight) || 0;
-    const autoYield = divW > 0 ? (weightTotalG / divW) : 1;
-    const baseYieldQty = parseFloat(rc.customProductionQty) > 0 ? parseFloat(rc.customProductionQty) : (autoYield > 0 ? autoYield : 1);
+    const lossR = Math.max(0, Math.min(99.9, parseFloat(rc.lossRatio) || 0));
+    const netWeightG = Math.max(0, weightTotalG * (1 - lossR / 100));
+    const autoYield = divW > 0 ? (netWeightG / divW) : 1;
+    const customBase = parseFloat(rc.customProductionQty) || 0;
+    const baseYieldQty = customBase > 0 ? (customBase * (1 - lossR / 100)) : (autoYield > 0 ? autoYield : 1);
 
-    return { weightTotalG, fillingWeightG, rawCostTotal, baseYieldQty, itemBreakdown };
+    return { weightTotalG, netWeightG, fillingWeightG, rawCostTotal, baseYieldQty, itemBreakdown };
 }
 
 // 제품단가 탭(price.js)에서 동일 품목코드(1순위) 또는 품목명(2순위)의 바로가 출고가(1ea) 조회
@@ -492,12 +495,18 @@ function calculateRecipeMetrics(rc) {
     const rawMaterialCost = base.rawCostTotal;
 
     const divW = parseFloat(rc.divisionWeight) || 0;
-    const theoProdQty = divW > 0 ? (weightTotalG / divW) : 0;
-    const prodQty = parseFloat(rc.customProductionQty) > 0 ? parseFloat(rc.customProductionQty) : theoProdQty;
-
-    const lossR = Math.max(0, parseFloat(rc.lossRatio) || 0);
+    const lossR = Math.max(0, Math.min(99.9, parseFloat(rc.lossRatio) || 0));
     const lossWeightG = weightTotalG * (lossR / 100);
-    const productQty = prodQty * (1 - lossR / 100);
+    const netWeightG = Math.max(0, weightTotalG - lossWeightG);
+
+    const theoProdQty = divW > 0 ? (weightTotalG / divW) : 0;
+    const autoNetProdQty = divW > 0 ? (netWeightG / divW) : 0;
+    const isCustomProdQty = (parseFloat(rc.customProductionQty) || 0) > 0;
+    // 생산수량 = 손실중량 차감 후 가용중량 ÷ 분할중량 (수기 지정 시 수기 기준수량에서 손실비율 차감)
+    const productQty = isCustomProdQty
+        ? (parseFloat(rc.customProductionQty) * (1 - lossR / 100))
+        : autoNetProdQty;
+    const prodQty = productQty;
     const lossAmount = rawMaterialCost * (lossR / 100);
 
     let unitPackCost = 0;
@@ -510,8 +519,8 @@ function calculateRecipeMetrics(rc) {
     });
 
     const packQty = Math.max(1, parseFloat(rc.packQty) || 1);
-    const batchPkQty = prodQty > 0 ? (prodQty / packQty) : 0;
-    const packCount = productQty > 0 ? (productQty / packQty) : 0;
+    const batchPkQty = productQty > 0 ? (productQty / packQty) : 0;
+    const packCount = batchPkQty;
     const totalPackCost = packCount * unitPackCost;
 
     const productionCost = rawMaterialCost + totalPackCost;
@@ -531,6 +540,8 @@ function calculateRecipeMetrics(rc) {
         priceLink,
         releasePriceEa,
         weightTotalG,
+        netWeightG,
+        isCustomProdQty,
         flourTotalG: weightTotalG,
         productionCost,
         theoQty: theoProdQty,
@@ -574,6 +585,66 @@ function fmtDec(n, digits = 1) {
     return val.toLocaleString('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: digits });
 }
 
+function bindRecipeFormulaTooltipEvents(containerEl) {
+    if (!containerEl || containerEl._fdTipBound) return;
+    containerEl._fdTipBound = true;
+
+    const getTipEl = () => document.getElementById('fdHoverTip');
+    const positionTip = (e, tipEl) => {
+        const pad = 12;
+        const rect = tipEl.getBoundingClientRect();
+        let x = e.clientX + 14;
+        let y = e.clientY + 16;
+        if (x + rect.width + pad > window.innerWidth) {
+            x = Math.max(pad, e.clientX - rect.width - 12);
+        }
+        if (y + rect.height + pad > window.innerHeight) {
+            y = Math.max(pad, e.clientY - rect.height - 12);
+        }
+        tipEl.style.left = `${x}px`;
+        tipEl.style.top = `${y}px`;
+    };
+
+    containerEl.addEventListener('mouseover', e => {
+        const target = e.target.closest('[data-tip]');
+        const tipEl = getTipEl();
+        if (!tipEl) return;
+        if (!target) {
+            tipEl.classList.add('hidden', 'opacity-0');
+            return;
+        }
+        const text = target.getAttribute('data-tip');
+        if (!text) {
+            tipEl.classList.add('hidden', 'opacity-0');
+            return;
+        }
+        tipEl.textContent = text;
+        tipEl.classList.remove('hidden', 'opacity-0');
+        positionTip(e, tipEl);
+    });
+
+    containerEl.addEventListener('mousemove', e => {
+        const tipEl = getTipEl();
+        if (!tipEl || tipEl.classList.contains('hidden')) return;
+        const target = e.target.closest('[data-tip]');
+        if (!target) {
+            tipEl.classList.add('hidden', 'opacity-0');
+            return;
+        }
+        positionTip(e, tipEl);
+    });
+
+    containerEl.addEventListener('mouseleave', () => {
+        const tipEl = getTipEl();
+        if (tipEl) tipEl.classList.add('hidden', 'opacity-0');
+    });
+
+    containerEl.addEventListener('keydown', () => {
+        const tipEl = getTipEl();
+        if (tipEl) tipEl.classList.add('hidden', 'opacity-0');
+    });
+}
+
 // 메인 레시피 워크스페이스 렌더링
 function renderRecipeWorkspace() {
     const lookup = buildRawCatalogLookupMaps();
@@ -590,11 +661,15 @@ function renderRecipeWorkspace() {
             <style>
                 .fd-th { background-color: #EFE2C6; color: #292524; font-weight: 800; font-size: 11px; border: 1px solid #D6C7A9; white-space: nowrap; }
                 .fd-td { border: 1px solid #E5E0D8; font-size: 11.5px; }
-                .fd-kv-label { background-color: #EFE2C6; color: #292524; font-weight: 800; font-size: 11px; border: 1px solid #D6C7A9; padding: 5px 6px; text-align: center; white-space: nowrap; }
+                .fd-kv-label { background-color: #EFE2C6; color: #292524; font-weight: 800; font-size: 11px; border: 1px solid #D6C7A9; padding: 5px 6px; text-align: center; white-space: nowrap; cursor: help; }
                 .fd-kv-val { background-color: #FFFFFF; color: #1C1917; font-weight: 700; font-size: 11.5px; border: 1px solid #DFD9CE; padding: 4px 7px; text-align: right; }
+                .fd-kv-val[data-tip] { cursor: help; }
+                .fd-kv-val[data-tip]:hover { background-color: #FEFCE8; }
                 .fd-kv-input { width: 100%; min-width: 0; text-align: right; font-weight: 800; background: #FFFBEB; border: 1px solid #F59E0B; border-radius: 4px; padding: 1px 5px; font-size: 11.5px; color: #1C1917; }
                 .fd-kv-input:focus { outline: 2px solid #D97706; background: #FFFFFF; }
+                #fdHoverTip { pointer-events: none; position: fixed; z-index: 9999; max-width: 360px; padding: 7px 10px; border-radius: 10px; background: rgba(28, 25, 23, 0.96); color: #FAFAF9; font-size: 11.5px; line-height: 1.45; font-weight: 600; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.35); border: 1px solid rgba(245, 158, 11, 0.45); white-space: pre-line; transition: opacity 0.08s ease; }
             </style>
+            <div id="fdHoverTip" class="hidden opacity-0 no-print"></div>
             <div id="fdThreeColRoot" class="grid grid-cols-1 xl:grid-cols-12 gap-3 xl:items-stretch xl:h-[calc(100vh-196px)] xl:min-h-[530px]">
                 <!-- [1] 좌측: 제품내역 (제품 배합비내역과 상하 높이 1:1 일치 + 내부 스크롤) -->
                 <div class="xl:col-span-3 xl:h-full bg-white rounded-xl border border-stone-300 shadow-2xs flex flex-col overflow-hidden">
@@ -706,6 +781,7 @@ function renderRecipeWorkspace() {
                 </div>
             </div>
         `;
+        bindRecipeFormulaTooltipEvents(mainEl);
     }
 
     renderRecipeSidebarList();
@@ -904,9 +980,9 @@ function renderRecipeDetailPanel() {
                         <td class="fd-td py-1 px-1 text-right bg-amber-50/50">
                             <input type="text" value="${fmtDec(ig.qty, 2)}" onchange="updateRecipeIngredient(${idx}, 'qty', this.value)" class="w-full min-w-0 text-right font-extrabold text-stone-900 bg-transparent focus:bg-white focus:outline-amber-500">
                         </td>
-                        <td class="fd-td py-1 px-1 text-right font-bold text-stone-800">${fmtDec(pct, 1)}</td>
+                        <td class="fd-td py-1 px-1 text-right font-bold text-stone-800 cursor-help" data-tip="${escapeHtml(`${recipeRatioMode === 'BAKERS' ? '베이커스(%)' : '중량비(%)'}: ${fmtDec(entry.effWeightG, 1)}g ÷ ${fmtDec(topDenomG, 1)}g × 100 = ${fmtDec(pct, 1)}%`)}">${fmtDec(pct, 1)}</td>
                         <td class="fd-td py-1 px-0.5 text-center"><input type="text" value="${ig.seq || 0}" onchange="updateRecipeIngredient(${idx}, 'seq', this.value)" class="w-full min-w-0 text-center bg-transparent focus:bg-white"></td>
-                        <td class="fd-td py-1 px-1.5 text-right font-extrabold text-stone-900">${fmtDec(entry.effCost, 1)}</td>
+                        <td class="fd-td py-1 px-1.5 text-right font-extrabold text-stone-900 cursor-help" data-tip="${escapeHtml(`반제품 원가: 1배합(${fmtDec(entry.subEval.rawCostTotal, 1)}원) × 배율(${fmtDec(entry.scale, 3)}) = ${fmtDec(entry.effCost, 1)}원`)}">${fmtDec(entry.effCost, 1)}</td>
                         <td class="fd-td py-1 px-0.5 text-center">
                             <button type="button" onclick="removeRecipeIngredient(${idx})" class="text-stone-400 hover:text-rose-600 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                         </td>
@@ -917,11 +993,20 @@ function renderRecipeDetailPanel() {
                 }
             } else {
                 // 일반 원재료 행 (코드 입력칸 숨김, 내부코드 및 원재료DB 단가 자동 연동)
-                const perGramPrice = (parseFloat(ig.specGrams) || 1000) > 0 ? ((parseFloat(ig.unitPrice) || 0) / (parseFloat(ig.specGrams) || 1000)) : 0;
+                const specGVal = parseFloat(ig.specGrams) || parseSpecToGrams(ig.spec) || 1000;
+                const perGramPrice = specGVal > 0 ? ((parseFloat(ig.unitPrice) || 0) / specGVal) : 0;
                 const isLinked = Boolean(entry.linkedRaw && ig.priceSource !== 'MANUAL');
+                const unitUpperStr = String(ig.unit || 'G').toUpperCase();
+                const costCalcLine = unitUpperStr === 'EA'
+                    ? `${formatCurrency(ig.unitPrice)} × ${fmtDec(ig.qty, 2)}EA = ${fmtDec(entry.effCost, 1)}원`
+                    : `(${formatCurrency(ig.unitPrice)} ÷ ${fmtDec(specGVal, 0)}g = ${perGramPrice.toFixed(2)}원/g) × ${fmtDec(entry.effWeightG, 1)}g = ${fmtDec(entry.effCost, 1)}원`;
                 const priceTooltip = isLinked
-                    ? `[원재료DB 자동연동] 규격: ${entry.linkedRaw.spec} / 최신발주단가: ${formatCurrency(entry.linkedRaw.unitPrice)} (g당 ${perGramPrice.toFixed(2)}원) · 클릭 시 수동단가 설정`
-                    : `[수동단가] 기준규격: ${ig.spec || '1kg'} / 단가: ${formatCurrency(ig.unitPrice)} (g당 ${perGramPrice.toFixed(2)}원) · 클릭 시 단가 수정 또는 DB 재연동`;
+                    ? `[재료원가 계산식] ${costCalcLine}
+· 원재료DB 연동 (${entry.linkedRaw.spec} · 클릭 시 개별 설정)`
+                    : `[재료원가 계산식] ${costCalcLine}
+· 수동단가 (${ig.spec || '1kg'} · 클릭 시 수정/DB복원)`;
+                const pctTooltip = `${recipeRatioMode === 'BAKERS' ? '[베이커스(%) 계산식] 투입량 ÷ 가루류 합계 × 100' : '[중량비(%) 계산식] 투입량 ÷ 중량합계 × 100'}
+${fmtDec(entry.effWeightG, 1)}g ÷ ${fmtDec(topDenomG, 1)}g × 100 = ${fmtDec(pct, 1)}%`;
                 formulaRowsHtml += `
                     <tr class="hover:bg-amber-50/30">
                         <td class="fd-td py-1 px-2 pl-3">
@@ -941,9 +1026,9 @@ function renderRecipeDetailPanel() {
                         <td class="fd-td py-1 px-1 text-right bg-amber-50/40">
                             <input type="text" value="${fmtDec(ig.qty, 2)}" onchange="updateRecipeIngredient(${idx}, 'qty', this.value)" class="w-full min-w-0 text-right font-extrabold text-stone-900 bg-transparent focus:bg-white focus:outline-amber-500">
                         </td>
-                        <td class="fd-td py-1 px-1 text-right text-stone-700 font-semibold">${fmtDec(pct, 1)}</td>
+                        <td class="fd-td py-1 px-1 text-right text-stone-700 font-semibold cursor-help" data-tip="${escapeHtml(pctTooltip)}">${fmtDec(pct, 1)}</td>
                         <td class="fd-td py-1 px-0.5 text-center"><input type="text" value="${ig.seq || 0}" onchange="updateRecipeIngredient(${idx}, 'seq', this.value)" class="w-full min-w-0 text-center text-stone-600 bg-transparent focus:bg-white"></td>
-                        <td class="fd-td py-1 px-1.5 text-right font-bold text-stone-900 cursor-pointer hover:bg-amber-100/50" onclick="promptIngredientUnitPrice(${idx})" title="${escapeHtml(priceTooltip)}">${fmtDec(entry.effCost, 1)}</td>
+                        <td class="fd-td py-1 px-1.5 text-right font-bold text-stone-900 cursor-pointer hover:bg-amber-100/50" onclick="promptIngredientUnitPrice(${idx})" data-tip="${escapeHtml(priceTooltip)}">${fmtDec(entry.effCost, 1)}</td>
                         <td class="fd-td py-1 px-0.5 text-center">
                             <button type="button" onclick="removeRecipeIngredient(${idx})" class="text-stone-400 hover:text-rose-600 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                         </td>
@@ -988,7 +1073,8 @@ function renderRecipeDetailPanel() {
                 </td>
                 <td class="fd-td py-1 px-1"></td>
                 <td class="fd-td py-1 px-0.5"></td>
-                <td class="fd-td py-1 px-1.5 text-right font-bold text-stone-900 cursor-pointer hover:bg-rose-50" onclick="promptPackagingPrice(${idx})" title="클릭하여 구매단가/입수량 수정 — 현재 구매가 ${formatCurrency(pPrice)} / 입수 ${sQty}개 (1개당 ${fmtDec(pPrice / sQty, 1)}원)">${fmtDec(rowPackCost, 1)}</td>
+                <td class="fd-td py-1 px-1.5 text-right font-bold text-stone-900 cursor-pointer hover:bg-rose-50" onclick="promptPackagingPrice(${idx})" data-tip="${escapeHtml(`[포장재 원가 계산식] (${formatCurrency(pPrice)}${sQty > 1 ? ` ÷ ${sQty}입` : ''}) × 사용수량(${fmtDec(uQty, 3)}EA) = ${fmtDec(rowPackCost, 1)}원
+· 클릭하여 단가/입수량 수정`)}">${fmtDec(rowPackCost, 1)}</td>
                 <td class="fd-td py-1 px-0.5 text-center">
                     <button type="button" onclick="removeRecipePackaging(${idx})" class="text-stone-400 hover:text-rose-600 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                 </td>
@@ -1096,16 +1182,65 @@ function renderRecipeDetailPanel() {
         </div>
     `;
 
-    // [3] 우측 패널: 16항목 요약표 + 제품이미지 + 제빵공정 테이블
+    // [3] 우측 패널: 16항목 요약표(마우스오버 계산식 툴팁 포함) + 제품이미지 + 제빵공정 테이블
     const bp = rc.bakingProcess || {};
     const pkMismatchHint = (m.priceLink && m.priceLink.pkQuantityEa > 0 && Number(m.priceLink.pkQuantityEa) !== Number(rc.packQty))
-        ? ` (※ 참고: 제품단가 탭 PK입수량은 ${m.priceLink.pkQuantityEa}ea)`
+        ? `
+※ 참고: 제품단가 탭 PK입수량은 ${m.priceLink.pkQuantityEa}ea`
         : '';
-    const sellPriceTooltip = m.priceLink
+
+    const tipDivWeight = `[분할중량(G)] 제품 1개(1EA)당 기준 반죽 분할 중량
+· 현재 설정: ${fmtDec(rc.divisionWeight, 2)}g (직접 입력)`;
+    const tipProdQty = m.isCustomProdQty
+        ? `[생산수량 계산식 · 수기기준 적용]
+수기 기준수량(${fmtDec(rc.customProductionQty, 1)}개) × (1 - 손실 ${fmtDec(m.lossRatio, 1)}%) = ${fmtDec(m.prodQty, 1)}개
+· 0 입력 시 자동계산((중량합계-손실중량)÷분할중량) 복원`
+        : (m.lossRatio > 0
+            ? `[생산수량 계산식] (중량합계 - 손실중량) ÷ 분할중량
+(${fmtDec(m.weightTotalG, 0)}g - ${fmtDec(m.lossWeightG, 1)}g) ÷ ${fmtDec(rc.divisionWeight, 2)}g = ${fmtDec(m.netWeightG, 1)}g ÷ ${fmtDec(rc.divisionWeight, 2)}g = ${fmtDec(m.prodQty, 2)}개
+(손실 전 이론수량: ${fmtDec(m.theoQty, 1)}개)`
+            : `[생산수량 계산식] 중량합계 ÷ 분할중량
+${fmtDec(m.weightTotalG, 0)}g ÷ ${fmtDec(rc.divisionWeight, 2)}g = ${fmtDec(m.prodQty, 2)}개`);
+    const tipPackQty = `[PK입수] 1팩(1PK)당 완제품 입수 수량
+· 현재 설정: ${fmtDec(rc.packQty, 1)}개/PK (직접 입력 · 제품단가 탭 PK입수량과 동일)`;
+    const tipSellPrice = m.priceLink
         ? (m.releasePriceEa > 0
-            ? `[제품단가 연동: ${m.priceLink.productName}] 바로가 출고가 ${fmtDec(m.releasePriceEa, 0)}원 × PK입수 ${fmtDec(rc.packQty, 1)} = ${fmtDec(m.sellPrice, 0)}원${pkMismatchHint}`
-            : `[제품단가 연동됨: ${m.priceLink.productName}] 제품단가 탭에 바로가 출고가가 아직 입력되지 않았습니다 (0원).`)
-        : `제품단가 탭에 동일 품목코드(${rc.productCode})가 등록되면 [바로가 출고가 × PK입수]로 자동 계산됩니다.`;
+            ? `[판매금액(1PK) 계산식] 바로가 출고가(1EA) × PK입수
+${fmtDec(m.releasePriceEa, 0)}원 × ${fmtDec(rc.packQty, 1)}개 = ${fmtDec(m.sellPrice, 0)}원
+· 제품단가 연동: ${m.priceLink.productName}${pkMismatchHint}`
+            : `[판매금액(1PK) 계산식] 바로가 출고가(0원) × PK입수(${fmtDec(rc.packQty, 1)}개) = 0원
+· 제품단가 탭 [${m.priceLink.productName}] 출고가를 입력해 주세요`)
+        : `[판매금액(1PK) 계산식] 바로가 출고가 × PK입수
+· 제품단가 탭에 동일 품목코드(${rc.productCode}) 등록 시 자동 연동됩니다`;
+    const tipCostRatio = m.sellPrice > 0
+        ? `[원가비율(%) 계산식] 판매원가 ÷ 판매금액 × 100
+${fmtDec(m.salesCost, 0)}원 ÷ ${fmtDec(m.sellPrice, 0)}원 × 100 = ${fmtDec(m.costRatioPct, 2)}% (마진율 ${fmtDec(m.marginRatioPct, 2)}%)`
+        : `[원가비율(%) 계산식] 판매원가 ÷ 판매금액 × 100
+· 판매금액이 0원이어서 0%로 표시됩니다`;
+    const tipLossRatio = `[손실비율(%)] 믹싱·분할 공정 반죽 손실률 (직접 입력)
+· 현재 ${fmtDec(m.lossRatio, 1)}% → 손실중량 ${fmtDec(m.lossWeightG, 1)}g 차감 후 생산수량(${fmtDec(m.prodQty, 1)}개) 산출`;
+    const tipLossWeight = `[손실중량(G) 계산식] 중량합계 × 손실비율(%)
+${fmtDec(m.weightTotalG, 0)}g × ${fmtDec(m.lossRatio, 1)}% = ${fmtDec(m.lossWeightG, 1)}g
+· 실제 가용중량: ${fmtDec(m.weightTotalG, 0)}g - ${fmtDec(m.lossWeightG, 1)}g = ${fmtDec(m.netWeightG, 1)}g`;
+    const tipBatchPk = `[1배합 pk수량 계산식] 생산수량 ÷ PK입수
+${fmtDec(m.prodQty, 2)}개 ÷ ${fmtDec(m.packQty, 1)}개 = ${fmtDec(m.batchPkQty, 2)} pk`;
+    const tipUnitCost = `[개당원가(1EA) 계산식] 원재료비용 ÷ 생산수량
+${fmtDec(m.productionCost, 2)}원 ÷ ${fmtDec(m.prodQty, 2)}개 = ${fmtDec(m.unitCost, 2)}원`;
+    const tipSalesCost = `[판매원가(1PK) 계산식] 개당원가 × PK입수
+${fmtDec(m.unitCost, 2)}원 × ${fmtDec(m.packQty, 1)}개 = ${fmtDec(m.salesCost, 0)}원`;
+    const tipLossAmount = `[손실금액 계산식] 배합 재료원가 합계 × 손실비율(%)
+${fmtDec(m.rawMaterialCost, 1)}원 × ${fmtDec(m.lossRatio, 1)}% = ${fmtDec(m.lossAmount, 0)}원`;
+    const tipUnitPack = `[개별포장(1PK) 계산식] 포장지 부자재(${(rc.packagingList || []).length}종) 원가 합계
+= ${fmtDec(m.unitPackCost, 1)}원 (1PK 포장 기준)`;
+    const tipTotalPack = `[총 포장가 계산식] 개별포장(1PK) × 1배합 pk수량
+${fmtDec(m.unitPackCost, 1)}원 × ${fmtDec(m.batchPkQty, 2)}pk = ${fmtDec(m.totalPackCost, 0)}원`;
+    const tipProdCost = `[원재료비용(1배합 총원가) 계산식] 배합 재료원가 합계 + 총 포장가
+${fmtDec(m.rawMaterialCost, 1)}원 + ${fmtDec(m.totalPackCost, 1)}원 = ${fmtDec(m.productionCost, 2)}원`;
+    const tipWeightTotal = `[중량합계(G) 계산식] 배합 원재료·반제품(${m.itemBreakdown.length}종) 투입중량 합계
+= ${fmtDec(m.weightTotalG, 0)}g${m.lossRatio > 0 ? ` (손실 ${fmtDec(m.lossWeightG, 1)}g 제외 시 가용중량 ${fmtDec(m.netWeightG, 1)}g)` : ''}`;
+    const tipFillingTotal = `[충전합계(G) 계산식] 충전물·필링·앙금·크림·잼 항목 중량 합계
+= ${fmtDec(m.fillingWeightG, 0)}g`;
+
     rightEl.innerHTML = `
         <div class="bg-white rounded-xl border border-stone-300 shadow-2xs p-2.5">
             <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-stretch">
@@ -1119,16 +1254,16 @@ function renderRecipeDetailPanel() {
                         </colgroup>
                         <tbody>
                             <tr>
-                                <td class="fd-kv-label">분할중량(G)</td>
-                                <td class="fd-kv-val"><input type="text" value="${fmtDec(rc.divisionWeight, 2)}" onchange="updateRecipeNumericField('divisionWeight', this.value)" class="fd-kv-input"></td>
-                                <td class="fd-kv-label">생산수량</td>
-                                <td class="fd-kv-val"><input type="text" value="${fmtDec(m.prodQty, 1)}" title="0 입력 시 (중량합계÷분할중량) 자동 계산" onchange="updateRecipeNumericField('customProductionQty', this.value)" class="fd-kv-input"></td>
+                                <td class="fd-kv-label" data-tip="${escapeHtml(tipDivWeight)}">분할중량(G)</td>
+                                <td class="fd-kv-val" data-tip="${escapeHtml(tipDivWeight)}"><input type="text" value="${fmtDec(rc.divisionWeight, 2)}" onchange="updateRecipeNumericField('divisionWeight', this.value)" class="fd-kv-input"></td>
+                                <td class="fd-kv-label" data-tip="${escapeHtml(tipProdQty)}">생산수량</td>
+                                <td class="fd-kv-val" data-tip="${escapeHtml(tipProdQty)}"><input type="text" value="${fmtDec(m.prodQty, 1)}" onchange="updateRecipeNumericField('customProductionQty', this.value)" class="fd-kv-input"></td>
                             </tr>
                             <tr>
-                                <td class="fd-kv-label" title="1PK당 입수 수량(ea) — 제품단가 탭의 PK입수량과 동일">PK입수</td>
-                                <td class="fd-kv-val"><input type="text" value="${fmtDec(rc.packQty, 1)}" onchange="updateRecipeNumericField('packQty', this.value)" class="fd-kv-input"></td>
-                                <td class="fd-kv-label" title="자동계산 = 제품단가의 바로가 출고가(1ea) × PK입수">판매금액</td>
-                                <td class="fd-kv-val cursor-help ${m.releasePriceEa > 0 ? 'bg-emerald-50/40 font-black text-emerald-900' : 'text-stone-400 font-bold'}" title="${escapeHtml(sellPriceTooltip)}">
+                                <td class="fd-kv-label" data-tip="${escapeHtml(tipPackQty)}">PK입수</td>
+                                <td class="fd-kv-val" data-tip="${escapeHtml(tipPackQty)}"><input type="text" value="${fmtDec(rc.packQty, 1)}" onchange="updateRecipeNumericField('packQty', this.value)" class="fd-kv-input"></td>
+                                <td class="fd-kv-label" data-tip="${escapeHtml(tipSellPrice)}">판매금액</td>
+                                <td class="fd-kv-val ${m.releasePriceEa > 0 ? 'bg-emerald-50/40 font-black text-emerald-900' : 'text-stone-400 font-bold'}" data-tip="${escapeHtml(tipSellPrice)}">
                                     <span class="inline-flex items-center justify-end gap-1 w-full">
                                         ${m.releasePriceEa > 0 ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>' : ''}
                                         <span>${fmtDec(m.sellPrice, 0)}</span>
@@ -1136,40 +1271,40 @@ function renderRecipeDetailPanel() {
                                 </td>
                             </tr>
                             <tr>
-                                <td class="fd-kv-label">원가비율(%)</td>
-                                <td class="fd-kv-val font-black ${m.costRatioPct >= 70 ? 'text-rose-600' : 'text-blue-700'}">${fmtDec(m.costRatioPct, 2)}</td>
-                                <td class="fd-kv-label">손실비율(%)</td>
-                                <td class="fd-kv-val"><input type="text" value="${fmtDec(rc.lossRatio, 1)}" onchange="updateRecipeNumericField('lossRatio', this.value)" class="fd-kv-input"></td>
+                                <td class="fd-kv-label" data-tip="${escapeHtml(tipCostRatio)}">원가비율(%)</td>
+                                <td class="fd-kv-val font-black ${m.costRatioPct >= 70 ? 'text-rose-600' : 'text-blue-700'}" data-tip="${escapeHtml(tipCostRatio)}">${fmtDec(m.costRatioPct, 2)}</td>
+                                <td class="fd-kv-label" data-tip="${escapeHtml(tipLossRatio)}">손실비율(%)</td>
+                                <td class="fd-kv-val" data-tip="${escapeHtml(tipLossRatio)}"><input type="text" value="${fmtDec(rc.lossRatio, 1)}" onchange="updateRecipeNumericField('lossRatio', this.value)" class="fd-kv-input"></td>
                             </tr>
                             <tr>
-                                <td class="fd-kv-label">손실중량(G)</td>
-                                <td class="fd-kv-val">${fmtDec(m.lossWeightG, 1)}</td>
-                                <td class="fd-kv-label" title="자동계산 = 생산수량 ÷ PK입수 (${fmtDec(m.prodQty, 1)} ÷ ${fmtDec(m.packQty, 1)})">1배합 pk수량</td>
-                                <td class="fd-kv-val font-extrabold text-stone-900" title="생산수량(${fmtDec(m.prodQty, 1)}) ÷ PK입수(${fmtDec(m.packQty, 1)}) = ${fmtDec(m.batchPkQty, 2)} PK">${fmtDec(m.batchPkQty, 1)}</td>
+                                <td class="fd-kv-label" data-tip="${escapeHtml(tipLossWeight)}">손실중량(G)</td>
+                                <td class="fd-kv-val" data-tip="${escapeHtml(tipLossWeight)}">${fmtDec(m.lossWeightG, 1)}</td>
+                                <td class="fd-kv-label" data-tip="${escapeHtml(tipBatchPk)}">1배합 pk수량</td>
+                                <td class="fd-kv-val font-extrabold text-stone-900" data-tip="${escapeHtml(tipBatchPk)}">${fmtDec(m.batchPkQty, 1)}</td>
                             </tr>
                             <tr>
-                                <td class="fd-kv-label">개당원가</td>
-                                <td class="fd-kv-val font-extrabold">${fmtDec(m.unitCost, 2)}</td>
-                                <td class="fd-kv-label">판매원가</td>
-                                <td class="fd-kv-val font-black text-amber-900">${fmtDec(m.salesCost, 0)}</td>
+                                <td class="fd-kv-label" data-tip="${escapeHtml(tipUnitCost)}">개당원가</td>
+                                <td class="fd-kv-val font-extrabold" data-tip="${escapeHtml(tipUnitCost)}">${fmtDec(m.unitCost, 2)}</td>
+                                <td class="fd-kv-label" data-tip="${escapeHtml(tipSalesCost)}">판매원가</td>
+                                <td class="fd-kv-val font-black text-amber-900" data-tip="${escapeHtml(tipSalesCost)}">${fmtDec(m.salesCost, 0)}</td>
                             </tr>
                             <tr>
-                                <td class="fd-kv-label">손실금액</td>
-                                <td class="fd-kv-val">${fmtDec(m.lossAmount, 0)}</td>
-                                <td class="fd-kv-label">개별포장</td>
-                                <td class="fd-kv-val">${fmtDec(m.unitPackCost, 0)}</td>
+                                <td class="fd-kv-label" data-tip="${escapeHtml(tipLossAmount)}">손실금액</td>
+                                <td class="fd-kv-val" data-tip="${escapeHtml(tipLossAmount)}">${fmtDec(m.lossAmount, 0)}</td>
+                                <td class="fd-kv-label" data-tip="${escapeHtml(tipUnitPack)}">개별포장</td>
+                                <td class="fd-kv-val" data-tip="${escapeHtml(tipUnitPack)}">${fmtDec(m.unitPackCost, 0)}</td>
                             </tr>
                             <tr>
-                                <td class="fd-kv-label">총 포장가</td>
-                                <td class="fd-kv-val">${fmtDec(m.totalPackCost, 0)}</td>
-                                <td class="fd-kv-label" title="배합 재료원가 + 총 포장가 — 제품단가 탭의 1배합 원재료비용과 동일">원재료비용</td>
-                                <td class="fd-kv-val font-black text-stone-900">${fmtDec(m.productionCost, 2)}</td>
+                                <td class="fd-kv-label" data-tip="${escapeHtml(tipTotalPack)}">총 포장가</td>
+                                <td class="fd-kv-val" data-tip="${escapeHtml(tipTotalPack)}">${fmtDec(m.totalPackCost, 0)}</td>
+                                <td class="fd-kv-label" data-tip="${escapeHtml(tipProdCost)}">원재료비용</td>
+                                <td class="fd-kv-val font-black text-stone-900" data-tip="${escapeHtml(tipProdCost)}">${fmtDec(m.productionCost, 2)}</td>
                             </tr>
                             <tr>
-                                <td class="fd-kv-label">중량합계(G)</td>
-                                <td class="fd-kv-val font-extrabold text-stone-900">${fmtDec(m.weightTotalG, 0)}</td>
-                                <td class="fd-kv-label">충전합계(G)</td>
-                                <td class="fd-kv-val">${fmtDec(m.fillingWeightG, 0)}</td>
+                                <td class="fd-kv-label" data-tip="${escapeHtml(tipWeightTotal)}">중량합계(G)</td>
+                                <td class="fd-kv-val font-extrabold text-stone-900" data-tip="${escapeHtml(tipWeightTotal)}">${fmtDec(m.weightTotalG, 0)}</td>
+                                <td class="fd-kv-label" data-tip="${escapeHtml(tipFillingTotal)}">충전합계(G)</td>
+                                <td class="fd-kv-val" data-tip="${escapeHtml(tipFillingTotal)}">${fmtDec(m.fillingWeightG, 0)}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -1341,10 +1476,35 @@ function updateRecipeField(field, val) {
 function updateRecipeNumericField(field, val) {
     const rc = recipesData.find(r => r.id === selectedRecipeId);
     if (!rc) return;
-    rc[field] = parseNumericCell(val);
+    const rawStr = String(val ?? '').trim();
+    const num = parseNumericCell(val);
+
+    if (field === 'customProductionQty') {
+        if (rawStr === '' || num <= 0) {
+            rc.customProductionQty = 0;
+        } else {
+            const base = evaluateRecipeBaseTotals(rc);
+            const divW = parseFloat(rc.divisionWeight) || 0;
+            const lossR = Math.max(0, Math.min(99.9, parseFloat(rc.lossRatio) || 0));
+            const netW = Math.max(0, base.weightTotalG * (1 - lossR / 100));
+            const autoNetQty = divW > 0 ? (netW / divW) : 0;
+            // 자동 산출 수량과 사실상 동일한 값이면 자동 계산 모드(0) 유지
+            if (autoNetQty > 0 && Math.abs(num - autoNetQty) < 0.08) {
+                rc.customProductionQty = 0;
+            } else {
+                rc.customProductionQty = lossR > 0 ? (num / (1 - lossR / 100)) : num;
+            }
+        }
+    } else {
+        rc[field] = num;
+    }
+
     rc.updatedAt = getTodayStr();
     saveLocalCache();
     renderRecipeWorkspace();
+    if (typeof window.refreshProductPriceRecipeLinks === 'function') {
+        window.refreshProductPriceRecipeLinks();
+    }
 }
 
 function updateBakingProcess(key, val) {
