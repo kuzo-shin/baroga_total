@@ -1,4 +1,4 @@
-// [VERSION: production.js v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
+// [VERSION: production.js v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
 //  - 품목 목록·단가: 제품단가 탭(barogaProductPriceBridge.getProductionProducts)
 //      파이 = PK로 입력 / 알생지·파베이크·제과 = 배합으로 입력 → '1배합 PK수'로 PK 환산 (실제 포장 PK를 직접 고칠 수 있음)
 //      금액 = PK × 엠즈 매입가(PK). 줄을 만들 때의 단가를 줄에 저장 → 나중에 단가가 바뀌어도 지난 기록 금액은 그대로
@@ -398,7 +398,7 @@
     if (dupName) { toast(`'${dupName}'이(가) 두 줄 있습니다. 한 줄로 합쳐 주세요.`, 'error'); return; }
     const lines = draft.lines.filter((l) => (Number(l.target) || 0) > 0 || (Number(l.actual) || 0) > 0 || (l.pkManual && Number(l.actualPk) > 0));
     lines.forEach((l) => { if (!l.pkManual) l.actualPk = lineAutoActualPk(l); l.targetPk = lineTargetPk(l); });  // 단가 0이면 0 그대로 저장 → 계속 현재 단가를 따라감
-    const semi = draft.semi.filter((l) => l.name && ((Number(l.target) || 0) > 0 || (Number(l.actual) || 0) > 0));
+    const semi = draft.semi.filter((l) => l.name && ((Number(l.target) || 0) > 0 || (Number(l.actual) || 0) > 0 || (Number(l.used) || 0) > 0 || (Number(l.waste) || 0) > 0));
     if (!lines.length && !semi.length && !draft.memo) delete db.days[draft.date];
     else db.days[draft.date] = { lines, semi, memo: draft.memo, updatedAt: new Date().toISOString() };
     const d = draft.date;
@@ -500,13 +500,14 @@
         <button type="button" onclick="Prod.removeLine('${l.id}')" title="삭제" class="w-8 h-8 rounded-lg text-stone-400 hover:text-rose-700 hover:bg-rose-50 cursor-pointer text-lg leading-none">×</button>
       </div>`;
     }).join('');
-    const semiRows = draft.semi.map((l) => `<div data-semi="${l.id}" class="grid grid-cols-[minmax(0,1.6fr)_110px_110px_130px_minmax(0,1fr)_36px] gap-2 items-center px-3 py-2 rounded-xl border border-dashed border-stone-300 bg-stone-50 transition">
-        <div class="min-w-0 flex items-center gap-1.5"><span class="text-[11px] font-bold px-1.5 py-0.5 rounded bg-stone-200 text-stone-600">반제품</span><span class="font-bold text-stone-800 truncate">${esc(l.name)}</span></div>
-        ${unitIn(`<input type="number" min="0" step="any" value="${l.target || ''}" placeholder="0" oninput="Prod.setSemiField('${l.id}','target',this.value)" class="${inCls} ${bd}">`, esc(l.unit))}
-        ${unitIn(`<input type="number" min="0" step="any" value="${l.actual || ''}" placeholder="0" oninput="Prod.setSemiField('${l.id}','actual',this.value)" class="${inCls} ${bd} bg-amber-50/70">`, esc(l.unit))}
-        <input type="text" value="${esc(l.note || '')}" oninput="Prod.setSemiField('${l.id}','note',this.value)" placeholder="메모" class="col-span-2 w-full border border-stone-300 rounded-lg px-2 py-1.5 text-sm">
+    const semiRows = draft.semi.map((l) => { const lam = isLaminating(l.name); return `<div data-semi="${l.id}" class="grid grid-cols-[minmax(0,1.6fr)_110px_110px_130px_minmax(0,1fr)_36px] gap-2 items-center px-3 py-2 rounded-xl border border-dashed border-stone-300 bg-stone-50 transition">
+        <div class="min-w-0"><div class="flex items-center gap-1.5"><span class="text-[11px] font-bold px-1.5 py-0.5 rounded bg-stone-200 text-stone-600">반제품</span><span class="font-bold text-stone-800 truncate">${esc(l.name)}</span></div>${lam ? '<div class="text-xs text-stone-500 mt-0.5">재고 관리 · 목표 / 만든 카트 / 사용 카트 / 폐기</div>' : '<div class="text-xs text-stone-400 mt-0.5">기록만 (재고·금액 제외)</div>'}</div>
+        ${unitIn(`<input type="number" min="0" step="any" value="${l.target || ''}" placeholder="0" oninput="Prod.setSemiField('${l.id}','target',this.value)" title="목표" class="${inCls} ${bd}">`, esc(l.unit))}
+        ${unitIn(`<input type="number" min="0" step="any" value="${l.actual || ''}" placeholder="0" oninput="Prod.setSemiField('${l.id}','actual',this.value)" title="${lam ? '만든 카트' : '실행'}" class="${inCls} ${bd} bg-amber-50/70">`, esc(l.unit))}
+        ${lam ? `${unitIn(`<input type="number" min="0" step="any" value="${l.used || ''}" placeholder="0" oninput="Prod.setSemiField('${l.id}','used',this.value)" title="사용 카트 (파이 성형에 쓴 카트)" class="${inCls} ${bd} bg-blue-50/60">`, '사용')}
+        <div class="flex items-center gap-1.5">${unitIn(`<input type="number" min="0" step="any" value="${l.waste || ''}" placeholder="0" oninput="Prod.setSemiField('${l.id}','waste',this.value)" title="폐기 카트" class="${inCls} ${bd} w-24 bg-rose-50/50">`, '폐기')}<input type="text" value="${esc(l.note || '')}" oninput="Prod.setSemiField('${l.id}','note',this.value)" placeholder="메모" class="min-w-0 flex-1 border border-stone-300 rounded-lg px-2 py-1.5 text-sm"></div>` : `<input type="text" value="${esc(l.note || '')}" oninput="Prod.setSemiField('${l.id}','note',this.value)" placeholder="메모" class="col-span-2 w-full border border-stone-300 rounded-lg px-2 py-1.5 text-sm">`}
         <button type="button" onclick="Prod.removeSemi('${l.id}')" title="삭제" class="w-8 h-8 rounded-lg text-stone-400 hover:text-rose-700 hover:bg-rose-50 cursor-pointer text-lg leading-none">×</button>
-      </div>`).join('');
+      </div>`; }).join('');
     const d = parseYmd(draft.date);
     const pw = prevWorkday(draft.date);
     const lastWeek = (() => { const x = parseYmd(draft.date); x.setDate(x.getDate() - 7); return ymd(x); })();
@@ -564,26 +565,40 @@
   //  생지(배합 입력): 투입 배합 × 1배합 PK수(표준) vs 실제 생산 수량(실행 재고수량을 직접 입력한 줄만) → 수율·손실 원재료비
   //  파이: 반제품 라미네이팅 카트 투입 반죽(kg) vs 생산한 파이가 쓴 반죽(개수 × 1개당 반죽 g) → 반죽 손실률
   function lossCfg() { db.loss = db.loss && typeof db.loss === 'object' ? db.loss : {}; db.loss.cartKg = db.loss.cartKg || {}; db.loss.pie = db.loss.pie || {}; return db.loss; }
-  function laminatingItems() { return db.semiItems.filter((s) => /라미네이팅/.test(s.name)); }
+  function isLaminating(name) { return /라미네이팅/.test(String(name || '')); }
+  function laminatingItems() { return db.semiItems.filter((s) => isLaminating(s.name)); }
   function pieDoughDefaults(products) {
     const recipes = Array.isArray(window.recipesData) ? window.recipesData : [];
     const byId = {}; recipes.forEach((r) => { byId[r.id] = r; });
     const out = {};
     products.filter((p) => p.cat === 'PIE').forEach((p) => {
       const r = recipes.find((x) => String(x.productCode) === String(p.productCode) && x.recipeType !== 'SUB');
-      let grams = 0, names = [];
+      let grams = 0, names = [], subIds = [];
       ((r && r.ingredients) || []).forEach((i) => {
         if (i.rowType !== 'SUB_RECIPE' || !/반죽/.test(i.item || '')) return;
         const sub = byId[i.subRecipeId];
         const unit = String(i.unit || '').toUpperCase();
         grams += (Number(i.qty) || 0) * (unit === 'EA' ? Number(sub && sub.divisionWeight) || 0 : 1);
-        names.push(i.item);
+        names.push(i.item); if (i.subRecipeId) subIds.push(i.subRecipeId);
       });
       const nm = names.join(' ');
       const group = /패스츄리/.test(nm) ? '패스츄리 반죽 라미네이팅' : /파트푀이테|쇼숑/.test(nm) ? '쇼숑 반죽 라미네이팅' : /몽마르트/.test(nm) ? '몽마르트 반죽 라미네이팅' : '';
-      out[p.productCode] = { group, gPerEa: grams > 0 && p.batchOutputEa > 0 ? Math.round((grams / p.batchOutputEa) * 10) / 10 : 0, recipeDiv: r ? Number(r.divisionWeight) || 0 : 0, doughNames: nm, hasRecipe: !!r };
+      out[p.productCode] = { group, gPerEa: grams > 0 && p.batchOutputEa > 0 ? Math.round((grams / p.batchOutputEa) * 10) / 10 : 0, recipeDiv: r ? Number(r.divisionWeight) || 0 : 0, doughNames: nm, subIds, hasRecipe: !!r };
     });
     return out;
+  }
+  // 라미네이팅 반죽 1kg 원재료비: 그 그룹 파이 레시피가 쓰는 반죽 반제품 레시피(가장 많이 쓰인 것)의 원재료비 ÷ 총중량
+  function laminatingDoughInfo(name, products, defs) {
+    const recipes = Array.isArray(window.recipesData) ? window.recipesData : [];
+    const cnt = {};
+    products.filter((p) => p.cat === 'PIE' && pieSetting(p.productCode, defs).group === name).forEach((p) => ((defs[p.productCode] || {}).subIds || []).forEach((id) => { cnt[id] = (cnt[id] || 0) + 1; }));
+    const subId = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0];
+    const rc = subId && recipes.find((r) => r.id === subId);
+    if (!rc || typeof window.calculateRecipeMetrics !== 'function') return { recipeName: rc ? rc.productName : '', costPerKg: null, batchKg: null };
+    try {
+      const m = window.calculateRecipeMetrics(JSON.parse(JSON.stringify(rc)));
+      return { recipeName: rc.productName, costPerKg: m.weightTotalG > 0 ? (m.rawMaterialCost / m.weightTotalG) * 1000 : null, batchKg: m.weightTotalG / 1000 };
+    } catch (e) { return { recipeName: rc.productName, costPerKg: null, batchKg: null }; }
   }
   function pieSetting(code, defs) {
     const c = lossCfg().pie[code] || {}, d = defs[code] || {};
@@ -599,10 +614,10 @@
   }
   function computeLoss(from, to, products, defs) {
     const doughRows = {}, pieGroups = {};
-    laminatingItems().forEach((s) => { pieGroups[s.name] = { name: s.name, carts: 0, cartKg: Number(lossCfg().cartKg[s.name]) || 0, usedKg: 0, pies: {}, missingG: [] }; });
+    laminatingItems().forEach((s) => { pieGroups[s.name] = { name: s.name, made: 0, usedCarts: 0, usedRecorded: false, carts: 0, cartKg: Number(lossCfg().cartKg[s.name]) || 0, usedKg: 0, pies: {}, missingG: [] }; });
     Object.entries(db.days).forEach(([d, day]) => {
       if (d < from || d > to) return;
-      (day.semi || []).forEach((s) => { if (pieGroups[s.name]) pieGroups[s.name].carts += Number(s.actual) || 0; });
+      (day.semi || []).forEach((s) => { const g = pieGroups[s.name]; if (!g) return; g.made += Number(s.actual) || 0; if (s.used !== undefined && s.used !== '' && Number(s.used) >= 0 && (Number(s.used) > 0 || Number(s.actual) > 0)) { if (Number(s.used) > 0) g.usedRecorded = true; g.usedCarts += Number(s.used) || 0; } });
       (day.lines || []).forEach((l) => {
         const p = productByCode(l.code, products);
         if (l.unit === '배합') {
@@ -628,6 +643,8 @@
       return { ...r, yieldPct, diff: r.actC - r.expC, lossMoney };
     }).sort((a, b) => CAT_ORDER.indexOf(a.cat) - CAT_ORDER.indexOf(b.cat) || a.code.localeCompare(b.code));
     const pies = Object.values(pieGroups).map((g) => {
+      g.basis = g.usedRecorded ? '사용 카트' : '만든 카트(사용 미입력)';
+      g.carts = g.usedRecorded ? g.usedCarts : g.made;
       const inputKg = g.carts * g.cartKg;
       return { ...g, inputKg, diffKg: inputKg - g.usedKg, lossPct: inputKg > 0 ? (1 - g.usedKg / inputKg) * 100 : null };
     });
@@ -668,7 +685,7 @@
       const pieRows = Object.values(g.pies).map((pe) => `<div class="flex justify-between text-xs"><span>${esc(pe.name)} ${num(pe.ea, 0)}개 × ${pe.gPerEa ? num(pe.gPerEa) + 'g' : '<b class="text-rose-700">g 미설정</b>'}</span><span class="tabular-nums">${num((pe.ea * pe.gPerEa) / 1000)}kg</span></div>`).join('');
       return `<div class="rounded-xl border border-stone-200 p-3 flex flex-col gap-1.5">
         <div class="flex items-center justify-between"><b class="text-sm">${esc(g.name.replace(' 라미네이팅', ''))}</b>${g.cartKg ? lossCell(g.lossPct) : '<span class="text-xs font-bold text-rose-700">1카트 kg 미설정</span>'}</div>
-        <div class="grid grid-cols-2 gap-x-2 text-xs tabular-nums"><span class="text-stone-500">투입 카트</span><span class="text-right font-bold">${num(g.carts)}카트${g.cartKg ? ` × ${num(g.cartKg)}kg` : ''}</span>
+        <div class="grid grid-cols-2 gap-x-2 text-xs tabular-nums"><span class="text-stone-500">투입 카트 <span class="text-[11px] ${g.usedRecorded ? 'text-blue-700' : 'text-amber-700'}">(${g.basis})</span></span><span class="text-right font-bold">${num(g.carts)}카트${g.cartKg ? ` × ${num(g.cartKg)}kg` : ''}</span>
           <span class="text-stone-500">투입 반죽</span><span class="text-right font-bold">${g.cartKg ? num(g.inputKg) + 'kg' : '-'}</span>
           <span class="text-stone-500">생산에 쓴 반죽</span><span class="text-right font-bold">${num(g.usedKg)}kg</span>
           <span class="text-stone-500">차이(손실)</span><span class="text-right font-extrabold ${g.diffKg > 0 ? 'text-rose-700' : 'text-emerald-700'}">${g.cartKg ? num(g.diffKg) + 'kg' : '-'}</span></div>
@@ -703,7 +720,7 @@
       </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
         <h3 class="text-sm font-extrabold mb-1">파이 — 라미네이팅 카트 투입 반죽 대비 생산에 쓴 반죽</h3>
-        <div class="text-xs text-stone-500 mb-2">투입 = 반제품 라미네이팅 실행 카트 × 1카트 반죽 kg · 사용 = 파이 생산 개수 × 1개당 반죽 g. 카트를 만든 날과 성형한 날이 다를 수 있어 하루보다 주·월로 보세요.</div>
+        <div class="text-xs text-stone-500 mb-2">투입 = 라미네이팅 <b>사용 카트</b>(없으면 만든 카트) × 1카트 반죽 kg · 사용 = 파이 생산 개수 × 1개당 반죽 g. 카트를 만든 날과 성형한 날이 다를 수 있어 하루보다 주·월로 보세요.</div>
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-${Math.max(1, Math.min(5, L.pies.length))} gap-3">${pieCards}</div>
       </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
@@ -714,7 +731,7 @@
   function openLossSettings() {
     const products = getProducts(), defs = pieDoughDefaults(products), cfg = lossCfg();
     const lam = laminatingItems();
-    const cartRows = lam.map((s) => `<tr class="border-b border-stone-100"><td class="py-1.5 px-2 font-bold">${esc(s.name)}</td><td class="py-1.5 px-2 text-right"><input type="number" min="0" step="any" data-cart="${esc(s.name)}" value="${cfg.cartKg[s.name] || ''}" placeholder="kg" class="no-spinner w-24 text-right border border-stone-300 rounded-lg px-2 py-1 font-bold tabular-nums"> kg</td></tr>`).join('');
+    const cartRows = lam.map((s) => { const di = laminatingDoughInfo(s.name, products, defs); return `<tr class="border-b border-stone-100"><td class="py-1.5 px-2"><div class="font-bold">${esc(s.name)}</div><div class="text-xs text-stone-500">${di.recipeName ? `반죽 레시피 ${esc(di.recipeName)} · 1배합 ${num(di.batchKg)}kg · 원재료비 ${di.costPerKg == null ? '-' : won(di.costPerKg) + '/kg'}` : '연결된 파이 반죽 레시피 없음'}</div></td><td class="py-1.5 px-2 text-right"><input type="number" min="0" step="any" data-cart="${esc(s.name)}" value="${cfg.cartKg[s.name] || ''}" placeholder="kg" class="no-spinner w-24 text-right border border-stone-300 rounded-lg px-2 py-1 font-bold tabular-nums"> kg</td></tr>`; }).join('');
     const pieRows = products.filter((p) => p.cat === 'PIE').map((p) => {
       const st = pieSetting(p.productCode, defs), d = defs[p.productCode] || {};
       const warn = !d.hasRecipe ? '레시피 없음' : !d.gPerEa ? '레시피에 반죽 없음' : (d.recipeDiv && Math.abs(d.gPerEa - d.recipeDiv) / d.recipeDiv > 0.3 ? `레시피 분할중량 ${num(d.recipeDiv)}g과 차이 큼` : '');
@@ -753,7 +770,7 @@
     const ensure = (code, name) => map[code] || (map[code] = { code, name, base: 0, produced: 0, shipped: 0, adjust: 0 });
     products.forEach((p) => ensure(String(p.productCode), p.productName));
     const after = (d) => !base || String(d || '') > base.date;
-    if (base) Object.entries(base.counts || {}).forEach(([code, pk]) => { ensure(code, (productByCode(code, products) || {}).productName || code).base = Number(pk) || 0; });
+    if (base) Object.entries(base.counts || {}).forEach(([code, pk]) => { if (code.startsWith('SEMI:')) return; ensure(code, (productByCode(code, products) || {}).productName || code).base = Number(pk) || 0; });
     Object.entries(db.days).forEach(([d, day]) => { if (!after(d)) return; (day.lines || []).forEach((l) => { ensure(String(l.code), l.name).produced += lineActualPk(l); }); });
     const unmapped = {};
     feed.records.forEach((r) => {
@@ -766,7 +783,22 @@
         else { const k = it.code + ' ' + it.name; unmapped[k] = (unmapped[k] || 0) + pk; }
       });
     });
-    db.stockAdjusts.forEach((a) => { if (after(a.date)) ensure(String(a.code), a.name).adjust += Number(a.deltaPk) || 0; });
+    db.stockAdjusts.forEach((a) => { if (after(a.date) && !String(a.code).startsWith('SEMI:')) ensure(String(a.code), a.name).adjust += Number(a.deltaPk) || 0; });
+    // 라미네이팅 반제품 재고(카트) = 실사 + 만든 − 사용 − 폐기 ± 조정, 평가 = 카트 × 1카트 kg × 반죽 원재료비/kg (판매 품목 아님)
+    const defs = pieDoughDefaults(products);
+    const semiRows = laminatingItems().map((s) => {
+      const key = 'SEMI:' + s.name;
+      const x = { key, name: s.name, unit: s.unit || '카트', base: base ? Number((base.counts || {})[key]) || 0 : 0, made: 0, used: 0, waste: 0, adjust: 0 };
+      Object.entries(db.days).forEach(([d, day]) => { if (!after(d)) return; (day.semi || []).forEach((l) => { if (l.name !== s.name) return; x.made += Number(l.actual) || 0; x.used += Number(l.used) || 0; x.waste += Number(l.waste) || 0; }); });
+      db.stockAdjusts.forEach((a) => { if (after(a.date) && a.code === key) x.adjust += Number(a.deltaPk) || 0; });
+      x.cur = r1(x.base + x.made - x.used - x.waste + x.adjust);
+      x.cartKg = Number(lossCfg().cartKg[s.name]) || 0;
+      const di = laminatingDoughInfo(s.name, products, defs);
+      x.costPerKg = di.costPerKg; x.recipeName = di.recipeName;
+      x.cartCost = x.cartKg && di.costPerKg != null ? x.cartKg * di.costPerKg : null;
+      x.amt = x.cartCost == null ? null : x.cur * x.cartCost;
+      return x;
+    });
     const rows = Object.values(map).map((x) => {
       const p = productByCode(x.code, products);
       const cur = r1(x.base + x.produced - x.shipped + x.adjust);
@@ -774,10 +806,25 @@
       const cost = p && p.pkTotalCost != null ? p.pkTotalCost * per : null, buy = p ? p.msBuyPricePk : 0; // 원가는 PK당 → 재고 단위(BOX)로 환산
       return { ...x, cat: p ? p.cat : '', unit: p ? p.stockUnit : 'PK', cur, cost, buy, costAmt: cost == null ? null : cur * cost, buyAmt: cur * buy };
     }).sort((a, b) => CAT_ORDER.indexOf(a.cat) - CAT_ORDER.indexOf(b.cat) || a.code.localeCompare(b.code));
-    return { rows, unmapped, feed, base };
+    return { rows, unmapped, feed, base, semiRows };
   }
   function renderStock() {
-    const { rows, unmapped, feed, base } = computeStock();
+    const { rows, unmapped, feed, base, semiRows } = computeStock();
+    const semiActive = semiRows.filter((r) => r.base || r.made || r.used || r.waste || r.adjust || r.cur);
+    const semiTot = semiActive.reduce((s2, r) => s2 + (r.amt > 0 ? r.amt : 0), 0);
+    const semiNoCost = semiActive.filter((r) => r.cur > 0 && r.cartCost == null).length;
+    const semiTrs = semiRows.map((r) => `<tr class="border-b border-stone-100 ${r.cur < 0 ? 'bg-rose-50' : ''}">
+        <td class="py-1.5 px-2 font-bold">${esc(r.name)}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums">${num(r.base)}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums text-emerald-700">${r.made ? '+' + num(r.made) : '-'}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums text-blue-700">${r.used ? '-' + num(r.used) : '-'}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums text-rose-700">${r.waste ? '-' + num(r.waste) : '-'}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums">${r.adjust ? (r.adjust > 0 ? '+' : '') + num(r.adjust) : '-'}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums font-extrabold ${r.cur < 0 ? 'text-rose-700' : 'text-stone-900'}">${num(r.cur)} <span class="text-xs font-bold text-stone-500">${esc(r.unit)}</span></td>
+        <td class="py-1.5 px-2 text-right tabular-nums text-stone-600">${r.cartKg ? num(r.cartKg) + 'kg' : '<span class="text-rose-600">미설정</span>'}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums text-stone-600" title="${esc(r.recipeName || '')}">${r.costPerKg == null ? '<span class="text-rose-600">레시피 없음</span>' : won(r.costPerKg)}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums font-bold">${r.amt == null ? '-' : won(r.amt)}</td>
+      </tr>`).join('');
     const active = rows.filter((r) => r.base || r.produced || r.shipped || r.adjust || r.cur);
     const totCost = active.reduce((s, r) => s + (r.costAmt > 0 ? r.costAmt : 0), 0), totBuy = active.reduce((s, r) => s + (r.buyAmt > 0 ? r.buyAmt : 0), 0);
     const noCost = active.filter((r) => r.cur > 0 && r.cost == null).length;
@@ -797,14 +844,15 @@
         <td class="py-1.5 px-2 text-right tabular-nums text-stone-600">${won(r.buy)}</td>
         <td class="py-1.5 px-2 text-right tabular-nums font-bold text-amber-900">${won(r.buyAmt)}</td>
       </tr>`).join('');
-    const adjRows = db.stockAdjusts.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map((a) => `<tr class="border-b border-stone-100"><td class="py-1 px-2">${esc(a.date)}</td><td class="py-1 px-2">${esc(a.name)}</td><td class="py-1 px-2 text-right tabular-nums font-bold ${a.deltaPk < 0 ? 'text-rose-700' : 'text-emerald-700'}">${a.deltaPk > 0 ? '+' : ''}${num(a.deltaPk)} ${esc((productByCode(a.code) || {}).stockUnit || 'PK')}</td><td class="py-1 px-2">${esc(a.reason)}</td><td class="py-1 px-2 text-center"><button type="button" onclick="Prod.removeAdjust('${a.id}')" class="text-xs text-rose-700 font-bold cursor-pointer">삭제</button></td></tr>`).join('');
+    const adjRows = db.stockAdjusts.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map((a) => `<tr class="border-b border-stone-100"><td class="py-1 px-2">${esc(a.date)}</td><td class="py-1 px-2">${esc(a.name)}</td><td class="py-1 px-2 text-right tabular-nums font-bold ${a.deltaPk < 0 ? 'text-rose-700' : 'text-emerald-700'}">${a.deltaPk > 0 ? '+' : ''}${num(a.deltaPk)} ${String(a.code).startsWith('SEMI:') ? '카트' : esc((productByCode(a.code) || {}).stockUnit || 'PK')}</td><td class="py-1 px-2">${esc(a.reason)}</td><td class="py-1 px-2 text-center"><button type="button" onclick="Prod.removeAdjust('${a.id}')" class="text-xs text-rose-700 font-bold cursor-pointer">삭제</button></td></tr>`).join('');
     return `
       ${!base ? `<div class="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-sm"><b>재고 실사 수량이 아직 없습니다.</b> 냉동창고 재고를 세어 [재고 실사 입력]에 넣으면, 그 날 이후의 생산(실행 PK)과 엠즈 입고(출고)로 재고가 자동 계산됩니다.</div>` : ''}
       ${!feed.loaded ? `<div class="p-3 rounded-xl bg-stone-100 border border-stone-200 text-stone-700 text-xs flex flex-wrap items-center gap-2"><span>엠즈 입고 기록을 이 기기에 저장된 사본으로 계산 중입니다. 최신 출고를 반영하려면</span><button type="button" onclick="Prod.loadMs()" class="px-2.5 py-1 rounded-lg bg-stone-900 text-white font-bold cursor-pointer">엠즈 입고 불러오기</button></div>` : ''}
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">재고 실사 기준일</div><div class="mt-1 text-xl font-extrabold">${base ? esc(base.date) : '-'}</div><div class="text-xs text-stone-500">이 날 이후 생산·출고 반영</div></div>
         <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">재고 자산 (생산원가 기준)</div><div class="mt-1 text-xl font-extrabold tabular-nums">${won(totCost)}</div><div class="text-xs text-stone-500">PK 총생산원가 × 현재고 (음수 재고 제외)${noCost ? ` · 원가 미산출 ${noCost}개 품목 제외` : ''}</div></div>
         <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">재고 자산 (엠즈 매입가 기준)</div><div class="mt-1 text-xl font-extrabold tabular-nums text-amber-900">${won(totBuy)}</div><div class="text-xs text-stone-500">엠즈 매입가(PK) × 현재고 (음수 재고 제외)</div></div>
+        <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">반제품(라미네이팅) 재고</div><div class="mt-1 text-xl font-extrabold tabular-nums">${won(semiTot)}</div><div class="text-xs text-stone-500">원재료비 기준 (판매 품목 아님)${semiNoCost ? ` · 기준 미설정 ${semiNoCost}개 제외` : ''}</div></div>
         <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">확인 필요</div><div class="mt-1 text-xl font-extrabold ${negative.length || unmappedList.length ? 'text-rose-700' : 'text-emerald-700'}">${negative.length + unmappedList.length}건</div><div class="text-xs text-stone-500">재고 음수 ${negative.length} · 연결 안 된 엠즈 상품 ${unmappedList.length}</div></div>
       </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
@@ -820,6 +868,13 @@
           <tbody>${trs || '<tr><td colspan="12" class="py-6 text-center text-xs text-stone-400">제품단가 탭 품목이 없습니다.</td></tr>'}</tbody>
         </table></div>
       </div>
+      <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-1"><h3 class="text-sm font-extrabold text-stone-900">반제품 재고 — 라미네이팅 카트</h3><button type="button" onclick="Prod.openLossSettings()" class="px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-bold cursor-pointer hover:bg-stone-50">1카트 kg 설정</button></div>
+        <div class="text-xs text-stone-500 mb-2">현재고 = 실사 + 만든 카트 − 사용 카트 − 폐기 ± 조정. 금액 = 카트 × 1카트 반죽 kg × 반죽 원재료비/kg (레시피 기준).</div>
+        <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm min-w-[900px]">
+          <thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600"><th class="py-2 px-2">반제품</th><th class="py-2 px-2 text-right">실사</th><th class="py-2 px-2 text-right">+만듦</th><th class="py-2 px-2 text-right">−사용</th><th class="py-2 px-2 text-right">−폐기</th><th class="py-2 px-2 text-right">±조정</th><th class="py-2 px-2 text-right">현재고</th><th class="py-2 px-2 text-right">1카트</th><th class="py-2 px-2 text-right">원재료비/kg</th><th class="py-2 px-2 text-right">원재료비 금액</th></tr></thead>
+          <tbody>${semiTrs}</tbody></table></div>
+      </div>
       ${unmappedList.length ? `<div class="bg-white rounded-2xl border border-rose-200 p-4 text-xs"><h4 class="font-extrabold text-rose-800 mb-1">재고에서 빼지 못한 엠즈 출고 (품목코드 연결 없음)</h4><div class="text-stone-600 mb-2">엠즈 입고 → 매입가 DB 관리에서 '레시피 품목코드'를 연결하면 재고에서 빠집니다. 생산일지 품목(제품단가 탭)에 없는 상품일 수도 있습니다.</div>${unmappedList.map(([k, pk]) => `<div class="flex justify-between border-b border-stone-100 py-1"><span>${esc(k)}</span><b class="tabular-nums">${num(pk)} PK</b></div>`).join('')}</div>` : ''}
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4 text-xs">
         <h4 class="text-sm font-extrabold text-stone-900 mb-2">재고 조정 기록</h4>
@@ -829,10 +884,10 @@
   function modal(html) { const h = document.getElementById('prodModal'); if (h) h.innerHTML = `<div class="fixed inset-0 z-50 bg-stone-900/40 flex items-start justify-center p-3 sm:p-6 overflow-y-auto" onclick="if(event.target===this)Prod.closeModal()"><div class="bg-white rounded-2xl shadow-xl w-full max-w-[720px]">${html}</div></div>`; }
   function closeModal() { const h = document.getElementById('prodModal'); if (h) h.innerHTML = ''; }
   function openCountModal() {
-    const { rows } = computeStock();
+    const { rows, semiRows } = computeStock();
     modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold">재고 실사 입력</h3><div class="text-xs text-stone-500 mt-0.5">기준일 <b>마감 후</b> 냉동창고에 있는 PK 수량입니다. 칸에는 지금 계산된 재고가 미리 들어 있으니, 센 수량으로 고쳐 주세요.</div></div>
       <div class="p-4 max-h-[60vh] overflow-y-auto"><div class="mb-3"><label class="text-xs font-bold">기준일</label> <input id="prodCountDate" type="date" value="${today()}" class="ml-2 border border-stone-300 rounded-lg px-2 py-1 text-sm"></div>
-      <table class="w-full text-sm">${rows.map((r) => `<tr class="border-b border-stone-100"><td class="py-1 px-2 text-xs text-stone-500">${CAT_LABEL[r.cat] || ''}</td><td class="py-1 px-2 font-bold">${esc(r.name)}</td><td class="py-1 px-2 text-right"><input type="number" min="0" step="any" data-count-code="${esc(r.code)}" value="${r.cur > 0 ? r.cur : 0}" class="no-spinner w-24 text-right border border-stone-300 rounded-lg px-2 py-1 font-bold tabular-nums"> ${esc(r.unit || 'PK')}</td></tr>`).join('')}</table></div>
+      <table class="w-full text-sm">${semiRows.map((r) => `<tr class="border-b border-stone-100 bg-stone-50"><td class="py-1 px-2 text-xs text-stone-500">반제품</td><td class="py-1 px-2 font-bold">${esc(r.name)}</td><td class="py-1 px-2 text-right"><input type="number" min="0" step="any" data-count-code="${esc(r.key)}" value="${r.cur > 0 ? r.cur : 0}" class="no-spinner w-24 text-right border border-stone-300 rounded-lg px-2 py-1 font-bold tabular-nums"> ${esc(r.unit)}</td></tr>`).join('')}${rows.map((r) => `<tr class="border-b border-stone-100"><td class="py-1 px-2 text-xs text-stone-500">${CAT_LABEL[r.cat] || ''}</td><td class="py-1 px-2 font-bold">${esc(r.name)}</td><td class="py-1 px-2 text-right"><input type="number" min="0" step="any" data-count-code="${esc(r.code)}" value="${r.cur > 0 ? r.cur : 0}" class="no-spinner w-24 text-right border border-stone-300 rounded-lg px-2 py-1 font-bold tabular-nums"> ${esc(r.unit || 'PK')}</td></tr>`).join('')}</table></div>
       <div class="px-5 py-3 border-t border-stone-200 flex justify-end gap-2"><button type="button" onclick="Prod.closeModal()" class="px-4 py-2 rounded-xl border border-stone-300 text-sm font-bold cursor-pointer">취소</button><button type="button" onclick="Prod.saveCount()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">실사 수량 확정</button></div>`);
   }
   function saveCount() {
@@ -850,8 +905,8 @@
     modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold">재고 조정</h3><div class="text-xs text-stone-500 mt-0.5">폐기·샘플·회송 입고 등 생산/엠즈 출고 말고 재고가 바뀐 경우. 빠지면 −, 들어오면 +.</div></div>
       <div class="p-4 grid grid-cols-2 gap-3 text-sm">
         <label class="flex flex-col gap-1 text-xs font-bold">날짜<input id="prodAdjDate" type="date" value="${today()}" class="border border-stone-300 rounded-lg px-2 py-1 text-sm font-normal"></label>
-        <label class="flex flex-col gap-1 text-xs font-bold">품목<select id="prodAdjCode" class="border border-stone-300 rounded-lg px-2 py-1 text-sm font-normal">${products.map((p) => `<option value="${esc(p.productCode)}">${esc(p.productCode)} ${esc(p.productName)}</option>`).join('')}</select></label>
-        <label class="flex flex-col gap-1 text-xs font-bold">증감 (PK, 쇼숑은 BOX)<input id="prodAdjPk" type="number" step="any" placeholder="예: -12" class="border border-stone-300 rounded-lg px-2 py-1 text-sm font-normal"></label>
+        <label class="flex flex-col gap-1 text-xs font-bold">품목<select id="prodAdjCode" class="border border-stone-300 rounded-lg px-2 py-1 text-sm font-normal"><optgroup label="생지 (PK)">${products.map((p) => `<option value="${esc(p.productCode)}">${esc(p.productCode)} ${esc(p.productName)}</option>`).join('')}</optgroup><optgroup label="반제품 (카트)">${laminatingItems().map((s) => `<option value="${esc('SEMI:' + s.name)}">${esc(s.name)}</option>`).join('')}</optgroup></select></label>
+        <label class="flex flex-col gap-1 text-xs font-bold">증감 (PK · 쇼숑 BOX · 반제품 카트)<input id="prodAdjPk" type="number" step="any" placeholder="예: -12" class="border border-stone-300 rounded-lg px-2 py-1 text-sm font-normal"></label>
         <label class="flex flex-col gap-1 text-xs font-bold">사유<input id="prodAdjReason" type="text" placeholder="예: 유통기한 폐기" class="border border-stone-300 rounded-lg px-2 py-1 text-sm font-normal"></label>
       </div>
       <div class="px-5 py-3 border-t border-stone-200 flex justify-end gap-2"><button type="button" onclick="Prod.closeModal()" class="px-4 py-2 rounded-xl border border-stone-300 text-sm font-bold cursor-pointer">취소</button><button type="button" onclick="Prod.saveAdjust()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">조정 기록</button></div>`);
@@ -862,7 +917,7 @@
     if (!date || !code || !delta) { toast('날짜·품목·증감 PK를 넣어 주세요.', 'error'); return; }
     if (!reason) { toast('사유를 적어 주세요.', 'error'); return; }
     const p = productByCode(code);
-    db.stockAdjusts.push({ id: uid(), date, code, name: p ? p.productName : code, deltaPk: delta, reason, at: new Date().toISOString() });
+    db.stockAdjusts.push({ id: uid(), date, code, name: code.startsWith('SEMI:') ? code.slice(5) : (p ? p.productName : code), deltaPk: delta, reason, at: new Date().toISOString() });
     closeModal(); markChanged(); render();
   }
   function removeAdjust(id) {
