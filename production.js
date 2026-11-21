@@ -245,7 +245,7 @@
     // 월~금은 넓게, 토·일은 한 칸(주말)으로 합쳐 좁게
     const GRID_STYLE = 'grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(0, 0.4fr) 132px';
     // 품목 줄: 이름 | 단위 | 목표 | → | 실행 — 칸 폭을 고정해 표처럼 세로로 줄이 맞도록
-    const ROW_STYLE = 'display:grid;grid-template-columns:minmax(0,1fr) 26px 21px 8px 21px;column-gap:2px;align-items:center';
+    const ROW_STYLE = 'display:grid;grid-template-columns:minmax(0,1fr) 26px 24px 8px 24px;column-gap:2px;align-items:center';
     const unitBadge = (u) => `<span class="block w-full text-center rounded text-[10px] leading-4 font-extrabold tracking-tighter ${u === 'PK' ? 'bg-blue-50 text-blue-700' : u === '배합' ? 'bg-emerald-50 text-emerald-700' : u === 'BOX' ? 'bg-violet-50 text-violet-700' : 'bg-stone-100 text-stone-500'}">${esc(u)}</span>`;
     const itemRow = (name, title, cls, unit, tq, aq, actCls) => `<div class="text-xs leading-tight" style="${ROW_STYLE}"><span class="truncate font-semibold ${cls}" title="${esc(title)}">${name}</span>${unitBadge(unit)}<span class="text-right font-semibold text-stone-500 tabular-nums">${num(tq)}</span><span class="text-center text-stone-300 text-[10px]">→</span><b class="text-right font-extrabold tabular-nums ${actCls}">${num(aq)}</b></div>`;
     const dayBadge = (c, t) => (c.date > tdy && !(t.actual > 0)) ? (t.target > 0 ? '<span class="text-[11px] font-bold text-stone-400">예정</span>' : '') : rateBadge(rateOf(t.actual, t.target), t.actual > 0);
