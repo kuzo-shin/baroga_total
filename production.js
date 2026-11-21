@@ -1,4 +1,4 @@
-// [VERSION: production.js v2.6 - 2026-11-22 작업 인원에 1인 생산금액(KPI·날짜·주·파트별), 작업 구분별 생산 파트·인원 기준 설정 / v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
+// [VERSION: production.js v2.7 - 2026-11-22 달력 칸 최소 높이 1행(빈 주는 짧게), 기록 없는 주 합계 한 줄 / v2.6 - 2026-11-22 작업 인원에 1인 생산금액(KPI·날짜·주·파트별), 작업 구분별 생산 파트·인원 기준 설정 / v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
 //  - 품목 목록·단가: 제품단가 탭(barogaProductPriceBridge.getProductionProducts)
 //      파이 = PK로 입력 / 알생지·파베이크·제과 = 배합으로 입력 → '1배합 PK수'로 PK 환산 (실제 포장 PK를 직접 고칠 수 있음)
 //      금액 = PK × 엠즈 매입가(PK). 줄을 만들 때의 단가를 줄에 저장 → 나중에 단가가 바뀌어도 지난 기록 금액은 그대로
@@ -273,7 +273,7 @@
       const cells = w.slice(0, 5).map((c) => {
         const day = db.days[c.date];
         const t = dayTotals(day);
-        if (!c.inMonth) return `<div class="min-h-[168px] rounded-xl bg-stone-50/60 border border-dashed border-stone-200 p-2 text-xl leading-none text-stone-300 font-black">${c.day}</div>`;
+        if (!c.inMonth) return `<div class="rounded-xl bg-stone-50/60 border border-dashed border-stone-200 p-2 text-xl leading-none text-stone-300 font-black">${c.day}</div>`;
         const lines = (day && day.lines) || [], semi = (day && day.semi) || [];
         const MAX = 12; // 하루 품목(반제품 포함) 최대 12종까지 칸이 늘어남(그 뒤는 '외 n개'), 기본 높이는 5종
         // 파트별로 묶고 왼쪽 색 띠로 구분 (파이 · 알생지 · 파베이크 · 제과 · 반제품). 품목은 최대 MAX줄(묶음 제목 제외), 넘치면 '외 n개'
@@ -289,7 +289,7 @@
         }).join('') + (total > MAX ? `<div class="text-xs text-stone-400 font-semibold">외 ${total - MAX}개</div>` : '');
         const items = { length: total };
         const isToday = c.date === tdy;
-        return `<button type="button" onclick="Prod.openDay('${c.date}')" class="text-left min-h-[168px] rounded-xl border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : 'border-stone-200'} bg-white hover:border-amber-400 hover:shadow-xs p-2 flex flex-col gap-1 cursor-pointer min-w-0">
+        return `<button type="button" onclick="Prod.openDay('${c.date}')" class="text-left min-h-[64px] rounded-xl border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : 'border-stone-200'} bg-white hover:border-amber-400 hover:shadow-xs p-2 flex flex-col gap-1 cursor-pointer min-w-0">
           <div class="flex items-center justify-between gap-1"><span class="flex items-baseline gap-1.5 min-w-0"><span class="text-xl leading-none font-black tabular-nums ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}</span>${crewBadge(c.date)}</span>${dayBadge(c, t)}</div>
           ${lines.length ? `<div class="grid grid-cols-[auto_1fr] gap-x-1 text-xs tabular-nums"><span class="font-semibold text-stone-500">목표</span><span class="text-right font-bold">${won(t.target)}</span><span class="font-semibold text-stone-500">실행</span><span class="text-right font-extrabold text-amber-900">${won(t.actual)}</span></div>` : ''}
           ${items.length ? `<div class="${lines.length ? 'border-t border-stone-100 pt-1 ' : ''}flex flex-col gap-1">${shown}</div>` : '<div class="text-xs text-stone-300 mt-1">클릭해서 목표 입력</div>'}
@@ -306,8 +306,10 @@
           ${n ? `<div class="text-[11px] font-extrabold text-amber-900 tabular-nums truncate" title="실행 ${won(t.actual)} / 목표 ${won(t.target)}">${Math.round((t.actual || 0) / 10000).toLocaleString('ko-KR')}만</div><div class="text-[11px] text-stone-500 font-semibold">${n}품목</div>` : '<div class="text-[11px] text-stone-300">휴무</div>'}
         </button>`;
       }).join('');
-      const weekendCell = `<div class="min-h-[168px] flex flex-col gap-1.5 min-w-0">${wk}</div>`;
+      const weekendCell = `<div class="flex flex-col gap-1.5 min-w-0">${wk}</div>`;
       const wr = rateOf(wA, wT);
+      if (!wT && !wA) return `<div class="grid gap-1.5" style="${GRID_STYLE}">${cells}${weekendCell}
+        <div class="rounded-xl border border-stone-200 bg-stone-50/60 px-2.5 py-1.5 flex items-center gap-2 text-xs"><span class="px-1.5 py-0.5 rounded-md bg-white border border-stone-200 text-stone-500 font-extrabold">${wi + 1}주</span><span class="text-stone-400 font-semibold">기록 없음</span></div></div>`;
       return `<div class="grid gap-1.5" style="${GRID_STYLE}">${cells}${weekendCell}
         <div class="rounded-xl border border-amber-200 bg-amber-50/60 p-2.5 flex flex-col justify-center gap-1.5 text-xs tabular-nums">
           <div class="flex items-center justify-between"><span class="px-1.5 py-0.5 rounded-md bg-white border border-amber-200 text-amber-800 font-extrabold">${wi + 1}주</span>${wr === null ? '' : (!(wA > 0) && w.filter((c) => c.inMonth).every((c) => c.date > tdy) ? '<span class="text-[11px] font-bold text-stone-400">예정</span>' : rateBadge(wr, wA > 0))}</div>
@@ -708,7 +710,7 @@
         ? `<div class="flex items-center justify-between gap-1 rounded-md bg-amber-50 border border-amber-100 px-1.5 py-0.5 text-[11px] tabular-nums"><span class="font-bold text-amber-800">1인 생산</span><span><b class="font-extrabold text-amber-900">${p.actual > 0 ? man(p.actual / p.heads) : '-'}</b><span class="text-stone-500 font-semibold"> / 목표 ${man(p.target / p.heads)}</span></span></div>`
         : (p.actual > 0 ? '<div class="rounded-md bg-stone-50 border border-dashed border-stone-200 px-1.5 py-0.5 text-[11px] font-bold text-stone-400">생산 기록 있음 · 인원 미입력</div>' : '');
       const cells = w.slice(0, 5).map((c) => {
-        if (!c.inMonth) return `<div class="min-h-[168px] rounded-xl bg-stone-50/60 border border-dashed border-stone-200 p-2 text-xl leading-none text-stone-300 font-black">${c.day}</div>`;
+        if (!c.inMonth) return `<div class="rounded-xl bg-stone-50/60 border border-dashed border-stone-200 p-2 text-xl leading-none text-stone-300 font-black">${c.day}</div>`;
         const day = days[c.date], t = crewTotals(day), isToday = c.date === tdy, pd = crewProd(c.date);
         const ga = (day && day.assign) || {};
         // 작업 구분을 파트별로 묶고 왼쪽 색 띠로 구분 (생산 스케쥴과 같은 방식). 이름은 줄바꿈해서 전부 보이게
@@ -725,7 +727,7 @@
             <div class="text-[11px] leading-4 font-extrabold text-rose-700 border-b border-rose-200 pb-0.5 mb-0.5">휴무 ${n1(t.leave)}명</div>
             ${lv.map((l) => `<div class="text-xs leading-[1.35]" style="${LROW}"><span class="truncate font-bold text-stone-800">${esc(staffName(l.sid))}</span><span class="min-w-0"><b class="font-extrabold text-rose-700">${esc(l.type)}</b>${l.note ? `<span class="text-stone-500 font-semibold"> · ${esc(l.note)}</span>` : ''}</span></div>`).join('')}
           </div>` : '';
-        return `<button type="button" onclick="Prod.openCrewDay('${c.date}')" class="text-left min-h-[168px] rounded-xl border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : 'border-stone-200'} bg-white hover:border-amber-400 hover:shadow-xs p-2 flex flex-col gap-1 cursor-pointer min-w-0">
+        return `<button type="button" onclick="Prod.openCrewDay('${c.date}')" class="text-left min-h-[64px] rounded-xl border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : 'border-stone-200'} bg-white hover:border-amber-400 hover:shadow-xs p-2 flex flex-col gap-1 cursor-pointer min-w-0">
           <div class="flex items-center justify-between gap-1"><span class="text-xl leading-none font-black tabular-nums ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}</span>${crewBadge(c.date)}</div>
           ${perLine(pd)}
           ${teamBlocks || leaveBlock ? `<div class="flex flex-col gap-1">${teamBlocks}${leaveBlock}</div>` : '<div class="text-xs text-stone-300 mt-1">클릭해서 인원 배정</div>'}
@@ -739,7 +741,9 @@
           ${t.work || t.leave ? `<span class="text-[11px] font-bold text-stone-600">근무 ${n1(t.work)}</span>${t.leave ? `<span class="text-[11px] font-bold text-rose-600">휴무 ${n1(t.leave)}</span>` : ''}${pw.actual > 0 && pw.heads > 0 ? `<span class="text-[11px] font-extrabold text-amber-800">1인 ${man(pw.actual / pw.heads)}</span>` : ''}` : '<span class="text-[11px] text-stone-300">휴무</span>'}
         </button>`;
       }).join('');
-      return `<div class="grid gap-1.5" style="${GRID_STYLE}">${cells}<div class="min-h-[168px] flex flex-col gap-1.5 min-w-0">${wk}</div>
+      if (!wWork && !wLeave && !wAc) return `<div class="grid gap-1.5" style="${GRID_STYLE}">${cells}<div class="flex flex-col gap-1.5 min-w-0">${wk}</div>
+        <div class="rounded-xl border border-stone-200 bg-stone-50/60 px-2.5 py-1.5 flex items-center gap-2 text-xs"><span class="px-1.5 py-0.5 rounded-md bg-white border border-stone-200 text-stone-500 font-extrabold">${wi + 1}주</span><span class="text-stone-400 font-semibold">기록 없음</span></div></div>`;
+      return `<div class="grid gap-1.5" style="${GRID_STYLE}">${cells}<div class="flex flex-col gap-1.5 min-w-0">${wk}</div>
         <div class="rounded-xl border border-sky-200 bg-sky-50/60 p-2.5 flex flex-col justify-center gap-1.5 text-xs tabular-nums">
           <span class="self-start px-1.5 py-0.5 rounded-md bg-white border border-sky-200 text-sky-800 font-extrabold">${wi + 1}주</span>
           <div><div class="font-semibold text-stone-500">평균 근무</div><div class="font-extrabold text-sky-900 text-sm">${wDays ? n1(wWork / wDays) + '명' : '-'}</div></div>
