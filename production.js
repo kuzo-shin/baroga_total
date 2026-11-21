@@ -1,4 +1,4 @@
-// [VERSION: production.js v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
+// [VERSION: production.js v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
 //  - 품목 목록·단가: 제품단가 탭(barogaProductPriceBridge.getProductionProducts)
 //      파이 = PK로 입력 / 알생지·파베이크·제과 = 배합으로 입력 → '1배합 PK수'로 PK 환산 (실제 포장 PK를 직접 고칠 수 있음)
 //      금액 = PK × 엠즈 매입가(PK). 줄을 만들 때의 단가를 줄에 저장 → 나중에 단가가 바뀌어도 지난 기록 금액은 그대로
@@ -190,22 +190,27 @@
   window.saveProductionDb = () => { if (!getUrl()) { toast('생산일지 DB 주소가 없어 이 기기에만 저장돼 있습니다. [DB 연결]에서 주소를 넣어 주세요.', 'info'); return; } clearTimeout(saveTimer); saveTimer = null; pushCloud(); };
 
   // ---------- 화면 ----------
-  function root() { return document.getElementById('productionRoot'); }
+  // 생산일지(달력·원재료 손실)와 생산 재고는 서로 다른 대항목 화면 → 지금 보이는 쪽 컨테이너에만 그림
+  let activeRootId = 'productionRoot';
+  function root() { return document.getElementById(activeRootId); }
   function render() {
     const el = root(); if (!el || !mounted) return;
+    const other = document.getElementById(activeRootId === 'productionRoot' ? 'productionStockRoot' : 'productionRoot');
+    if (other) other.innerHTML = ''; // 같은 id(prodStatus·prodModal)가 두 곳에 생기지 않게
+    const isStock = activeRootId === 'productionStockRoot';
     const tabBtn = (k, label) => `<button type="button" onclick="Prod.setView('${k}')" class="px-3.5 py-1.5 rounded-xl text-sm font-bold cursor-pointer ${view === k ? 'bg-stone-900 text-white' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'}">${label}</button>`;
     const url = getUrl();
     el.innerHTML = `
       <div class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-4 flex flex-col gap-4">
         <div class="flex flex-wrap items-center justify-between gap-2">
-          <div class="flex items-center gap-2">${tabBtn('CAL', '생산 달력')}${tabBtn('LOSS', '원재료 손실')}${tabBtn('STOCK', '생지 재고')}</div>
+          <div class="flex items-center gap-2">${isStock ? '<h2 class="text-base font-extrabold text-stone-900">생산 재고 <span class="text-xs font-bold text-stone-500">냉동창고 생지 · 반제품</span></h2>' : `${tabBtn('CAL', '생산 달력')}${tabBtn('LOSS', '원재료 손실')}`}</div>
           <div class="flex items-center gap-2 text-xs">
             <span id="prodStatus" class="px-2.5 py-1 rounded-lg bg-white border border-stone-200 font-bold text-stone-600">${esc(statusText || (url ? '' : '이 기기에만 저장됨 (DB 미연결)'))}</span>
             ${url ? `<button type="button" onclick="Prod.pull()" class="px-2.5 py-1 rounded-lg bg-white border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">불러오기</button>` : ''}
             <button type="button" onclick="Prod.openDbModal()" class="px-2.5 py-1 rounded-lg ${url ? 'bg-white border border-stone-200 text-stone-700' : 'bg-amber-600 text-white'} font-bold cursor-pointer">DB 연결</button>
           </div>
         </div>
-        ${view === 'CAL' ? renderCalendar() : view === 'LOSS' ? renderLoss() : renderStock()}
+        ${isStock ? renderStock() : view === 'LOSS' ? renderLoss() : renderCalendar()}
       </div>
       <div id="prodModal"></div>`;
     if (draft) renderEditor();
@@ -259,7 +264,7 @@
         const t = dayTotals(day);
         if (!c.inMonth) return `<div class="min-h-[168px] rounded-xl bg-stone-50/60 border border-dashed border-stone-200 p-2 text-xs text-stone-300 font-bold">${c.day}</div>`;
         const lines = (day && day.lines) || [], semi = (day && day.semi) || [];
-        const MAX = 10; // 하루 품목(반제품 포함) 최대 10종까지 칸이 늘어남, 기본 높이는 5종
+        const MAX = 12; // 하루 품목(반제품 포함) 최대 12종까지 칸이 늘어남(그 뒤는 '외 n개'), 기본 높이는 5종
         const items = [
           ...lines.map((l) => { const tq = Number(l.target) || 0, aq = Number(l.actual) || 0, added = tq === 0 && aq > 0; return itemRow(`${added ? '＋' : ''}${esc(l.name)}`, l.name, added ? 'text-blue-700' : 'text-stone-800', l.unit, tq, aq, 'text-stone-900'); }),
           ...semi.map((l) => itemRow(`<span class="px-1 mr-0.5 rounded bg-stone-100 text-stone-500 text-[10px] font-extrabold">반</span>${esc(l.name)}`, '반제품 · ' + l.name, 'text-stone-500', l.unit || '', Number(l.target) || 0, Number(l.actual) || 0, 'text-stone-700')),
@@ -969,6 +974,15 @@
     }, 1000);
   }
   function mountProductionApp() {
+    activeRootId = 'productionRoot';
+    if (view === 'STOCK') view = 'CAL';
+    mountCommon();
+  }
+  function mountProductionStockApp() {
+    activeRootId = 'productionStockRoot';
+    mountCommon();
+  }
+  function mountCommon() {
     if (!mounted) {
       mounted = true;
       loadLocal();
@@ -978,6 +992,7 @@
     waitForProducts();
   }
   window.mountProductionApp = mountProductionApp;
+  window.mountProductionStockApp = mountProductionStockApp;
   window.Prod = {
     retryProducts: () => { _liveCache = null; if (typeof window.reloadProductPriceDb === 'function' && !getProducts().length) { try { window.reloadProductPriceDb(); } catch (e) {} } render(); waitForProducts(); },
     setView: (v) => { view = v; render(); }, setMonth: (m) => { cursorMonth = m; lossPeriodKey = 'M'; render(); }, pull: () => pullCloud(true),
