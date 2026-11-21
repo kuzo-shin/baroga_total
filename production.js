@@ -577,8 +577,8 @@
         <td class="py-1.5 px-2 text-xs text-stone-500">${CAT_LABEL[r.cat] || ''}</td><td class="py-1.5 px-2 font-bold">${esc(r.name)}</td>
         <td class="py-1.5 px-2 text-right tabular-nums">${num(r.batches)}</td>
         <td class="py-1.5 px-2 text-right tabular-nums text-stone-500">${num(r.bC)}</td>
-        <td class="py-1.5 px-2 text-right tabular-nums">${num(r.expC)} ${r.su}</td>
-        <td class="py-1.5 px-2 text-right tabular-nums font-bold">${num(r.actC)} ${r.su}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums">${r.bC ? num(r.expC) + ' ' + r.su : '-'}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums font-bold">${r.bC ? num(r.actC) + ' ' + r.su : '-'}</td>
         <td class="py-1.5 px-2 text-right tabular-nums ${r.diff < 0 ? 'text-rose-700' : 'text-emerald-700'}">${r.expC > 0 ? (r.diff > 0 ? '+' : '') + num(r.diff) : '-'}</td>
         <td class="py-1.5 px-2 text-right">${yieldCell(r.yieldPct)}</td>
         <td class="py-1.5 px-2 text-right tabular-nums ${r.lossMoney > 0 ? 'text-rose-700 font-bold' : 'text-emerald-700'}">${r.lossMoney === null ? '-' : (r.matPerBatch ? won(r.lossMoney) : '<span class="text-stone-400" title="제품단가 탭 원재료비 없음">원재료비 없음</span>')}</td>
