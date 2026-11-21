@@ -809,7 +809,7 @@
         <select onchange="Prod.crewAdd('${tm.id}', this.value)" class="border border-stone-300 bg-white rounded-lg px-2 py-1 text-sm"><option value="">+ 인원 추가</option>${staffOptions(new Set(arr.map((a) => a.sid)))}</select>
       </div>`;
     }).join('');
-    const leaveRows = crewDraft.leaves.map((l) => `<div class="grid grid-cols-[110px_176px_minmax(0,1fr)_28px] gap-1.5 items-center">
+    const leaveRows = crewDraft.leaves.map((l) => `<div class="grid grid-cols-[136px_176px_minmax(0,1fr)_28px] gap-1.5 items-center">
         <select onchange="Prod.crewLeaveField('${l.id}','sid',this.value)" class="border border-rose-200 bg-white rounded-lg px-2 py-1 text-sm"><option value="">이름 선택</option>${staffOptions(null, l.sid)}</select>
         <select onchange="Prod.crewLeaveField('${l.id}','type',this.value)" class="border border-rose-200 bg-white rounded-lg px-2 py-1 text-sm">${cfg.leaveTypes.map((x) => `<option ${x.name === l.type ? 'selected' : ''} value="${esc(x.name)}">${esc(x.name)} (${n1(x.weight)}명)</option>`).join('')}</select>
         <input type="text" value="${esc(l.note || '')}" oninput="Prod.crewLeaveField('${l.id}','note',this.value)" placeholder="비고" class="border border-rose-200 bg-white rounded-lg px-2 py-1 text-sm">
@@ -827,7 +827,7 @@
             <button type="button" onclick="Prod.closeCrewDay()" class="ml-1 w-8 h-8 rounded-lg text-stone-500 hover:bg-stone-100 cursor-pointer text-xl leading-none">×</button>
           </div>
         </div>
-        <div id="crewEditBody" class="flex-1 overflow-y-auto px-6 py-4 grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-5">
+        <div id="crewEditBody" class="flex-1 overflow-y-auto px-6 py-4 grid grid-cols-1 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] gap-5">
           <section><h4 class="text-sm font-extrabold text-stone-800 mb-2">작업 구분별 배정 <span class="text-xs font-semibold text-stone-500">숫자를 누르면 1 ↔ 0.5(반나절)</span></h4><div class="grid grid-cols-1 md:grid-cols-2 gap-2">${teamCards}</div></section>
           <section class="flex flex-col gap-4">
             <div class="rounded-xl bg-rose-50 border border-rose-200 p-3"><div class="flex items-center justify-between mb-2"><h4 class="text-sm font-extrabold text-rose-800">휴무 <span class="text-xs font-bold text-rose-600">${n1(t.leave)}명</span></h4><button type="button" onclick="Prod.crewAddLeave()" class="px-2.5 py-1 rounded-lg bg-stone-900 text-white text-xs font-bold cursor-pointer">+ 휴무 추가</button></div>
