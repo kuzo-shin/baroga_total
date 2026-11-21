@@ -236,8 +236,10 @@
     const kpi = (label, value, sub, cls = 'text-stone-900') => `<div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">${label}</div><div class="mt-1 text-xl font-extrabold tabular-nums ${cls}">${value}</div>${sub ? `<div class="text-xs text-stone-500 mt-0.5">${sub}</div>` : ''}</div>`;
     const prevYm = ymd(new Date(y, m - 2, 1)).slice(0, 7), nextYm = ymd(new Date(y, m, 1)).slice(0, 7);
     const catRows = CAT_ORDER.filter((c) => catSum[c]).map((c) => { const s = catSum[c]; return `<tr class="border-b border-stone-100 whitespace-nowrap"><td class="py-1.5 px-2 font-bold">${CAT_LABEL[c]}</td><td class="py-1.5 px-2 text-right tabular-nums">${won(s.target)}</td><td class="py-1.5 px-2 text-right tabular-nums font-extrabold">${won(s.actual)}</td><td class="py-1.5 px-2 text-right">${rateBadge(rateOf(s.actual, s.target), s.actual > 0)}</td></tr>`; }).join('');
-    // 주말(토·일)은 좁게: 평일 1 : 주말 0.45 (주말 근무가 있으면 그대로 표시)
-    const GRID = 'grid grid-cols-[repeat(5,minmax(0,1fr))_repeat(2,minmax(0,0.45fr))_136px] gap-1.5';
+    // 주말(토·일)은 좁게: 평일 1 : 주말 0.45. 그 달에 토/일 근무 기록이 있으면 그 요일 열은 평일만큼 넓힘
+    const worked = (dow) => Object.keys(db.days).some((d) => d.slice(0, 7) === ym && parseYmd(d).getDay() === dow && (((db.days[d].lines || []).length) || ((db.days[d].semi || []).length)));
+    const satW = worked(6) ? '1fr' : '0.45fr', sunW = worked(0) ? '1fr' : '0.45fr';
+    const GRID_STYLE = `grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(0, ${satW}) minmax(0, ${sunW}) 136px`;
     const unitBadge = (u) => `<span class="px-1 rounded text-[10px] leading-4 font-extrabold ${u === 'PK' ? 'bg-blue-50 text-blue-700' : u === '배합' ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-500'}">${esc(u)}</span>`;
 
     const weekRows = weeks.map((w, wi) => {
@@ -267,9 +269,9 @@
         </button>`;
       }).join('');
       const wr = rateOf(wA, wT);
-      return `<div class="${GRID}">${cells}
+      return `<div class="grid gap-1.5" style="${GRID_STYLE}">${cells}
         <div class="rounded-xl border border-amber-200 bg-amber-50/60 p-2.5 flex flex-col justify-center gap-1.5 text-xs tabular-nums">
-          <div class="flex items-center justify-between"><span class="px-1.5 py-0.5 rounded-md bg-white border border-amber-200 text-amber-800 font-extrabold">${wi + 1}주 합계</span>${wr === null ? '' : rateBadge(wr, wA > 0)}</div>
+          <div class="flex items-center justify-between"><span class="px-1.5 py-0.5 rounded-md bg-white border border-amber-200 text-amber-800 font-extrabold">${wi + 1}주</span>${wr === null ? '' : rateBadge(wr, wA > 0)}</div>
           <div><div class="font-semibold text-stone-500">목표</div><div class="font-bold text-stone-800 text-sm">${won(wT)}</div></div>
           <div><div class="font-semibold text-stone-500">실행</div><div class="font-extrabold text-amber-900 text-sm">${won(wA)}</div></div>
           <div class="h-1.5 rounded-full bg-white border border-amber-100 overflow-hidden"><div class="h-full rounded-full ${wr !== null && wr >= 100 ? 'bg-emerald-500' : 'bg-amber-500'}" style="width:${wr === null ? 0 : Math.min(100, wr)}%"></div></div>
@@ -304,7 +306,7 @@
           </div>
           <span class="text-xs text-stone-500">칸을 눌러 입력 · <span class="text-blue-700 font-bold">＋</span> 계획에 없던 품목 · 목표→실행 · <span class="px-1 rounded bg-stone-100 text-stone-500 font-bold">반</span> 반제품(금액 제외)</span>
         </div>
-        <div class="${GRID} text-xs font-extrabold text-center"><div class="text-stone-500">월</div><div class="text-stone-500">화</div><div class="text-stone-500">수</div><div class="text-stone-500">목</div><div class="text-stone-500">금</div><div class="text-blue-600">토</div><div class="text-rose-600">일</div><div class="text-stone-500">주 합계</div></div>
+        <div class="grid gap-1.5 text-xs font-extrabold text-center" style="${GRID_STYLE}"><div class="text-stone-500">월</div><div class="text-stone-500">화</div><div class="text-stone-500">수</div><div class="text-stone-500">목</div><div class="text-stone-500">금</div><div class="text-blue-600">토</div><div class="text-rose-600">일</div><div class="text-stone-500">주 합계</div></div>
         ${weekRows}
       </div>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
