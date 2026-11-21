@@ -29,7 +29,6 @@
   const parseYmd = (s) => { const [y, m, d] = String(s).split('-').map(Number); return new Date(y, m - 1, d); };
   const r1 = (n) => Math.round((Number(n) || 0) * 10) / 10;
   const uid = () => 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  const jsq = (v) => esc(JSON.stringify(String(v ?? '')));
   const DOW = ['일', '월', '화', '수', '목', '금', '토'];
 
   // ---------- 상태 ----------
@@ -221,7 +220,7 @@
     const kpi = (label, value, sub, cls = 'text-stone-900') => `<div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">${label}</div><div class="mt-1 text-xl font-extrabold tabular-nums ${cls}">${value}</div>${sub ? `<div class="text-xs text-stone-500 mt-0.5">${sub}</div>` : ''}</div>`;
     const prevYm = (() => { const d = new Date(y, m - 2, 1); return ymd(d).slice(0, 7); })();
     const nextYm = (() => { const d = new Date(y, m, 1); return ymd(d).slice(0, 7); })();
-    const catRows = CAT_ORDER.filter((c) => catSum[c]).map((c) => { const s = catSum[c]; return `<tr class="border-b border-stone-100"><td class="py-1.5 px-2 font-bold">${CAT_LABEL[c]}</td><td class="py-1.5 px-2 text-right tabular-nums">${won(s.target)}</td><td class="py-1.5 px-2 text-right tabular-nums font-extrabold">${won(s.actual)}</td><td class="py-1.5 px-2 text-right">${rateBadge(rateOf(s.actual, s.target), s.actual > 0)}</td></tr>`; }).join('');
+    const catRows = CAT_ORDER.filter((c) => catSum[c]).map((c) => { const s = catSum[c]; return `<tr class="border-b border-stone-100 whitespace-nowrap"><td class="py-1.5 px-2 font-bold">${CAT_LABEL[c]}</td><td class="py-1.5 px-2 text-right tabular-nums">${won(s.target)}</td><td class="py-1.5 px-2 text-right tabular-nums font-extrabold">${won(s.actual)}</td><td class="py-1.5 px-2 text-right">${rateBadge(rateOf(s.actual, s.target), s.actual > 0)}</td></tr>`; }).join('');
 
     const weekRows = weeks.map((w, wi) => {
       let wT = 0, wA = 0;
@@ -440,7 +439,7 @@
           <button type="button" onclick="Prod.addLine()" class="mt-2 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold cursor-pointer">+ 품목 추가</button>
           <span class="ml-2 text-xs text-stone-500">계획에 없던 품목을 만들었으면 목표는 0으로 두고 실행만 입력하세요.</span>
           <div class="mt-5 mb-1 flex items-center gap-2"><h4 class="text-sm font-extrabold text-stone-800">반제품 (반죽 믹싱·라미네이팅)</h4><span class="text-xs text-stone-500">수량만 기록 · 금액·재고 합계 제외</span></div>
-          <table class="w-full text-left border-collapse text-sm min-w-[1000px]"><tbody>${semiRows || '<tr><td class="py-2 text-xs text-stone-400">반제품 기록 없음</td></tr>'}</tbody></table>
+          ${semiRows ? `<table class="w-full text-left border-collapse text-sm min-w-[1000px]"><thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600"><th class="py-2 px-1.5">반제품</th><th class="py-2 px-1.5 text-center">단위</th><th class="py-2 px-1.5 text-right">목표</th><th class="py-2 px-1.5 text-right">실행</th><th class="py-2 px-1.5" colspan="5">메모</th><th></th><th></th></tr></thead><tbody>${semiRows}</tbody></table>` : '<div class="py-2 text-xs text-stone-400">반제품 기록 없음</div>'}
           <button type="button" onclick="Prod.addSemi()" class="mt-2 px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-bold cursor-pointer hover:bg-stone-50">+ 반제품 추가</button>
           <div class="mt-4"><label class="text-xs font-bold text-stone-600">그날 메모 (사정·변경 사유 등)</label><textarea oninput="Prod.setMemo(this.value)" rows="2" class="mt-1 w-full border border-stone-300 rounded-lg px-2 py-1.5 text-sm">${esc(draft.memo || '')}</textarea></div>
         </div>
@@ -509,8 +508,8 @@
       ${!feed.loaded ? `<div class="p-3 rounded-xl bg-stone-100 border border-stone-200 text-stone-700 text-xs flex flex-wrap items-center gap-2"><span>엠즈 입고 기록을 이 기기에 저장된 사본으로 계산 중입니다. 최신 출고를 반영하려면</span><button type="button" onclick="Prod.loadMs()" class="px-2.5 py-1 rounded-lg bg-stone-900 text-white font-bold cursor-pointer">엠즈 입고 불러오기</button></div>` : ''}
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">재고 실사 기준일</div><div class="mt-1 text-xl font-extrabold">${base ? esc(base.date) : '-'}</div><div class="text-xs text-stone-500">이 날 이후 생산·출고 반영</div></div>
-        <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">재고 자산 (생산원가 기준)</div><div class="mt-1 text-xl font-extrabold tabular-nums">${won(totCost)}</div><div class="text-xs text-stone-500">${noCost ? `원가 미산출 ${noCost}개 품목 제외` : 'PK 총생산원가 × 현재고'}</div></div>
-        <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">재고 자산 (엠즈 매입가 기준)</div><div class="mt-1 text-xl font-extrabold tabular-nums text-amber-900">${won(totBuy)}</div><div class="text-xs text-stone-500">엠즈 매입가(PK) × 현재고</div></div>
+        <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">재고 자산 (생산원가 기준)</div><div class="mt-1 text-xl font-extrabold tabular-nums">${won(totCost)}</div><div class="text-xs text-stone-500">PK 총생산원가 × 현재고 (음수 재고 제외)${noCost ? ` · 원가 미산출 ${noCost}개 품목 제외` : ''}</div></div>
+        <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">재고 자산 (엠즈 매입가 기준)</div><div class="mt-1 text-xl font-extrabold tabular-nums text-amber-900">${won(totBuy)}</div><div class="text-xs text-stone-500">엠즈 매입가(PK) × 현재고 (음수 재고 제외)</div></div>
         <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">확인 필요</div><div class="mt-1 text-xl font-extrabold ${negative.length || unmappedList.length ? 'text-rose-700' : 'text-emerald-700'}">${negative.length + unmappedList.length}건</div><div class="text-xs text-stone-500">재고 음수 ${negative.length} · 연결 안 된 엠즈 상품 ${unmappedList.length}</div></div>
       </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
