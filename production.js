@@ -1,4 +1,4 @@
-// [VERSION: production.js v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
+// [VERSION: production.js v2.6 - 2026-11-22 작업 인원에 1인 생산금액(KPI·날짜·주·파트별), 작업 구분별 생산 파트·인원 기준 설정 / v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
 //  - 품목 목록·단가: 제품단가 탭(barogaProductPriceBridge.getProductionProducts)
 //      파이 = PK로 입력 / 알생지·파베이크·제과 = 배합으로 입력 → '1배합 PK수'로 PK 환산 (실제 포장 PK를 직접 고칠 수 있음)
 //      금액 = PK × 엠즈 매입가(PK). 줄을 만들 때의 단가를 줄에 저장 → 나중에 단가가 바뀌어도 지난 기록 금액은 그대로
@@ -612,18 +612,34 @@
   ].map(([name, short, part], i) => ({ id: 't' + (i + 1), name, short, part }));
   const DEFAULT_LEAVES = [['연차', 1], ['무급휴무', 1], ['휴무', 1], ['병가', 1], ['경조', 1], ['외근', 1], ['오전반차', 0.5], ['오후반차', 0.5], ['무급반차', 0.5], ['무급오전휴무', 0.5], ['무급오후반차', 0.5], ['조퇴', 0.5], ['조기퇴근', 0.5]].map(([name, weight]) => ({ name, weight }));
   const STAFF_PARTS = ['생산총괄', '파이', '알파베', '제과', '출하', '지원', '품질관리', '사무'];
-  const TEAM_GROUPS = [
-    { key: 'PIE', ids: ['t1', 't2', 't3', 't4'], bar: 'border-amber-400', text: 'text-amber-700', card: 'bg-amber-50 border-amber-200' },
-    { key: 'DOUGH', ids: ['t5', 't6'], bar: 'border-emerald-500', text: 'text-emerald-700', card: 'bg-emerald-50 border-emerald-200' },
-    { key: 'PARBAKE', ids: ['t7'], bar: 'border-orange-500', text: 'text-orange-700', card: 'bg-orange-50 border-orange-200' },
-    { key: 'BAKERY', ids: ['t8'], bar: 'border-violet-400', text: 'text-violet-700', card: 'bg-violet-50 border-violet-200' },
-    { key: 'SHIP', ids: ['t9'], bar: 'border-sky-500', text: 'text-sky-700', card: 'bg-sky-50 border-sky-200' },
-  ];
+  // 작업 구분 → 생산 파트 (1인 생산금액 계산과 달력 색 묶음에 사용). [인원 설정 > 작업 구분]에서 바꿀 수 있음
+  const PROD_CATS = [['PIE', '파이'], ['DOUGH', '알생지'], ['PARBAKE', '파베이크'], ['BAKERY', '제과'], ['NONE', '생산 외 (출하·지원)']];
+  const DEFAULT_TEAM_CAT = { t1: 'PIE', t2: 'PIE', t3: 'PIE', t4: 'PIE', t5: 'DOUGH', t6: 'DOUGH', t7: 'PARBAKE', t8: 'BAKERY', t9: 'NONE' };
+  const CAT_STYLE = {
+    PIE: { bar: 'border-amber-400', text: 'text-amber-700', card: 'bg-amber-50 border-amber-200' },
+    DOUGH: { bar: 'border-emerald-500', text: 'text-emerald-700', card: 'bg-emerald-50 border-emerald-200' },
+    PARBAKE: { bar: 'border-orange-500', text: 'text-orange-700', card: 'bg-orange-50 border-orange-200' },
+    BAKERY: { bar: 'border-violet-400', text: 'text-violet-700', card: 'bg-violet-50 border-violet-200' },
+    NONE: { bar: 'border-sky-500', text: 'text-sky-700', card: 'bg-sky-50 border-sky-200' },
+  };
+  function teamCat(t) { return CAT_STYLE[t.cat] ? t.cat : (DEFAULT_TEAM_CAT[t.id] || 'NONE'); }
   function teamGroups(teams) {
-    const out = TEAM_GROUPS.map((g) => ({ ...g, teams: teams.filter((t) => g.ids.includes(t.id)) }));
-    const rest = teams.filter((t) => !TEAM_GROUPS.some((g) => g.ids.includes(t.id)));
-    if (rest.length) out.push({ key: 'ETC', bar: 'border-stone-300', text: 'text-stone-600', card: 'bg-stone-50 border-stone-200', teams: rest });
-    return out.filter((g) => g.teams.length);
+    return PROD_CATS.map(([key, label]) => ({ key, label, ...CAT_STYLE[key], teams: teams.filter((t) => teamCat(t) === key) })).filter((g) => g.teams.length);
+  }
+  const man = (v) => (Math.round(v / 1000) / 10).toLocaleString('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '만';
+  // 하루 1인 생산금액: 생산 스케쥴 금액(엠즈 매입가) ÷ 근무 인원. 인원 기준은 설정(ALL: 전체 근무 / PROD: 생산 파트 인원만)
+  function crewProd(date) {
+    const cfg = crewCfg(), day = crewDays()[date], t = dayTotals(db.days[date]);
+    const catOf = {}; cfg.teams.forEach((tm) => { catOf[tm.id] = teamCat(tm); });
+    const ppl = {}, prodPpl = {}, catHeads = {};
+    Object.entries((day && day.assign) || {}).forEach(([tid, arr]) => (arr || []).forEach((a) => {
+      const w = Number(a.w) || 1, c = catOf[tid] || 'NONE';
+      ppl[a.sid] = (ppl[a.sid] || 0) + w; if (c !== 'NONE') prodPpl[a.sid] = (prodPpl[a.sid] || 0) + w;
+      catHeads[c] = (catHeads[c] || 0) + w;
+    }));
+    const cap = (o) => Object.values(o).reduce((sum, w) => sum + Math.min(1, w), 0);
+    const all = cap(ppl), prod = cap(prodPpl);
+    return { heads: cfg.perCapita === 'PROD' ? prod : all, all, prod, actual: t.actual, target: t.target, byCat: t.byCat, catHeads };
   }
   function crewCfg() {
     const c = db.crewCfg && typeof db.crewCfg === 'object' ? db.crewCfg : (db.crewCfg = {});
@@ -669,17 +685,31 @@
       workSum += t.work; leaveSum += t.leave; if (t.work > 0) workDays++;
       Object.entries(t.byTeam).forEach(([tid, w]) => { const s = teamSum[tid] || (teamSum[tid] = { sum: 0, days: 0 }); s.sum += w; if (w > 0) s.days++; });
     });
-    const kpi = (label, value, sub) => `<div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">${label}</div><div class="mt-1 text-xl font-extrabold tabular-nums">${value}</div>${sub ? `<div class="text-xs text-stone-500 mt-0.5">${sub}</div>` : ''}</div>`;
+    // 1인 생산금액 (생산 실행 금액과 근무 인원이 둘 다 있는 날만)
+    const pm = { actual: 0, target: 0, heads: 0, days: 0, missing: [], cat: {} };
+    Object.keys(db.days).concat(Object.keys(days)).filter((d, i, a) => a.indexOf(d) === i && d.slice(0, 7) === ym).sort().forEach((d) => {
+      const p = crewProd(d);
+      if (p.actual > 0 && p.heads > 0) {
+        pm.actual += p.actual; pm.target += p.target; pm.heads += p.heads; pm.days++;
+        Object.entries(p.byCat).forEach(([c, v]) => { const o = pm.cat[c] || (pm.cat[c] = { amount: 0, heads: 0 }); o.amount += v.actual; });
+        Object.entries(p.catHeads).forEach(([c, h]) => { const o = pm.cat[c] || (pm.cat[c] = { amount: 0, heads: 0 }); o.heads += h; });
+      } else if (p.actual > 0) pm.missing.push(Number(d.slice(8)));
+    });
+    const basis = cfg.perCapita === 'PROD' ? '생산 파트 인원' : '전체 근무 인원';
+    const kpi = (label, value, sub, hl) => `<div class="${hl ? 'bg-amber-50 border-amber-200' : 'bg-white border-stone-200/90'} rounded-2xl p-4 border shadow-xs"><div class="text-xs font-bold ${hl ? 'text-amber-800' : 'text-stone-500'}">${label}</div><div class="mt-1 text-xl font-extrabold tabular-nums ${hl ? 'text-amber-900' : ''}">${value}</div>${sub ? `<div class="text-xs text-stone-500 mt-0.5">${sub}</div>` : ''}</div>`;
     const GRID_STYLE = 'grid-template-columns: repeat(5, minmax(0, 1fr)) 60px 132px';
     const ROW = 'display:grid;grid-template-columns:58px minmax(0,1fr) 22px;column-gap:4px;align-items:start';
     const LROW = 'display:grid;grid-template-columns:72px minmax(0,1fr);column-gap:4px;align-items:start';
     const dayCls = (c) => c.dow === 0 ? 'text-rose-600' : c.dow === 6 ? 'text-blue-600' : 'text-stone-900';
     const weekRows = weeks.map((w, wi) => {
-      let wWork = 0, wLeave = 0, wDays = 0;
-      w.forEach((c) => { if (!c.inMonth) return; const t = crewTotals(days[c.date]); wWork += t.work; wLeave += t.leave; if (t.work > 0) wDays++; });
+      let wWork = 0, wLeave = 0, wDays = 0, wAc = 0, wHeads = 0;
+      w.forEach((c) => { if (!c.inMonth) return; const t = crewTotals(days[c.date]); wWork += t.work; wLeave += t.leave; if (t.work > 0) wDays++; const p = crewProd(c.date); if (p.actual > 0 && p.heads > 0) { wAc += p.actual; wHeads += p.heads; } });
+      const perLine = (p) => p.heads > 0 && (p.actual > 0 || p.target > 0)
+        ? `<div class="flex items-center justify-between gap-1 rounded-md bg-amber-50 border border-amber-100 px-1.5 py-0.5 text-[11px] tabular-nums"><span class="font-bold text-amber-800">1인 생산</span><span><b class="font-extrabold text-amber-900">${p.actual > 0 ? man(p.actual / p.heads) : '-'}</b><span class="text-stone-500 font-semibold"> / 목표 ${man(p.target / p.heads)}</span></span></div>`
+        : (p.actual > 0 ? '<div class="rounded-md bg-stone-50 border border-dashed border-stone-200 px-1.5 py-0.5 text-[11px] font-bold text-stone-400">생산 기록 있음 · 인원 미입력</div>' : '');
       const cells = w.slice(0, 5).map((c) => {
         if (!c.inMonth) return `<div class="min-h-[168px] rounded-xl bg-stone-50/60 border border-dashed border-stone-200 p-2 text-xl leading-none text-stone-300 font-black">${c.day}</div>`;
-        const day = days[c.date], t = crewTotals(day), isToday = c.date === tdy;
+        const day = days[c.date], t = crewTotals(day), isToday = c.date === tdy, pd = crewProd(c.date);
         const ga = (day && day.assign) || {};
         // 작업 구분을 파트별로 묶고 왼쪽 색 띠로 구분 (생산 스케쥴과 같은 방식). 이름은 줄바꿈해서 전부 보이게
         const teamBlocks = teamGroups(cfg.teams).map((g) => {
@@ -697,15 +727,16 @@
           </div>` : '';
         return `<button type="button" onclick="Prod.openCrewDay('${c.date}')" class="text-left min-h-[168px] rounded-xl border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : 'border-stone-200'} bg-white hover:border-amber-400 hover:shadow-xs p-2 flex flex-col gap-1 cursor-pointer min-w-0">
           <div class="flex items-center justify-between gap-1"><span class="text-xl leading-none font-black tabular-nums ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}</span>${crewBadge(c.date)}</div>
+          ${perLine(pd)}
           ${teamBlocks || leaveBlock ? `<div class="flex flex-col gap-1">${teamBlocks}${leaveBlock}</div>` : '<div class="text-xs text-stone-300 mt-1">클릭해서 인원 배정</div>'}
         </button>`;
       }).join('');
       const wk = w.slice(5).map((c) => {
         if (!c.inMonth) return `<div class="flex-1 rounded-lg border border-dashed border-stone-200 bg-stone-50/60 p-1.5 text-base leading-none text-stone-300 font-black">${c.day}</div>`;
-        const t = crewTotals(days[c.date]), isToday = c.date === tdy;
+        const t = crewTotals(days[c.date]), isToday = c.date === tdy, pw = crewProd(c.date);
         return `<button type="button" onclick="Prod.openCrewDay('${c.date}')" class="flex-1 text-left rounded-lg border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : 'border-stone-200'} ${t.work || t.leave ? 'bg-white' : 'bg-stone-50'} hover:border-amber-400 p-1.5 flex flex-col gap-0.5 cursor-pointer min-w-0">
           <span class="text-base leading-none font-black tabular-nums ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}<span class="text-[10px] font-extrabold ml-0.5">${DOW[c.dow]}</span></span>
-          ${t.work || t.leave ? `<span class="text-[11px] font-bold text-stone-600">근무 ${n1(t.work)}</span>${t.leave ? `<span class="text-[11px] font-bold text-rose-600">휴무 ${n1(t.leave)}</span>` : ''}` : '<span class="text-[11px] text-stone-300">휴무</span>'}
+          ${t.work || t.leave ? `<span class="text-[11px] font-bold text-stone-600">근무 ${n1(t.work)}</span>${t.leave ? `<span class="text-[11px] font-bold text-rose-600">휴무 ${n1(t.leave)}</span>` : ''}${pw.actual > 0 && pw.heads > 0 ? `<span class="text-[11px] font-extrabold text-amber-800">1인 ${man(pw.actual / pw.heads)}</span>` : ''}` : '<span class="text-[11px] text-stone-300">휴무</span>'}
         </button>`;
       }).join('');
       return `<div class="grid gap-1.5" style="${GRID_STYLE}">${cells}<div class="min-h-[168px] flex flex-col gap-1.5 min-w-0">${wk}</div>
@@ -713,13 +744,16 @@
           <span class="self-start px-1.5 py-0.5 rounded-md bg-white border border-sky-200 text-sky-800 font-extrabold">${wi + 1}주</span>
           <div><div class="font-semibold text-stone-500">평균 근무</div><div class="font-extrabold text-sky-900 text-sm">${wDays ? n1(wWork / wDays) + '명' : '-'}</div></div>
           <div><div class="font-semibold text-stone-500">휴무 합계</div><div class="font-bold text-stone-800 text-sm">${n1(wLeave)}명</div></div>
+          <div><div class="font-semibold text-stone-500">1인 생산금액</div><div class="font-extrabold text-amber-900 text-sm">${wHeads ? man(wAc / wHeads) : '-'}</div></div>
         </div></div>`;
     }).join('');
     const teamTrs = cfg.teams.map((tm, i) => { const s = teamSum[tm.id] || { sum: 0, days: 0 }; return `<tr class="border-b border-stone-100 whitespace-nowrap"><td class="py-1.5 px-2 text-stone-400">${i + 1}</td><td class="py-1.5 px-2 font-bold">${esc(tm.short || tm.name)}</td><td class="py-1.5 px-2 text-xs text-stone-500">${esc(tm.part || '')}</td><td class="py-1.5 px-2 text-right tabular-nums">${n1(s.sum)}</td><td class="py-1.5 px-2 text-right tabular-nums">${s.days}</td><td class="py-1.5 px-2 text-right tabular-nums font-extrabold">${s.days ? n1(s.sum / s.days) : '-'}</td></tr>`; }).join('');
     const monthBtns = Array.from({ length: 12 }, (_, i) => { const mm = `${y}-${pad(i + 1)}`, on = mm === ym; return `<button type="button" onclick="Prod.setMonth('${mm}')" class="px-2.5 py-1 rounded-xl text-xs cursor-pointer ${on ? 'bg-amber-600 text-white font-extrabold shadow-xs' : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200 font-bold'}">${i + 1}월</button>`; }).join('');
     const active = cfg.staff.filter((s) => s.active !== false).length;
     return `${!cfg.staff.length ? `<div class="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-sm flex flex-wrap items-center gap-2"><b>등록된 팀원이 없습니다.</b> [인원 설정]에서 팀원을 추가해 주세요.<button type="button" onclick="Prod.openCrewSettings()" class="px-3 py-1 rounded-lg bg-stone-900 text-white text-xs font-bold cursor-pointer">인원 설정</button></div>` : ''}
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="grid grid-cols-2 lg:grid-cols-6 gap-3">
+        ${kpi('1인 평균 생산금액', pm.heads ? man(pm.actual / pm.heads) + '원' : '-', `실행 금액 ÷ ${basis} · ${pm.days}일`, true)}
+        ${kpi('1인 평균 목표금액', pm.heads ? man(pm.target / pm.heads) + '원' : '-', pm.missing.length ? `인원 미입력 ${pm.missing.join('·')}일 제외` : '같은 날 기준')}
         ${kpi(`${m}월 누적 근무`, n1(workSum) + '명', '하루 인원을 모두 더한 값')}
         ${kpi('출근 일수', workDays + '일', '근무 인원이 있는 날')}
         ${kpi('하루 평균 인원', workDays ? n1(workSum / workDays) + '명' : '-', `재직 팀원 ${active}명`)}
@@ -738,9 +772,19 @@
         <div class="grid gap-1.5 text-xs font-extrabold text-center" style="${GRID_STYLE}"><div class="text-stone-500">월</div><div class="text-stone-500">화</div><div class="text-stone-500">수</div><div class="text-stone-500">목</div><div class="text-stone-500">금</div><div><span class="text-blue-600">토</span>·<span class="text-rose-600">일</span></div><div class="text-stone-500">주 합계</div></div>
         ${weekRows}
       </div>
+      <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-4 items-start">
+      <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
+        <h3 class="text-sm font-extrabold text-stone-900">${m}월 파트별 1인 생산금액</h3>
+        <div class="text-xs text-stone-500 mb-2">파트 품목 실행 금액 ÷ 그 파트 작업 구분 인원 (인원·생산이 다 있는 ${pm.days}일). 작업 구분의 파트는 [인원 설정 > 작업 구분]에서 바꿉니다.</div>
+        <table class="w-full text-sm"><thead><tr class="text-xs text-stone-500 border-b border-stone-200"><th class="py-1 px-2 text-left">파트</th><th class="py-1 px-2 text-right">실행 금액</th><th class="py-1 px-2 text-right">투입 인원</th><th class="py-1 px-2 text-right">1인 평균</th></tr></thead><tbody>
+          ${PROD_CATS.filter(([k]) => k !== 'NONE').map(([k, label]) => { const o = pm.cat[k] || { amount: 0, heads: 0 }; return `<tr class="border-b border-stone-100 whitespace-nowrap"><td class="py-1.5 px-2"><span class="border-l-[3px] ${CAT_STYLE[k].bar} pl-1.5 font-extrabold ${CAT_STYLE[k].text}">${label}</span></td><td class="py-1.5 px-2 text-right tabular-nums">${won(o.amount)}</td><td class="py-1.5 px-2 text-right tabular-nums">${n1(o.heads)}명</td><td class="py-1.5 px-2 text-right tabular-nums font-extrabold">${o.heads ? man(o.amount / o.heads) : '-'}</td></tr>`; }).join('')}
+          <tr class="whitespace-nowrap bg-amber-50/60"><td class="py-1.5 px-2 font-extrabold">전체 (${basis})</td><td class="py-1.5 px-2 text-right tabular-nums font-bold">${won(pm.actual)}</td><td class="py-1.5 px-2 text-right tabular-nums font-bold">${n1(pm.heads)}명</td><td class="py-1.5 px-2 text-right tabular-nums font-extrabold text-amber-900">${pm.heads ? man(pm.actual / pm.heads) : '-'}</td></tr>
+        </tbody></table>
+      </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
         <h3 class="text-sm font-extrabold text-stone-900 mb-2">${m}월 작업 구분별</h3>
         <table class="w-full text-sm"><thead><tr class="text-xs text-stone-500 border-b border-stone-200"><th class="py-1 px-2 text-left">No</th><th class="py-1 px-2 text-left">작업 구분</th><th class="py-1 px-2 text-left">담당</th><th class="py-1 px-2 text-right">월누적 인원</th><th class="py-1 px-2 text-right">출근 일수</th><th class="py-1 px-2 text-right">평균 인원</th></tr></thead><tbody>${teamTrs}</tbody></table>
+      </div>
       </div>`;
   }
 
@@ -875,6 +919,7 @@
     }
     arr.splice(idx, 1); renderCrewSettings();
   }
+  function cfgPerCapita(k) { if (crewCfgDraft) { crewCfgDraft.perCapita = k; renderCrewSettings(); } }
   function crewSetTabTo(k) { crewSetTab = k; renderCrewSettings(); }
   function crewToggleRetired() { crewShowRetired = !crewShowRetired; renderCrewSettings(); }
   function renderCrewSettings() {
@@ -928,16 +973,23 @@
           ${col(0.5, '반나절 휴무 · 0.5명', '휴무 인원에 0.5명으로 더합니다 (나머지 반나절은 작업 배정에서 0.5로)', 'bg-amber-50 text-amber-900')}
         </div>`;
     } else {
-      const rows = teamGroups(c.teams).map((g) => g.teams.map((t) => { const i = c.teams.indexOf(t); return `<div class="grid gap-2 items-center px-2 py-1.5 border-l-[3px] ${g.bar} rounded-r-xl hover:bg-stone-50" style="grid-template-columns:28px 150px minmax(0,1fr) 190px">
+      const rows = teamGroups(c.teams).map((g) => g.teams.map((t) => { const i = c.teams.indexOf(t); return `<div class="grid gap-2 items-center px-2 py-1.5 border-l-[3px] ${g.bar} rounded-r-xl hover:bg-stone-50" style="grid-template-columns:28px 140px minmax(0,1fr) 170px 150px">
           <span class="text-xs font-extrabold text-stone-400 text-center">${i + 1}</span>
           <input type="text" value="${esc(t.short || '')}" oninput="Prod.cfgField('teams',${i},'short',this.value)" class="${inp} font-extrabold ${g.text}">
           <input type="text" value="${esc(t.name)}" oninput="Prod.cfgField('teams',${i},'name',this.value)" class="${inp}">
           <input type="text" value="${esc(t.part || '')}" oninput="Prod.cfgField('teams',${i},'part',this.value)" class="${inp} text-xs">
+          <select onchange="Prod.cfgField('teams',${i},'cat',this.value,true)" class="${inp} text-xs ${g.text}">${PROD_CATS.map(([k, label]) => `<option value="${k}" ${teamCat(t) === k ? 'selected' : ''}>${label}</option>`).join('')}</select>
         </div>`; }).join('')).join('');
-      body = `<div class="rounded-2xl border border-stone-200 bg-white p-2">
-          <div class="grid gap-2 px-2 pb-1.5 mb-1 border-b border-stone-100 text-xs font-bold text-stone-500" style="grid-template-columns:28px 150px minmax(0,1fr) 190px"><span class="text-center">No</span><span>달력에 보이는 이름</span><span>작업 구분 이름</span><span>담당</span></div>
+      const pc = c.perCapita === 'PROD' ? 'PROD' : 'ALL';
+      body = `<div class="rounded-2xl bg-amber-50/70 border border-amber-200 px-3 py-2.5 mb-3 flex flex-wrap items-center gap-3">
+          <span class="text-sm font-extrabold text-amber-900">1인 생산금액의 인원 기준</span>
+          <div class="flex rounded-lg border border-stone-200 overflow-hidden text-xs font-extrabold bg-white">${[['ALL', '전체 근무 인원'], ['PROD', '생산 파트 인원만 (생산 외 제외)']].map(([k, label]) => `<button type="button" onclick="Prod.cfgPerCapita('${k}')" class="px-3 py-1.5 cursor-pointer ${pc === k ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-50'}">${label}</button>`).join('')}</div>
+          <span class="text-xs text-stone-600">파트별 1인 금액은 항상 그 파트 인원으로 나눕니다.</span>
+        </div>
+        <div class="rounded-2xl border border-stone-200 bg-white p-2">
+          <div class="grid gap-2 px-2 pb-1.5 mb-1 border-b border-stone-100 text-xs font-bold text-stone-500" style="grid-template-columns:28px 140px minmax(0,1fr) 170px 150px"><span class="text-center">No</span><span>달력에 보이는 이름</span><span>작업 구분 이름</span><span>담당</span><span>생산 파트 (1인 금액)</span></div>
           <div class="flex flex-col gap-1">${rows}</div></div>
-        <div class="text-xs text-stone-500 mt-2">왼쪽 색은 달력의 묶음 색입니다: <b class="text-amber-700">파이</b> · <b class="text-emerald-700">알생지</b> · <b class="text-orange-700">파베이크</b> · <b class="text-violet-700">제과</b> · <b class="text-sky-700">포장출하</b></div>`;
+        <div class="text-xs text-stone-500 mt-2">왼쪽 색은 생산 파트 색입니다 (달력 묶음 색과 같음): <b class="text-amber-700">파이</b> · <b class="text-emerald-700">알생지</b> · <b class="text-orange-700">파베이크</b> · <b class="text-violet-700">제과</b> · <b class="text-sky-700">생산 외</b></div>`;
     }
     const host = document.getElementById('prodModal'); if (!host) return;
     const keep = (document.getElementById('crewSetBody') || {}).scrollTop || 0;
@@ -1387,7 +1439,7 @@
     openDay, closeDay, addLine, setLineProduct, setLineField, removeLine, refreshPrices, copyTargetsFrom,
     addSemi, setSemiField, removeSemi, addProduct, addSemiByName, setPicker, setMemo: (v) => { if (draft) draft.memo = v; }, saveDay,
     openCrewDay, closeCrewDay, crewAdd, crewToggleW, crewRemove, crewAddLeave, crewLeaveField, crewRemoveLeave, crewCopyPrev, saveCrewDay,
-    openCrewSettings, cfgField, cfgAdd, cfgRemove, saveCrewSettings, crewSetTabTo, crewToggleRetired,
+    openCrewSettings, cfgField, cfgAdd, cfgRemove, saveCrewSettings, crewSetTabTo, crewToggleRetired, cfgPerCapita,
     setLossPeriod: (k) => { lossPeriodKey = k; render(); }, openLossSettings, saveLossSettings,
     openCountModal, saveCount, openAdjustModal, saveAdjust, removeAdjust, closeModal, loadMs, openDbModal, saveDbUrl,
     _debug: () => ({ db, dbRevision, cloudLoaded, products: getProducts() }),
