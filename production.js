@@ -670,7 +670,7 @@
     const kpi = (label, value, sub) => `<div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">${label}</div><div class="mt-1 text-xl font-extrabold tabular-nums">${value}</div>${sub ? `<div class="text-xs text-stone-500 mt-0.5">${sub}</div>` : ''}</div>`;
     const GRID_STYLE = 'grid-template-columns: repeat(5, minmax(0, 1fr)) 60px 132px';
     const ROW = 'display:grid;grid-template-columns:58px minmax(0,1fr) 22px;column-gap:4px;align-items:start';
-    const LROW = 'display:grid;grid-template-columns:58px minmax(0,1fr);column-gap:4px;align-items:start';
+    const LROW = 'display:grid;grid-template-columns:72px minmax(0,1fr);column-gap:4px;align-items:start';
     const dayCls = (c) => c.dow === 0 ? 'text-rose-600' : c.dow === 6 ? 'text-blue-600' : 'text-stone-900';
     const weekRows = weeks.map((w, wi) => {
       let wWork = 0, wLeave = 0, wDays = 0;
