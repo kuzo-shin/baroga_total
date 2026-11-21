@@ -1,4 +1,4 @@
-// [VERSION: production.js v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
+// [VERSION: production.js v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
 //  - 품목 목록·단가: 제품단가 탭(barogaProductPriceBridge.getProductionProducts)
 //      파이 = PK로 입력 / 알생지·파베이크·제과 = 배합으로 입력 → '1배합 PK수'로 PK 환산 (실제 포장 PK를 직접 고칠 수 있음)
 //      금액 = PK × 엠즈 매입가(PK). 줄을 만들 때의 단가를 줄에 저장 → 나중에 단가가 바뀌어도 지난 기록 금액은 그대로
@@ -200,7 +200,8 @@
     const other = document.getElementById(activeRootId === 'productionRoot' ? 'productionStockRoot' : 'productionRoot');
     if (other) other.innerHTML = ''; // 같은 id(prodStatus·prodModal)가 두 곳에 생기지 않게
     const isStock = activeRootId === 'productionStockRoot';
-    const tabBtn = (k, label) => `<button type="button" onclick="Prod.setView('${k}')" class="px-3.5 py-1.5 rounded-xl text-sm font-bold cursor-pointer ${view === k ? 'bg-stone-900 text-white' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'}">${label}</button>`;
+    const TAB_ICON = { CAL: 'calendar-range', CREW: 'users', LOSS: 'trending-down' };
+    const tabBtn = (k, label) => `<button type="button" onclick="Prod.setView('${k}')" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-sm font-bold cursor-pointer ${view === k ? 'bg-stone-900 text-white' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'}"><i data-lucide="${TAB_ICON[k]}" class="w-4 h-4"></i><span>${label}</span></button>`;
     const url = getUrl();
     el.innerHTML = `
       <div class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-4 flex flex-col gap-4">
@@ -215,6 +216,7 @@
         ${isStock ? renderStock() : view === 'LOSS' ? renderLoss() : view === 'CREW' ? renderCrew() : renderCalendar()}
       </div>
       <div id="prodModal"></div>`;
+    if (window.lucide) { try { lucide.createIcons(); } catch (e) {} }
     if (draft) renderEditor();
   }
 
@@ -271,7 +273,7 @@
       const cells = w.slice(0, 5).map((c) => {
         const day = db.days[c.date];
         const t = dayTotals(day);
-        if (!c.inMonth) return `<div class="min-h-[168px] rounded-xl bg-stone-50/60 border border-dashed border-stone-200 p-2 text-xs text-stone-300 font-bold">${c.day}</div>`;
+        if (!c.inMonth) return `<div class="min-h-[168px] rounded-xl bg-stone-50/60 border border-dashed border-stone-200 p-2 text-xl leading-none text-stone-300 font-black">${c.day}</div>`;
         const lines = (day && day.lines) || [], semi = (day && day.semi) || [];
         const MAX = 12; // 하루 품목(반제품 포함) 최대 12종까지 칸이 늘어남(그 뒤는 '외 n개'), 기본 높이는 5종
         // 파트별로 묶고 왼쪽 색 띠로 구분 (파이 · 알생지 · 파베이크 · 제과 · 반제품). 품목은 최대 MAX줄(묶음 제목 제외), 넘치면 '외 n개'
@@ -288,19 +290,19 @@
         const items = { length: total };
         const isToday = c.date === tdy;
         return `<button type="button" onclick="Prod.openDay('${c.date}')" class="text-left min-h-[168px] rounded-xl border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : 'border-stone-200'} bg-white hover:border-amber-400 hover:shadow-xs p-2 flex flex-col gap-1 cursor-pointer min-w-0">
-          <div class="flex items-center justify-between gap-1"><span class="flex items-baseline gap-1.5 min-w-0"><span class="text-sm font-extrabold ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}</span>${crewBadge(c.date)}</span>${dayBadge(c, t)}</div>
+          <div class="flex items-center justify-between gap-1"><span class="flex items-baseline gap-1.5 min-w-0"><span class="text-xl leading-none font-black tabular-nums ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}</span>${crewBadge(c.date)}</span>${dayBadge(c, t)}</div>
           ${lines.length ? `<div class="grid grid-cols-[auto_1fr] gap-x-1 text-xs tabular-nums"><span class="font-semibold text-stone-500">목표</span><span class="text-right font-bold">${won(t.target)}</span><span class="font-semibold text-stone-500">실행</span><span class="text-right font-extrabold text-amber-900">${won(t.actual)}</span></div>` : ''}
           ${items.length ? `<div class="${lines.length ? 'border-t border-stone-100 pt-1 ' : ''}flex flex-col gap-1">${shown}</div>` : '<div class="text-xs text-stone-300 mt-1">클릭해서 목표 입력</div>'}
         </button>`;
       }).join('');
       // 주말(토·일) 한 칸: 날짜별 작은 칸 2개(요약만), 눌러서 입력
       const wk = w.slice(5).map((c) => {
-        if (!c.inMonth) return `<div class="flex-1 rounded-lg border border-dashed border-stone-200 bg-stone-50/60 p-1.5 text-xs text-stone-300 font-bold">${c.day}</div>`;
+        if (!c.inMonth) return `<div class="flex-1 rounded-lg border border-dashed border-stone-200 bg-stone-50/60 p-1.5 text-base leading-none text-stone-300 font-black">${c.day}</div>`;
         const day = db.days[c.date], t = dayTotals(day);
         const n = (((day && day.lines) || []).length) + (((day && day.semi) || []).length);
         const isToday = c.date === tdy;
         return `<button type="button" onclick="Prod.openDay('${c.date}')" class="flex-1 text-left rounded-lg border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : 'border-stone-200'} ${n ? 'bg-white' : 'bg-stone-50'} hover:border-amber-400 p-1.5 flex flex-col gap-0.5 cursor-pointer min-w-0">
-          <div class="flex items-center justify-between gap-1"><span class="text-xs font-extrabold ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}<span class="text-[10px] ml-0.5">${DOW[c.dow]}</span></span></div>${n ? `<div class="-mt-0.5">${dayBadge(c, t)}</div>` : ''}
+          <div class="flex items-center justify-between gap-1"><span class="text-base leading-none font-black tabular-nums ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}<span class="text-[10px] font-extrabold ml-0.5">${DOW[c.dow]}</span></span></div>${n ? `<div class="-mt-0.5">${dayBadge(c, t)}</div>` : ''}
           ${n ? `<div class="text-[11px] font-extrabold text-amber-900 tabular-nums truncate" title="실행 ${won(t.actual)} / 목표 ${won(t.target)}">${Math.round((t.actual || 0) / 10000).toLocaleString('ko-KR')}만</div><div class="text-[11px] text-stone-500 font-semibold">${n}품목</div>` : '<div class="text-[11px] text-stone-300">휴무</div>'}
         </button>`;
       }).join('');
@@ -611,16 +613,16 @@
   const DEFAULT_LEAVES = [['연차', 1], ['무급휴무', 1], ['휴무', 1], ['병가', 1], ['경조', 1], ['외근', 1], ['오전반차', 0.5], ['오후반차', 0.5], ['무급반차', 0.5], ['무급오전휴무', 0.5], ['무급오후반차', 0.5], ['조퇴', 0.5], ['조기퇴근', 0.5]].map(([name, weight]) => ({ name, weight }));
   const STAFF_PARTS = ['생산총괄', '파이', '알파베', '제과', '출하', '지원', '품질관리', '사무'];
   const TEAM_GROUPS = [
-    { key: 'PIE', ids: ['t1', 't2', 't3', 't4'], bar: 'border-amber-400', text: 'text-amber-700' },
-    { key: 'DOUGH', ids: ['t5', 't6'], bar: 'border-emerald-500', text: 'text-emerald-700' },
-    { key: 'PARBAKE', ids: ['t7'], bar: 'border-orange-500', text: 'text-orange-700' },
-    { key: 'BAKERY', ids: ['t8'], bar: 'border-violet-400', text: 'text-violet-700' },
-    { key: 'SHIP', ids: ['t9'], bar: 'border-sky-500', text: 'text-sky-700' },
+    { key: 'PIE', ids: ['t1', 't2', 't3', 't4'], bar: 'border-amber-400', text: 'text-amber-700', card: 'bg-amber-50 border-amber-200' },
+    { key: 'DOUGH', ids: ['t5', 't6'], bar: 'border-emerald-500', text: 'text-emerald-700', card: 'bg-emerald-50 border-emerald-200' },
+    { key: 'PARBAKE', ids: ['t7'], bar: 'border-orange-500', text: 'text-orange-700', card: 'bg-orange-50 border-orange-200' },
+    { key: 'BAKERY', ids: ['t8'], bar: 'border-violet-400', text: 'text-violet-700', card: 'bg-violet-50 border-violet-200' },
+    { key: 'SHIP', ids: ['t9'], bar: 'border-sky-500', text: 'text-sky-700', card: 'bg-sky-50 border-sky-200' },
   ];
   function teamGroups(teams) {
     const out = TEAM_GROUPS.map((g) => ({ ...g, teams: teams.filter((t) => g.ids.includes(t.id)) }));
     const rest = teams.filter((t) => !TEAM_GROUPS.some((g) => g.ids.includes(t.id)));
-    if (rest.length) out.push({ key: 'ETC', bar: 'border-stone-300', text: 'text-stone-600', teams: rest });
+    if (rest.length) out.push({ key: 'ETC', bar: 'border-stone-300', text: 'text-stone-600', card: 'bg-stone-50 border-stone-200', teams: rest });
     return out.filter((g) => g.teams.length);
   }
   function crewCfg() {
@@ -676,7 +678,7 @@
       let wWork = 0, wLeave = 0, wDays = 0;
       w.forEach((c) => { if (!c.inMonth) return; const t = crewTotals(days[c.date]); wWork += t.work; wLeave += t.leave; if (t.work > 0) wDays++; });
       const cells = w.slice(0, 5).map((c) => {
-        if (!c.inMonth) return `<div class="min-h-[168px] rounded-xl bg-stone-50/60 border border-dashed border-stone-200 p-2 text-xs text-stone-300 font-bold">${c.day}</div>`;
+        if (!c.inMonth) return `<div class="min-h-[168px] rounded-xl bg-stone-50/60 border border-dashed border-stone-200 p-2 text-xl leading-none text-stone-300 font-black">${c.day}</div>`;
         const day = days[c.date], t = crewTotals(day), isToday = c.date === tdy;
         const ga = (day && day.assign) || {};
         // 작업 구분을 파트별로 묶고 왼쪽 색 띠로 구분 (생산 스케쥴과 같은 방식). 이름은 줄바꿈해서 전부 보이게
@@ -689,20 +691,20 @@
           return rows.length ? `<div class="border-l-[3px] ${g.bar} pl-1.5 flex flex-col gap-0.5">${rows.join('')}</div>` : '';
         }).join('');
         const lv = ((day && day.leaves) || []).filter((l) => l.sid);
-        const leaveBlock = lv.length ? `<div class="border-l-[3px] border-rose-400 pl-1.5 flex flex-col gap-0.5 ${teamBlocks ? 'mt-0.5' : ''}">
-            <div class="text-[10px] leading-3 font-extrabold text-rose-700">휴무 ${n1(t.leave)}명</div>
+        const leaveBlock = lv.length ? `<div class="${teamBlocks ? 'mt-1' : ''} rounded-lg bg-rose-50 border border-rose-200 px-1.5 py-1 flex flex-col gap-0.5">
+            <div class="text-[11px] leading-4 font-extrabold text-rose-700 border-b border-rose-200 pb-0.5 mb-0.5">휴무 ${n1(t.leave)}명</div>
             ${lv.map((l) => `<div class="text-xs leading-[1.35]" style="${LROW}"><span class="truncate font-bold text-stone-800">${esc(staffName(l.sid))}</span><span class="min-w-0"><b class="font-extrabold text-rose-700">${esc(l.type)}</b>${l.note ? `<span class="text-stone-500 font-semibold"> · ${esc(l.note)}</span>` : ''}</span></div>`).join('')}
           </div>` : '';
         return `<button type="button" onclick="Prod.openCrewDay('${c.date}')" class="text-left min-h-[168px] rounded-xl border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : 'border-stone-200'} bg-white hover:border-amber-400 hover:shadow-xs p-2 flex flex-col gap-1 cursor-pointer min-w-0">
-          <div class="flex items-center justify-between gap-1"><span class="text-sm font-extrabold ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}</span>${crewBadge(c.date)}</div>
+          <div class="flex items-center justify-between gap-1"><span class="text-xl leading-none font-black tabular-nums ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}</span>${crewBadge(c.date)}</div>
           ${teamBlocks || leaveBlock ? `<div class="flex flex-col gap-1">${teamBlocks}${leaveBlock}</div>` : '<div class="text-xs text-stone-300 mt-1">클릭해서 인원 배정</div>'}
         </button>`;
       }).join('');
       const wk = w.slice(5).map((c) => {
-        if (!c.inMonth) return `<div class="flex-1 rounded-lg border border-dashed border-stone-200 bg-stone-50/60 p-1.5 text-xs text-stone-300 font-bold">${c.day}</div>`;
+        if (!c.inMonth) return `<div class="flex-1 rounded-lg border border-dashed border-stone-200 bg-stone-50/60 p-1.5 text-base leading-none text-stone-300 font-black">${c.day}</div>`;
         const t = crewTotals(days[c.date]), isToday = c.date === tdy;
         return `<button type="button" onclick="Prod.openCrewDay('${c.date}')" class="flex-1 text-left rounded-lg border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : 'border-stone-200'} ${t.work || t.leave ? 'bg-white' : 'bg-stone-50'} hover:border-amber-400 p-1.5 flex flex-col gap-0.5 cursor-pointer min-w-0">
-          <span class="text-xs font-extrabold ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}<span class="text-[10px] ml-0.5">${DOW[c.dow]}</span></span>
+          <span class="text-base leading-none font-black tabular-nums ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}<span class="text-[10px] font-extrabold ml-0.5">${DOW[c.dow]}</span></span>
           ${t.work || t.leave ? `<span class="text-[11px] font-bold text-stone-600">근무 ${n1(t.work)}</span>${t.leave ? `<span class="text-[11px] font-bold text-rose-600">휴무 ${n1(t.leave)}</span>` : ''}` : '<span class="text-[11px] text-stone-300">휴무</span>'}
         </button>`;
       }).join('');
@@ -798,25 +800,25 @@
     const leaveMap = {}; crewDraft.leaves.forEach((l) => { if (l.sid) leaveMap[l.sid] = l.type; });
     const assigned = new Set(Object.values(crewDraft.assign).flat().map((a) => a.sid));
     const unassigned = cfg.staff.filter((s) => s.active !== false && !assigned.has(s.id) && !(leaveMap[s.id] && leaveWeight(leaveMap[s.id]) >= 1));
-    const teamCards = cfg.teams.map((tm) => {
+    const teamCards = teamGroups(cfg.teams).flatMap((g) => g.teams.map((tm) => ({ tm, g }))).map(({ tm, g }) => {
       const arr = crewDraft.assign[tm.id] || [];
       const chips = arr.map((a) => `<span class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-lg border ${leaveMap[a.sid] ? 'border-rose-300 bg-rose-50' : 'border-stone-300 bg-white'} text-sm font-bold">${esc(staffName(a.sid))}<button type="button" onclick="Prod.crewToggleW('${tm.id}','${a.sid}')" title="하루(1) / 반나절(0.5) 바꾸기" class="px-1 rounded text-xs font-extrabold cursor-pointer ${Number(a.w) === 0.5 ? 'bg-amber-100 text-amber-800' : 'bg-stone-100 text-stone-500'}">${Number(a.w) === 0.5 ? '0.5' : '1'}</button><button type="button" onclick="Prod.crewRemove('${tm.id}','${a.sid}')" class="w-5 h-5 rounded text-stone-400 hover:text-rose-700 cursor-pointer">×</button></span>`).join('');
-      return `<div class="rounded-xl border border-stone-200 p-2.5 flex flex-col gap-1.5">
-        <div class="flex items-center justify-between gap-2"><div class="min-w-0"><span class="font-extrabold text-stone-900">${esc(tm.short || tm.name)}</span><span class="ml-1.5 text-xs text-stone-500">${esc(tm.part || '')}</span></div><b class="text-sm tabular-nums text-sky-800">${n1(t.byTeam[tm.id] || 0)}명</b></div>
+      return `<div class="rounded-xl border ${g.card} p-2.5 flex flex-col gap-1.5">
+        <div class="flex items-center justify-between gap-2"><div class="min-w-0"><span class="font-extrabold ${g.text}">${esc(tm.short || tm.name)}</span><span class="ml-1.5 text-xs text-stone-500">${esc(tm.part || '')}</span></div><b class="px-2 py-0.5 rounded-lg bg-white/80 text-sm tabular-nums text-stone-900">${n1(t.byTeam[tm.id] || 0)}명</b></div>
         <div class="flex flex-wrap gap-1">${chips || '<span class="text-xs text-stone-300">배정 없음</span>'}</div>
-        <select onchange="Prod.crewAdd('${tm.id}', this.value)" class="border border-stone-300 rounded-lg px-2 py-1 text-sm"><option value="">+ 인원 추가</option>${staffOptions(new Set(arr.map((a) => a.sid)))}</select>
+        <select onchange="Prod.crewAdd('${tm.id}', this.value)" class="border border-stone-300 bg-white rounded-lg px-2 py-1 text-sm"><option value="">+ 인원 추가</option>${staffOptions(new Set(arr.map((a) => a.sid)))}</select>
       </div>`;
     }).join('');
-    const leaveRows = crewDraft.leaves.map((l) => `<div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)_28px] gap-1.5 items-center">
-        <select onchange="Prod.crewLeaveField('${l.id}','sid',this.value)" class="border border-stone-300 rounded-lg px-2 py-1 text-sm"><option value="">이름 선택</option>${staffOptions(null, l.sid)}</select>
-        <select onchange="Prod.crewLeaveField('${l.id}','type',this.value)" class="border border-stone-300 rounded-lg px-2 py-1 text-sm">${cfg.leaveTypes.map((x) => `<option ${x.name === l.type ? 'selected' : ''} value="${esc(x.name)}">${esc(x.name)} (${n1(x.weight)}명)</option>`).join('')}</select>
-        <input type="text" value="${esc(l.note || '')}" oninput="Prod.crewLeaveField('${l.id}','note',this.value)" placeholder="비고" class="border border-stone-300 rounded-lg px-2 py-1 text-sm">
+    const leaveRows = crewDraft.leaves.map((l) => `<div class="grid grid-cols-[136px_176px_minmax(0,1fr)_28px] gap-1.5 items-center">
+        <select onchange="Prod.crewLeaveField('${l.id}','sid',this.value)" class="border border-rose-200 bg-white rounded-lg px-2 py-1 text-sm"><option value="">이름 선택</option>${staffOptions(null, l.sid)}</select>
+        <select onchange="Prod.crewLeaveField('${l.id}','type',this.value)" class="border border-rose-200 bg-white rounded-lg px-2 py-1 text-sm">${cfg.leaveTypes.map((x) => `<option ${x.name === l.type ? 'selected' : ''} value="${esc(x.name)}">${esc(x.name)} (${n1(x.weight)}명)</option>`).join('')}</select>
+        <input type="text" value="${esc(l.note || '')}" oninput="Prod.crewLeaveField('${l.id}','note',this.value)" placeholder="비고" class="border border-rose-200 bg-white rounded-lg px-2 py-1 text-sm">
         <button type="button" onclick="Prod.crewRemoveLeave('${l.id}')" class="w-7 h-7 rounded-lg text-stone-400 hover:text-rose-700 hover:bg-rose-50 cursor-pointer">×</button>
       </div>`).join('');
     const host = document.getElementById('prodModal'); if (!host) return;
     const keep = (document.getElementById('crewEditBody') || {}).scrollTop || 0;
     host.innerHTML = `<div class="fixed inset-0 z-50 bg-stone-900/50 flex items-center justify-center p-3 sm:p-6" onclick="if(event.target===this)Prod.closeCrewDay()">
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[1180px] max-h-[92vh] flex flex-col overflow-hidden">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[1280px] max-h-[92vh] flex flex-col overflow-hidden">
         <div class="px-6 py-4 border-b border-stone-200 flex flex-wrap items-center justify-between gap-3">
           <div><h3 class="text-lg font-extrabold text-stone-900">${d.getMonth() + 1}월 ${d.getDate()}일 (${DOW[d.getDay()]}) 작업 인원</h3>
             <div class="text-sm text-stone-600 mt-0.5">근무 <b class="text-stone-900">${n1(t.work)}명</b> · 휴무 <b class="text-rose-700">${n1(t.leave)}명</b> · 미배정 <b>${unassigned.length}명</b></div></div>
@@ -825,12 +827,12 @@
             <button type="button" onclick="Prod.closeCrewDay()" class="ml-1 w-8 h-8 rounded-lg text-stone-500 hover:bg-stone-100 cursor-pointer text-xl leading-none">×</button>
           </div>
         </div>
-        <div id="crewEditBody" class="flex-1 overflow-y-auto px-6 py-4 grid grid-cols-1 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] gap-5">
+        <div id="crewEditBody" class="flex-1 overflow-y-auto px-6 py-4 grid grid-cols-1 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] gap-5">
           <section><h4 class="text-sm font-extrabold text-stone-800 mb-2">작업 구분별 배정 <span class="text-xs font-semibold text-stone-500">숫자를 누르면 1 ↔ 0.5(반나절)</span></h4><div class="grid grid-cols-1 md:grid-cols-2 gap-2">${teamCards}</div></section>
           <section class="flex flex-col gap-4">
-            <div><div class="flex items-center justify-between mb-2"><h4 class="text-sm font-extrabold text-stone-800">휴무</h4><button type="button" onclick="Prod.crewAddLeave()" class="px-2.5 py-1 rounded-lg bg-stone-900 text-white text-xs font-bold cursor-pointer">+ 휴무 추가</button></div>
-              <div class="flex flex-col gap-1.5">${leaveRows || '<div class="text-xs text-stone-400">휴무 없음</div>'}</div></div>
-            <div><h4 class="text-sm font-extrabold text-stone-800 mb-1">미배정 팀원 (${unassigned.length}명)</h4><div class="flex flex-wrap gap-1">${unassigned.map((s) => `<span class="px-2 py-0.5 rounded-lg bg-stone-100 text-xs font-bold text-stone-600">${esc(s.name)}</span>`).join('') || '<span class="text-xs text-stone-400">없음</span>'}</div></div>
+            <div class="rounded-xl bg-rose-50 border border-rose-200 p-3"><div class="flex items-center justify-between mb-2"><h4 class="text-sm font-extrabold text-rose-800">휴무 <span class="text-xs font-bold text-rose-600">${n1(t.leave)}명</span></h4><button type="button" onclick="Prod.crewAddLeave()" class="px-2.5 py-1 rounded-lg bg-stone-900 text-white text-xs font-bold cursor-pointer">+ 휴무 추가</button></div>
+              <div class="flex flex-col gap-1.5">${leaveRows || '<div class="text-xs text-rose-400">휴무 없음</div>'}</div></div>
+            <div class="rounded-xl bg-stone-50 border border-stone-200 p-3"><h4 class="text-sm font-extrabold text-stone-800 mb-1.5">미배정 팀원 (${unassigned.length}명)</h4><div class="flex flex-wrap gap-1">${unassigned.map((s) => `<span class="px-2 py-0.5 rounded-lg bg-white border border-stone-200 text-xs font-bold text-stone-700">${esc(s.name)}</span>`).join('') || '<span class="text-xs text-stone-400">없음</span>'}</div></div>
           </section>
         </div>
         <div class="px-6 py-3 border-t border-stone-200 bg-stone-50 flex justify-end gap-2">
