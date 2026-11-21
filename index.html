@@ -1,4 +1,4 @@
-<!-- [VERSION: index.html v2.16 - 2026-11-21 오른쪽 그래프 눌림 개선(금액 축 억·만 표기, 월 글자 눕힘 없음, 높이 조정, 그래프 탭 한 줄) / v2.15 - 2026-11-21 원재료 표 줄바꿈 제거(한 줄 표시)·발주 이력 열 너비를 새 품목명·규격에 맞춤·큰 화면에서 표 영역 확대 / v2.14 - 2026-11-21 옛 프로그램 입고내역 엑셀 업로드 지원(품목번호·과세구분 변환), 발주에 품목번호(CODE) 저장 / v2.13 - 2026-11-20 버튼·입력칸 모서리/포커스 통일, 원재료 표 머리글 고정, Ctrl+S 저장, 표 숫자칸 Enter 이동 / v2.12 - 2026-11-20 디자인 통일: 회색 stone 통일·남색→파랑·최소 글자 12px·굵기 한 단계 낮춤·표 숫자 자릿수 정렬·포커스 표시·알림 1종 / v2.11 - 2026-11-20 저장 안전: 4개 탭 저장 상태 문구 통일(저장됨 HH:MM), 미저장 변경 시 창 닫기 경고, 공통 입력창(openFormModal) / v2.10 - 2026-11-20 모바일 UI: 일일 사용 보고 카드형 입력·하단 확정 바, 상단 탭 한 줄 가로 스크롤, 헤더 고정 해제, KPI 2열 / v2.9 - 2026-11-20 원재료 업로드 양식(매입처·과세구분) 인식, 과세구분 열 그대로 사용, 수량 없는 양식 등록 차단 / v2.8 - 2026-11-20 3~5단계 정확성 (발주서 동일 줄·업로드 오류 표시·로트별 소진금액·월말 기준 재고 역산·제조원 추정 표시·재고 변동 이력·부가세 줄별 통일·CSV 안전 처리) / v2.7 2단계 보안 (DB 접속 코드 인증 · SRM 계정정보 삭제 · 급여/고정비 기본값 제거 · 화면 출력 이스케이프) / v2.6.1 DB 주소 4종 새 배포로 교체 · 각 기기 저장 주소 일괄 초기화 / v2.6 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 스냅샷 분할 저장 · 샘플 레시피 제거)] -->
+<!-- [VERSION: index.html v2.17 - 2026-11-21 합계 줄을 카드 맨 아래에 고정, 그래프 카드 높이 고정으로 TOP 5 위치 고정, TOP 5 내용 같으면 다시 그리지 않음 / v2.16 - 2026-11-21 오른쪽 그래프 눌림 개선(금액 축 억·만 표기, 월 글자 눕힘 없음, 높이 조정, 그래프 탭 한 줄) / v2.15 - 2026-11-21 원재료 표 줄바꿈 제거(한 줄 표시)·발주 이력 열 너비를 새 품목명·규격에 맞춤·큰 화면에서 표 영역 확대 / v2.14 - 2026-11-21 옛 프로그램 입고내역 엑셀 업로드 지원(품목번호·과세구분 변환), 발주에 품목번호(CODE) 저장 / v2.13 - 2026-11-20 버튼·입력칸 모서리/포커스 통일, 원재료 표 머리글 고정, Ctrl+S 저장, 표 숫자칸 Enter 이동 / v2.12 - 2026-11-20 디자인 통일: 회색 stone 통일·남색→파랑·최소 글자 12px·굵기 한 단계 낮춤·표 숫자 자릿수 정렬·포커스 표시·알림 1종 / v2.11 - 2026-11-20 저장 안전: 4개 탭 저장 상태 문구 통일(저장됨 HH:MM), 미저장 변경 시 창 닫기 경고, 공통 입력창(openFormModal) / v2.10 - 2026-11-20 모바일 UI: 일일 사용 보고 카드형 입력·하단 확정 바, 상단 탭 한 줄 가로 스크롤, 헤더 고정 해제, KPI 2열 / v2.9 - 2026-11-20 원재료 업로드 양식(매입처·과세구분) 인식, 과세구분 열 그대로 사용, 수량 없는 양식 등록 차단 / v2.8 - 2026-11-20 3~5단계 정확성 (발주서 동일 줄·업로드 오류 표시·로트별 소진금액·월말 기준 재고 역산·제조원 추정 표시·재고 변동 이력·부가세 줄별 통일·CSV 안전 처리) / v2.7 2단계 보안 (DB 접속 코드 인증 · SRM 계정정보 삭제 · 급여/고정비 기본값 제거 · 화면 출력 이스케이프) / v2.6.1 DB 주소 4종 새 배포로 교체 · 각 기기 저장 주소 일괄 초기화 / v2.6 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 스냅샷 분할 저장 · 샘플 레시피 제거)] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -83,7 +83,7 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-base sm:text-lg font-extrabold tracking-tight text-stone-900">바로가 공장 통합 관리 시스템</h1>
-                        <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.16.0</span>
+                        <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.17.0</span>
                     </div>
                     <p class="text-xs text-stone-500 hidden sm:block">원재료 발주/재고 · 엠즈 입고/회송 · 레시피 배합비 · 제품단가 출고마진 통합 관리</p>
                 </div>
@@ -303,13 +303,14 @@
                     <input type="text" id="priceSearchInput" oninput="renderDashboard()" placeholder="제품명·거래처·제조원 검색..." class="text-xs border border-stone-300 rounded-xl px-3 py-1.5 w-52 bg-white">
                 </div>
                 <div id="mainContentContainer" class="p-4 flex-1 overflow-y-auto max-h-[760px] space-y-4"></div>
-                <div class="px-4 py-3 bg-stone-900 text-white flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div class="mt-auto px-4 py-3 bg-stone-900 text-white flex flex-wrap items-center justify-between gap-2 text-xs">
                     <div class="flex items-center gap-3"><span id="footerSummaryLabel" class="font-bold text-stone-300">현재 표시 내역 합계</span><span id="footerCountBadge" class="px-2 py-0.5 rounded-full bg-stone-800 text-amber-300 font-bold">0건</span></div>
                     <div class="flex items-center gap-4"><span>공급가 합계: <strong id="footerSupplyTotal" class="text-amber-300">0원</strong></span><span>부가세 포함 총액: <strong id="footerVatIncludedTotal" class="text-emerald-300 text-sm">0원</strong></span></div>
                 </div>
             </div>
             <div class="lg:col-span-4 xl:col-span-3 flex flex-col gap-4">
-                <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs flex flex-col">
+                <!-- 그래프 카드 높이 고정: 탭(1~4)·그래프 종류를 바꿔도 아래 TOP 5 카드 위치가 움직이지 않게 -->
+                <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs flex flex-col lg:h-[452px]">
                     <div class="flex flex-col gap-2 pb-3 border-b border-stone-100">
                         <div><h3 id="chartCardTitle" class="text-sm font-extrabold text-stone-900">월별 총 발주금액 추이</h3><p id="chartCardSub" class="text-xs text-stone-500">연간 월별 공급가 및 부가세 포함 발주 추이</p></div>
                         <div id="orderChartTabsWrap" class="grid grid-cols-4 gap-1 bg-stone-100 p-1 rounded-xl">
@@ -320,7 +321,7 @@
                         </div>
                         <div id="trendItemSelectWrap" class="hidden pt-1"><select id="trendItemSelect" onchange="renderMainChart()" class="w-full text-xs font-bold border border-stone-200 rounded-xl px-2.5 py-1.5 bg-stone-50 text-stone-800"></select></div>
                     </div>
-                    <div class="relative h-64 sm:h-72 xl:h-64 mt-3"><canvas id="mainChartCanvas"></canvas></div>
+                    <div class="relative h-64 sm:h-72 lg:h-auto lg:flex-1 lg:min-h-0 mt-3"><canvas id="mainChartCanvas"></canvas></div>
                 </div>
                 <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs flex-1 flex flex-col">
                     <div class="flex items-center justify-between pb-2.5 border-b border-stone-100"><h3 id="sidePanelTitle" class="text-sm font-extrabold text-stone-900">거래처별 발주 합계 TOP 5</h3><span id="sidePanelSub" class="text-xs font-semibold text-stone-500">공급가 기준</span></div>
@@ -1911,10 +1912,12 @@
             const filtered = getFilteredOrders(false), vMap = {}; let totalSum = 0;
             filtered.forEach(o => { const v = o.colA || '미지정', amt = getOrderLineAmounts(o).totalAmt; vMap[v] = (vMap[v] || 0) + amt; totalSum += amt; });
             const topV = Object.entries(vMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
-            bodyEl.innerHTML = topV.length === 0 ? `<div class="py-8 text-center text-stone-400 text-xs">데이터가 없습니다.</div>` : topV.map(([v, amt], idx) => {
+            const html = topV.length === 0 ? `<div class="py-8 text-center text-stone-400 text-xs">데이터가 없습니다.</div>` : topV.map(([v, amt], idx) => {
                 const ratio = totalSum > 0 ? ((amt / totalSum) * 100).toFixed(1) : '0.0';
                 return `<div class="p-2.5 rounded-xl border border-stone-100 bg-stone-50/70"><div class="flex justify-between text-xs"><span class="font-extrabold text-stone-800">${idx + 1}. ${escapeHtml(v)}</span><span class="font-black text-stone-900">${formatCurrency(amt)} <span class="text-xs text-amber-700">(${ratio}%)</span></span></div><div class="w-full h-1.5 bg-stone-200 rounded-full mt-1.5 overflow-hidden"><div class="h-full bg-amber-600 rounded-full" style="width:${Math.min(100, parseFloat(ratio))}%"></div></div></div>`;
             }).join('');
+            // 내용이 같으면 다시 그리지 않음 (탭 전환 때 깜빡임 방지)
+            if (bodyEl.dataset.html !== html) { bodyEl.innerHTML = html; bodyEl.dataset.html = html; }
         }
         function adjustRemainQty(id, d) { const t = ordersData.find(o => o.id === id); if (!t) return; const before = getOrderRemainQty(t); t.remainQty = Math.max(0, Number((before + d).toFixed(2))); logInventoryAdjust(t, before, t.remainQty, '현재고 직접 조정(+/-)'); t.id = buildIdWithMeta(t); renderDashboard(); pushAllToGoogleSheet(true); }
         function setRemainQty(id, v) { const t = ordersData.find(o => o.id === id); if (!t) return; const before = getOrderRemainQty(t); t.remainQty = Math.max(0, parseFloat(v) || 0); logInventoryAdjust(t, before, t.remainQty, '현재고 직접 입력'); t.id = buildIdWithMeta(t); renderDashboard(); pushAllToGoogleSheet(true); }
