@@ -1,4 +1,4 @@
-<!-- [VERSION: index.html v2.14 - 2026-11-21 옛 프로그램 입고내역 엑셀 업로드 지원(품목번호·과세구분 변환), 발주에 품목번호(CODE) 저장 / v2.13 - 2026-11-20 버튼·입력칸 모서리/포커스 통일, 원재료 표 머리글 고정, Ctrl+S 저장, 표 숫자칸 Enter 이동 / v2.12 - 2026-11-20 디자인 통일: 회색 stone 통일·남색→파랑·최소 글자 12px·굵기 한 단계 낮춤·표 숫자 자릿수 정렬·포커스 표시·알림 1종 / v2.11 - 2026-11-20 저장 안전: 4개 탭 저장 상태 문구 통일(저장됨 HH:MM), 미저장 변경 시 창 닫기 경고, 공통 입력창(openFormModal) / v2.10 - 2026-11-20 모바일 UI: 일일 사용 보고 카드형 입력·하단 확정 바, 상단 탭 한 줄 가로 스크롤, 헤더 고정 해제, KPI 2열 / v2.9 - 2026-11-20 원재료 업로드 양식(매입처·과세구분) 인식, 과세구분 열 그대로 사용, 수량 없는 양식 등록 차단 / v2.8 - 2026-11-20 3~5단계 정확성 (발주서 동일 줄·업로드 오류 표시·로트별 소진금액·월말 기준 재고 역산·제조원 추정 표시·재고 변동 이력·부가세 줄별 통일·CSV 안전 처리) / v2.7 2단계 보안 (DB 접속 코드 인증 · SRM 계정정보 삭제 · 급여/고정비 기본값 제거 · 화면 출력 이스케이프) / v2.6.1 DB 주소 4종 새 배포로 교체 · 각 기기 저장 주소 일괄 초기화 / v2.6 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 스냅샷 분할 저장 · 샘플 레시피 제거)] -->
+<!-- [VERSION: index.html v2.15 - 2026-11-21 원재료 표 줄바꿈 제거(한 줄 표시)·발주 이력 열 너비를 새 품목명·규격에 맞춤·큰 화면에서 표 영역 확대 / v2.14 - 2026-11-21 옛 프로그램 입고내역 엑셀 업로드 지원(품목번호·과세구분 변환), 발주에 품목번호(CODE) 저장 / v2.13 - 2026-11-20 버튼·입력칸 모서리/포커스 통일, 원재료 표 머리글 고정, Ctrl+S 저장, 표 숫자칸 Enter 이동 / v2.12 - 2026-11-20 디자인 통일: 회색 stone 통일·남색→파랑·최소 글자 12px·굵기 한 단계 낮춤·표 숫자 자릿수 정렬·포커스 표시·알림 1종 / v2.11 - 2026-11-20 저장 안전: 4개 탭 저장 상태 문구 통일(저장됨 HH:MM), 미저장 변경 시 창 닫기 경고, 공통 입력창(openFormModal) / v2.10 - 2026-11-20 모바일 UI: 일일 사용 보고 카드형 입력·하단 확정 바, 상단 탭 한 줄 가로 스크롤, 헤더 고정 해제, KPI 2열 / v2.9 - 2026-11-20 원재료 업로드 양식(매입처·과세구분) 인식, 과세구분 열 그대로 사용, 수량 없는 양식 등록 차단 / v2.8 - 2026-11-20 3~5단계 정확성 (발주서 동일 줄·업로드 오류 표시·로트별 소진금액·월말 기준 재고 역산·제조원 추정 표시·재고 변동 이력·부가세 줄별 통일·CSV 안전 처리) / v2.7 2단계 보안 (DB 접속 코드 인증 · SRM 계정정보 삭제 · 급여/고정비 기본값 제거 · 화면 출력 이스케이프) / v2.6.1 DB 주소 4종 새 배포로 교체 · 각 기기 저장 주소 일괄 초기화 / v2.6 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 스냅샷 분할 저장 · 샘플 레시피 제거)] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -46,6 +46,9 @@
             #mainContentContainer { overflow: auto; }
             #mainContentContainer thead th { position: sticky; top: -16px; z-index: 2; box-shadow: inset 0 -1px 0 #e7e5e4; }
             :where(#mainContentContainer) thead th { background-color: #f5f5f4; }
+            /* [C4] 원재료 표: 품목명·거래처·금액이 줄바꿈 없이 한 줄로 보이게 (넘치면 가로 스크롤) */
+            #mainContentContainer table th, #mainContentContainer table td { white-space: nowrap; padding-left: 0.375rem; padding-right: 0.375rem; }
+            #mainContentContainer table td.cell-wrap { white-space: normal; min-width: 10rem; }
         }
         /* [C3] 키보드로 이동할 때 현재 위치 표시 */
         button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid #f59e0b; outline-offset: 1px; }
@@ -80,7 +83,7 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-base sm:text-lg font-extrabold tracking-tight text-stone-900">바로가 공장 통합 관리 시스템</h1>
-                        <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.14.0</span>
+                        <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.15.0</span>
                     </div>
                     <p class="text-xs text-stone-500 hidden sm:block">원재료 발주/재고 · 엠즈 입고/회송 · 레시피 배합비 · 제품단가 출고마진 통합 관리</p>
                 </div>
@@ -195,7 +198,7 @@
             </div>
         </section>
         <section class="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1">
-            <div class="lg:col-span-8 bg-white rounded-2xl border border-stone-200/90 shadow-xs flex flex-col overflow-hidden">
+            <div class="lg:col-span-8 xl:col-span-9 bg-white rounded-2xl border border-stone-200/90 shadow-xs flex flex-col overflow-hidden">
                 <!-- 1. 발주 이력 툴바 -->
                 <div id="orderSubTabsBar" class="flex flex-col border-b border-stone-200 bg-stone-50/80">
                     <div id="periodFilterBar" class="px-4 py-2.5 border-b border-stone-200/80 bg-white flex flex-wrap items-center justify-between gap-2">
@@ -305,7 +308,7 @@
                     <div class="flex items-center gap-4"><span>공급가 합계: <strong id="footerSupplyTotal" class="text-amber-300">0원</strong></span><span>부가세 포함 총액: <strong id="footerVatIncludedTotal" class="text-emerald-300 text-sm">0원</strong></span></div>
                 </div>
             </div>
-            <div class="lg:col-span-4 flex flex-col gap-4">
+            <div class="lg:col-span-4 xl:col-span-3 flex flex-col gap-4">
                 <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs flex flex-col">
                     <div class="flex flex-col gap-2 pb-3 border-b border-stone-100">
                         <div><h3 id="chartCardTitle" class="text-sm font-extrabold text-stone-900">월별 총 발주금액 추이</h3><p id="chartCardSub" class="text-xs text-stone-500">연간 월별 공급가 및 부가세 포함 발주 추이</p></div>
@@ -1391,7 +1394,7 @@
                             : `<span class="inline-block max-w-full truncate px-1.5 py-0.5 rounded bg-amber-100/80 text-amber-950 font-extrabold text-xs">${escapeHtml(mfgText)}</span>`)
                         : '-';
                     const showNote = pureNote && pureNote !== '과세' && pureNote !== '면세';
-                    const noteHint = showNote ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-stone-100 text-stone-600 text-xs font-semibold" title="${escapeHtml(pureNote)}">${escapeHtml(pureNote)}</span>` : '';
+                    const noteHint = showNote ? `<span class="block w-fit max-w-full truncate mt-0.5 px-1.5 py-0.5 rounded bg-stone-100 text-stone-600 text-xs font-semibold" title="${escapeHtml(pureNote)}">${escapeHtml(pureNote)}</span>` : '';
                     return `
                         <tr class="border-b border-stone-100 hover:bg-stone-50/80 transition text-xs">
                             <td class="py-2 px-2 font-bold text-stone-700 truncate" title="${escapeHtml(o.colA)}">${escapeHtml(o.colA)}</td>
@@ -1432,18 +1435,18 @@
                             </div>
                         </div>
                         <div class="overflow-x-auto">
-                            <table class="w-full table-fixed min-w-[860px] text-left border-collapse">
+                            <table class="w-full table-fixed min-w-[1116px] text-left border-collapse">
                                 <colgroup>
-                                    <col class="w-[9%]">
-                                    <col class="w-[22%]">
-                                    <col class="w-[6%]">
-                                    <col class="w-[5%]">
-                                    <col class="w-[6%]">
-                                    <col class="w-[11%]">
-                                    <col class="w-[11%]">
-                                    <col class="w-[13%]">
-                                    <col class="w-[11%]">
-                                    <col class="w-[6%]">
+                                    <col class="w-[150px]">
+                                    <col>
+                                    <col class="w-[94px]">
+                                    <col class="w-[56px]">
+                                    <col class="w-[52px]">
+                                    <col class="w-[88px]">
+                                    <col class="w-[94px]">
+                                    <col class="w-[126px]">
+                                    <col class="w-[144px]">
+                                    <col class="w-[60px]">
                                 </colgroup>
                                 <thead>
                                     <tr class="bg-stone-50 border-b border-stone-200 text-xs font-extrabold text-stone-500">
@@ -1657,12 +1660,12 @@
                 container.innerHTML = list.length === 0 ? `<div class="py-16 text-center text-stone-400 text-sm font-bold">현재고(>0) 보유 품목이 없습니다.</div>` : renderUsageCardsMobile(list) + `<div class="hidden sm:block overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b border-stone-200 font-extrabold text-stone-600"><th class="py-2.5 px-3">거래처</th><th class="py-2.5 px-3">원재료명</th><th class="py-2.5 px-2 text-center">규격</th><th class="py-2.5 px-2 text-center">가용 현재고</th><th class="py-2.5 px-2 text-center bg-amber-100/70">금일 사용수량</th><th class="py-2.5 px-2 text-center">차감 후 잔여</th><th class="py-2.5 px-2.5 text-right">소진 금액</th><th class="py-2.5 px-2">품목 비고</th></tr></thead><tbody>${list.map(st => { const uq = pendingUsageInputs[st.key]?.qty || 0, nv = pendingUsageInputs[st.key]?.note || '', afterR = Number((st.totalRemainQty - uq).toFixed(2)); return `<tr class="border-b border-stone-100 ${uq > 0 ? 'bg-amber-50/70' : 'hover:bg-stone-50'}"><td class="py-2 px-3 font-bold">${escapeHtml(st.vendor)}</td><td class="py-2 px-3 font-extrabold">${escapeHtml(st.item)}</td><td class="py-2 px-2 text-center">${escapeHtml(st.spec)}</td><td class="py-2 px-2 text-center font-extrabold text-emerald-800">${formatNumber(st.totalRemainQty)}</td><td class="py-2 px-2 text-center"><div class="flex items-center justify-center gap-1"><button type="button" onclick="adjustPendingUsageQty(${jsArg(st.key)}, -1, ${st.totalRemainQty})" class="w-6 h-6 rounded border bg-white font-bold cursor-pointer">-</button><input type="number" step="any" value="${uq > 0 ? uq : ''}" placeholder="0" onchange="setPendingUsageQty(${jsArg(st.key)}, this.value)" class="no-spinner w-14 text-center font-extrabold border rounded py-1"><button type="button" onclick="adjustPendingUsageQty(${jsArg(st.key)}, 1, ${st.totalRemainQty})" class="w-6 h-6 rounded border bg-white font-bold cursor-pointer">+</button></div></td><td class="py-2 px-2 text-center font-extrabold">${formatNumber(afterR)}</td><td class="py-2 px-2.5 text-right font-bold">${uq > 0 ? formatCurrency(estimateUsageCost(st, uq)) : formatCurrency(st.unitAmt) + '/개'}</td><td class="py-2 px-2"><input type="text" value="${escapeHtml(nv)}" oninput="setPendingUsageNote(${jsArg(st.key)}, this.value)" placeholder="비고" class="w-full border rounded px-2 py-1"></td></tr>`; }).join('')}</tbody></table></div>`;
             } else {
                 const logs = usageLogsData.filter(u => !q || `${u.item} ${u.vendor} ${u.memo} ${u.date}`.toLowerCase().includes(q)).sort((a, b) => String(b.date).localeCompare(String(a.date)));
-                container.innerHTML = logs.length === 0 ? `<div class="py-16 text-center text-stone-400 text-sm font-bold">사용 보고 이력이 없습니다.</div>` : renderUsageHistoryCardsMobile(logs) + `<div class="hidden sm:block overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b font-extrabold text-stone-600"><th class="py-2 px-3">사용일자</th><th class="py-2 px-3">거래처</th><th class="py-2 px-3">원재료명</th><th class="py-2 px-2 text-center">규격</th><th class="py-2 px-2 text-center">사용수량</th><th class="py-2 px-2.5 text-right">소진금액</th><th class="py-2 px-3">비고</th><th class="py-2 px-2 text-center">취소</th></tr></thead><tbody>${logs.map(u => `<tr class="border-b hover:bg-stone-50"><td class="py-2 px-3 font-bold">${escapeHtml(u.date)}</td><td class="py-2 px-3">${escapeHtml(u.vendor)}</td><td class="py-2 px-3 font-extrabold">${escapeHtml(u.item)}</td><td class="py-2 px-2 text-center">${escapeHtml(u.spec)}</td><td class="py-2 px-2 text-center font-extrabold text-rose-700">-${formatNumber(u.usedQty)}</td><td class="py-2 px-2.5 text-right font-extrabold">${formatCurrency(u.totalAmt)}</td><td class="py-2 px-3">${escapeHtml(u.memo || '-')}</td><td class="py-2 px-2 text-center"><button type="button" onclick="revertSingleUsageLog(${jsArg(u.id)})" class="px-2 py-1 rounded bg-rose-50 text-rose-700 border border-rose-200 font-bold cursor-pointer">원복</button></td></tr>`).join('')}</tbody></table></div>`;
+                container.innerHTML = logs.length === 0 ? `<div class="py-16 text-center text-stone-400 text-sm font-bold">사용 보고 이력이 없습니다.</div>` : renderUsageHistoryCardsMobile(logs) + `<div class="hidden sm:block overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b font-extrabold text-stone-600"><th class="py-2 px-3">사용일자</th><th class="py-2 px-3">거래처</th><th class="py-2 px-3">원재료명</th><th class="py-2 px-2 text-center">규격</th><th class="py-2 px-2 text-center">사용수량</th><th class="py-2 px-2.5 text-right">소진금액</th><th class="py-2 px-3">비고</th><th class="py-2 px-2 text-center">취소</th></tr></thead><tbody>${logs.map(u => `<tr class="border-b hover:bg-stone-50"><td class="py-2 px-3 font-bold">${escapeHtml(u.date)}</td><td class="py-2 px-3">${escapeHtml(u.vendor)}</td><td class="py-2 px-3 font-extrabold">${escapeHtml(u.item)}</td><td class="py-2 px-2 text-center">${escapeHtml(u.spec)}</td><td class="py-2 px-2 text-center font-extrabold text-rose-700">-${formatNumber(u.usedQty)}</td><td class="py-2 px-2.5 text-right font-extrabold">${formatCurrency(u.totalAmt)}</td><td class="py-2 px-3 cell-wrap">${escapeHtml(u.memo || '-')}</td><td class="py-2 px-2 text-center"><button type="button" onclick="revertSingleUsageLog(${jsArg(u.id)})" class="px-2 py-1 rounded bg-rose-50 text-rose-700 border border-rose-200 font-bold cursor-pointer">원복</button></td></tr>`).join('')}</tbody></table></div>`;
 
                 // [4단계 R7] 재고 변동 이력 (수동 조정·발주 수정·삭제·사용 보고 취소)
                 const typeLabel = { ADJUST: '현재고 조정', EDIT: '발주 수정', DELETE: '발주 삭제', USAGE_REVERT: '사용보고 취소' };
                 const adj = inventoryAdjustLogs.filter(a => !q || `${a.item} ${a.vendor} ${a.reason} ${a.date}`.toLowerCase().includes(q)).slice().sort((a, b) => String(b.at || b.date).localeCompare(String(a.at || a.date)) || String(b.id).localeCompare(String(a.id)));
-                container.innerHTML += `<div class="mt-5"><div class="flex items-center justify-between mb-2"><h4 class="text-xs font-extrabold text-stone-800">재고 변동 이력 (수동 조정 · 발주 수정/삭제 · 사용보고 취소)</h4><span class="text-xs text-stone-500">${adj.length}건 · 삭제·수정 불가 기록</span></div>${adj.length === 0 ? `<div class="py-6 text-center text-stone-400 text-xs">기록된 재고 변동이 없습니다.</div>` : `<div class="overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b font-extrabold text-stone-600"><th class="py-2 px-3">기록 시각</th><th class="py-2 px-2">구분</th><th class="py-2 px-3">원재료명</th><th class="py-2 px-2 text-center">규격</th><th class="py-2 px-2 text-center">발주일</th><th class="py-2 px-2 text-right">변경 전</th><th class="py-2 px-2 text-right">변경 후</th><th class="py-2 px-2 text-right">증감</th><th class="py-2 px-3">사유</th></tr></thead><tbody>${adj.map(a => `<tr class="border-b"><td class="py-2 px-3 whitespace-nowrap">${escapeHtml(a.at || a.date)}</td><td class="py-2 px-2 font-bold">${escapeHtml(typeLabel[a.type] || a.type || '')}</td><td class="py-2 px-3 font-extrabold">${escapeHtml(a.item)}</td><td class="py-2 px-2 text-center">${escapeHtml(a.spec)}</td><td class="py-2 px-2 text-center">${escapeHtml(a.orderDate)}</td><td class="py-2 px-2 text-right">${formatNumber(a.before)}</td><td class="py-2 px-2 text-right">${formatNumber(a.after)}</td><td class="py-2 px-2 text-right font-extrabold ${a.delta < 0 ? 'text-rose-700' : 'text-emerald-700'}">${a.delta > 0 ? '+' : ''}${formatNumber(a.delta)}</td><td class="py-2 px-3">${escapeHtml(a.reason)}</td></tr>`).join('')}</tbody></table></div>`}</div>`;            }
+                container.innerHTML += `<div class="mt-5"><div class="flex items-center justify-between mb-2"><h4 class="text-xs font-extrabold text-stone-800">재고 변동 이력 (수동 조정 · 발주 수정/삭제 · 사용보고 취소)</h4><span class="text-xs text-stone-500">${adj.length}건 · 삭제·수정 불가 기록</span></div>${adj.length === 0 ? `<div class="py-6 text-center text-stone-400 text-xs">기록된 재고 변동이 없습니다.</div>` : `<div class="overflow-x-auto border border-stone-200 rounded-2xl"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-stone-100 border-b font-extrabold text-stone-600"><th class="py-2 px-3">기록 시각</th><th class="py-2 px-2">구분</th><th class="py-2 px-3">원재료명</th><th class="py-2 px-2 text-center">규격</th><th class="py-2 px-2 text-center">발주일</th><th class="py-2 px-2 text-right">변경 전</th><th class="py-2 px-2 text-right">변경 후</th><th class="py-2 px-2 text-right">증감</th><th class="py-2 px-3">사유</th></tr></thead><tbody>${adj.map(a => `<tr class="border-b"><td class="py-2 px-3 whitespace-nowrap">${escapeHtml(a.at || a.date)}</td><td class="py-2 px-2 font-bold">${escapeHtml(typeLabel[a.type] || a.type || '')}</td><td class="py-2 px-3 font-extrabold">${escapeHtml(a.item)}</td><td class="py-2 px-2 text-center">${escapeHtml(a.spec)}</td><td class="py-2 px-2 text-center">${escapeHtml(a.orderDate)}</td><td class="py-2 px-2 text-right">${formatNumber(a.before)}</td><td class="py-2 px-2 text-right">${formatNumber(a.after)}</td><td class="py-2 px-2 text-right font-extrabold ${a.delta < 0 ? 'text-rose-700' : 'text-emerald-700'}">${a.delta > 0 ? '+' : ''}${formatNumber(a.delta)}</td><td class="py-2 px-3 cell-wrap">${escapeHtml(a.reason)}</td></tr>`).join('')}</tbody></table></div>`}</div>`;            }
         }
         function renderInventoryWorkspace() {
             const q = (document.getElementById('inventorySearchInput')?.value || '').trim().toLowerCase(), expF = document.getElementById('expiryFilterSelect')?.value || 'ALL';
