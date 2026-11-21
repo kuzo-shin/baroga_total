@@ -1,4 +1,4 @@
-// [VERSION: production.js v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
+// [VERSION: production.js v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
 //  - 품목 목록·단가: 제품단가 탭(barogaProductPriceBridge.getProductionProducts)
 //      파이 = PK로 입력 / 알생지·파베이크·제과 = 배합으로 입력 → '1배합 PK수'로 PK 환산 (실제 포장 PK를 직접 고칠 수 있음)
 //      금액 = PK × 엠즈 매입가(PK). 줄을 만들 때의 단가를 줄에 저장 → 나중에 단가가 바뀌어도 지난 기록 금액은 그대로
@@ -247,7 +247,7 @@
         const weekend = c.dow === 0 || c.dow === 6;
         if (!c.inMonth) return `<div class="min-h-[150px] rounded-xl bg-stone-50/60 border border-dashed border-stone-200 p-2 text-xs text-stone-300 font-bold">${c.day}</div>`;
         const lines = (day && day.lines) || [], semi = (day && day.semi) || [];
-        const MAX = 6;
+        const MAX = 10; // 하루 품목(반제품 포함) 최대 10종까지 칸이 늘어남, 기본 높이는 5종
         const items = [
           ...lines.map((l) => {
             const tq = Number(l.target) || 0, aq = Number(l.actual) || 0, added = tq === 0 && aq > 0;
@@ -320,6 +320,7 @@
   function openDay(date) {
     const day = db.days[date] || { lines: [], semi: [], memo: '' };
     draft = { date, lines: JSON.parse(JSON.stringify(day.lines || [])), semi: JSON.parse(JSON.stringify(day.semi || [])), memo: day.memo || '' };
+    pickerQuery = ''; pickerCat = 'PIE';
     renderEditor();
   }
   function closeDay() { draft = null; const m = document.getElementById('prodModal'); if (m) m.innerHTML = ''; }
@@ -402,81 +403,150 @@
     const t = dayTotals(draft);
     draft.lines.forEach((l) => {
       const row = document.querySelector(`[data-line="${l.id}"]`); if (!row) return;
-      const tp = lineTargetPk(l), ap = lineActualPk(l);
-      row.querySelector('[data-k="tpk"]').textContent = num(tp) + ' ' + lineStockUnit(l);
+      const tp = lineTargetPk(l), ap = lineActualPk(l), su = lineStockUnit(l);
+      const conv = row.querySelector('[data-k="conv"]');
+      if (conv) conv.textContent = l.unit === '배합' || su !== 'PK' ? `목표 ${num(tp)}${su} · 실행 ${num(lineAutoActualPk(l))}${su}` : '';
       const pkIn = row.querySelector('[data-k="apk"]'); if (pkIn && !l.pkManual) pkIn.placeholder = num(lineAutoActualPk(l));
       row.querySelector('[data-k="tamt"]').textContent = won(tp * linePrice(l));
       row.querySelector('[data-k="aamt"]').textContent = won(ap * linePrice(l));
     });
     const box = document.getElementById('prodEditTotals');
-    if (box) box.innerHTML = `목표 <b class="tabular-nums">${won(t.target)}</b> · 실행 <b class="tabular-nums text-amber-900">${won(t.actual)}</b> · ${rateBadge(rateOf(t.actual, t.target), t.actual > 0) || '<span class="text-stone-400">-</span>'}`;
+    if (box) box.innerHTML = `<span class="text-stone-500">목표</span> <b class="tabular-nums text-stone-900">${won(t.target)}</b><span class="mx-2 text-stone-300">|</span><span class="text-stone-500">실행</span> <b class="tabular-nums text-amber-900">${won(t.actual)}</b><span class="ml-2">${rateBadge(rateOf(t.actual, t.target), t.actual > 0)}</span>`;
+    const cnt = document.getElementById('prodEditCount');
+    if (cnt) cnt.textContent = `완제품 ${draft.lines.length} · 반제품 ${draft.semi.length}`;
+  }
+  // 품목 고르기: 분류 탭 + 검색 → 눌러서 추가 (이미 있는 품목은 그 줄로 이동)
+  let pickerCat = 'PIE', pickerQuery = '';
+  function addProduct(code) {
+    if (!draft) return;
+    const ex = draft.lines.find((l) => String(l.code) === String(code));
+    if (ex) { focusRow(ex.id); return; }
+    const p = productByCode(code); if (!p) return;
+    const l = newLineFor(p); draft.lines.push(l);
+    renderEditor(); focusRow(l.id);
+  }
+  function addSemiByName(name) {
+    if (!draft) return;
+    const ex = draft.semi.find((l) => l.name === name);
+    if (ex) { focusRow(ex.id); return; }
+    const s = db.semiItems.find((x) => x.name === name) || { name, unit: '배합' };
+    const l = { id: uid(), name: s.name, unit: s.unit, target: 0, actual: 0, note: '' }; draft.semi.push(l);
+    renderEditor(); focusRow(l.id);
+  }
+  function focusRow(id) {
+    setTimeout(() => {
+      const row = document.querySelector(`[data-line="${id}"],[data-semi="${id}"]`); if (!row) return;
+      row.scrollIntoView({ block: 'nearest' });
+      row.classList.add('ring-2', 'ring-amber-400'); setTimeout(() => row.classList.remove('ring-2', 'ring-amber-400'), 900);
+      const inp = row.querySelector('input[type="number"]'); if (inp) { inp.focus(); inp.select(); }
+    }, 30);
+  }
+  function setPicker(cat, q) {
+    if (cat !== null && cat !== undefined) pickerCat = cat;
+    if (q !== null && q !== undefined) pickerQuery = q;
+    const box = document.getElementById('prodPicker'); if (box) box.innerHTML = renderPickerBody();
+  }
+  function renderPickerBody() {
+    const products = getProducts();
+    const q = pickerQuery.trim().toLowerCase();
+    const used = new Set(draft.lines.map((l) => String(l.code))), usedSemi = new Set(draft.semi.map((l) => l.name));
+    const tabs = [...CAT_ORDER.filter((c) => products.some((p) => p.cat === c)), 'SEMI'].map((c) => {
+      const label = c === 'SEMI' ? '반제품' : CAT_LABEL[c];
+      const on = !q && pickerCat === c;
+      return `<button type="button" onclick="Prod.setPicker('${c}', '')" class="px-3 py-1.5 rounded-lg text-sm font-bold cursor-pointer ${on ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-100'}">${label}</button>`;
+    }).join('');
+    const chip = (key, label, sub, isUsed, onclick) => `<button type="button" onclick="${onclick}" class="text-left px-3 py-2 rounded-xl border text-sm cursor-pointer transition ${isUsed ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-stone-200 bg-white hover:border-amber-400 hover:bg-amber-50/40'}"><div class="font-bold leading-tight">${isUsed ? '✓ ' : ''}${esc(label)}</div><div class="text-xs text-stone-500 mt-0.5">${sub}</div></button>`;
+    let items = [];
+    if (q || pickerCat !== 'SEMI') {
+      items = products.filter((p) => (q ? (String(p.productName).toLowerCase().includes(q) || String(p.productCode).includes(q)) : p.cat === pickerCat))
+        .map((p) => chip(p.productCode, p.productName, `${esc(p.productCode)} · ${CAT_LABEL[p.cat]} · ${p.unit}${p.stockUnit !== 'PK' ? ` (재고 ${p.stockUnit})` : ''}`, used.has(String(p.productCode)), `Prod.addProduct('${esc(p.productCode)}')`));
+    }
+    if (q || pickerCat === 'SEMI') {
+      items = items.concat(db.semiItems.filter((s) => !q || s.name.toLowerCase().includes(q)).map((s) => chip(s.name, s.name, `반제품 · ${esc(s.unit)}`, usedSemi.has(s.name), `Prod.addSemiByName(${esc(JSON.stringify(s.name))})`)));
+    }
+    return `<div class="flex flex-wrap items-center gap-1 mb-2">${tabs}</div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5">${items.join('') || '<div class="col-span-full py-4 text-center text-sm text-stone-400">찾는 품목이 없습니다.</div>'}</div>`;
   }
   function renderEditor() {
     const host = document.getElementById('prodModal'); if (!host || !draft) return;
     const products = getProducts();
-    const optHtml = (sel) => CAT_ORDER.map((c) => {
-      const ps = products.filter((p) => p.cat === c); if (!ps.length) return '';
-      return `<optgroup label="${CAT_LABEL[c]} (${c === 'PIE' ? 'PK' : '배합'})">${ps.map((p) => `<option value="${esc(p.productCode)}" ${String(p.productCode) === String(sel) ? 'selected' : ''}>${esc(p.productCode)} ${esc(p.productName)}</option>`).join('')}</optgroup>`;
-    }).join('');
-    const inCls = 'no-spinner w-20 text-right border border-stone-300 rounded-lg px-2 py-1 font-bold tabular-nums';
-    const rows = draft.lines.map((l) => {
+    const inCls = 'no-spinner w-full text-right border border-stone-300 rounded-lg pl-2 pr-9 py-1.5 text-base font-bold tabular-nums focus:border-amber-500';
+    const unitIn = (html, unit) => `<div class="relative">${html}<span class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs font-bold text-stone-400">${unit}</span></div>`;
+    const lineRows = draft.lines.map((l) => {
       const known = productByCode(l.code, products);
-      const cur = known && ((Number(l.pricePk) > 0 && known.msBuyPricePk !== l.pricePk) || (Number(l.pkPerBatch) > 0 && known.batchOutputPk !== l.pkPerBatch));
       const su = lineStockUnit(l), pr = linePrice(l), following = !(Number(l.pricePk) > 0);
-      return `<tr data-line="${l.id}" class="border-b border-stone-100">
-        <td class="py-1.5 px-1.5"><select onchange="Prod.setLineProduct('${l.id}', this.value)" class="w-full max-w-[260px] border border-stone-300 rounded-lg px-2 py-1 text-xs font-bold">${known ? '' : `<option selected>${esc(l.code)} ${esc(l.name)} (목록에 없음)</option>`}${optHtml(l.code)}</select></td>
-        <td class="py-1.5 px-1.5 text-center text-xs font-bold ${l.unit === 'PK' ? 'text-blue-700' : 'text-emerald-700'}">${l.unit}${l.unit === '배합' ? `<div class="text-[11px] font-semibold text-stone-400">1배합 ${num(linePkPerBatch(l))}PK</div>` : ''}${su !== 'PK' ? `<div class="text-[11px] font-semibold text-stone-400">재고 ${su} (${linePerStock(l)}PK)</div>` : ''}</td>
-        <td class="py-1.5 px-1.5 text-right"><input type="number" min="0" step="any" value="${l.target || ''}" placeholder="0" oninput="Prod.setLineField('${l.id}','target',this.value)" class="${inCls}"></td>
-        <td class="py-1.5 px-1.5 text-right"><input type="number" min="0" step="any" value="${l.actual || ''}" placeholder="0" oninput="Prod.setLineField('${l.id}','actual',this.value)" class="${inCls} bg-amber-50/60"></td>
-        <td class="py-1.5 px-1.5 text-right text-xs text-stone-500 tabular-nums" data-k="tpk">${num(lineTargetPk(l))} ${su}</td>
-        <td class="py-1.5 px-1.5 text-right"><input type="number" min="0" step="any" data-k="apk" value="${l.pkManual ? l.actualPk : ''}" placeholder="${num(lineAutoActualPk(l))}" oninput="Prod.setLineField('${l.id}','actualPk',this.value)" title="비워 두면 자동 계산값(회색)을 씁니다. 실제 포장 수량이 다르면 입력 (${su})" class="${inCls} w-20"> <span class="text-[11px] text-stone-400">${su}</span></td>
-        <td class="py-1.5 px-1.5 text-right text-xs tabular-nums ${cur ? 'text-rose-600' : 'text-stone-600'}" title="${cur ? '현재 제품단가와 다름 — [현재 단가로 다시 계산]으로 바꿀 수 있음' : following ? '단가 0원 → 제품단가 탭에 금액이 들어가면 자동 반영' : ''}">${won(pr)}${su !== 'PK' ? `<span class="text-stone-400">/${su}</span>` : ''}${following ? '<div class="text-[11px] text-stone-400">현재 단가 따름</div>' : ''}</td>
-        <td class="py-1.5 px-1.5 text-right text-xs tabular-nums" data-k="tamt">${won(lineTargetPk(l) * pr)}</td>
-        <td class="py-1.5 px-1.5 text-right text-xs font-extrabold tabular-nums text-amber-900" data-k="aamt">${won(lineActualPk(l) * pr)}</td>
-        <td class="py-1.5 px-1.5"><input type="text" value="${esc(l.note || '')}" oninput="Prod.setLineField('${l.id}','note',this.value)" placeholder="메모" class="w-28 border border-stone-300 rounded-lg px-2 py-1 text-xs"></td>
-        <td class="py-1.5 px-1.5 text-center"><button type="button" onclick="Prod.removeLine('${l.id}')" class="px-2 py-1 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 cursor-pointer">삭제</button></td>
-      </tr>`;
+      const cur = known && ((Number(l.pricePk) > 0 && known.msBuyPricePk !== l.pricePk) || (Number(l.pkPerBatch) > 0 && known.batchOutputPk !== l.pkPerBatch));
+      const added = !(Number(l.target) > 0) && Number(l.actual) > 0;
+      return `<div data-line="${l.id}" class="grid grid-cols-[minmax(0,1.6fr)_110px_110px_130px_minmax(0,1fr)_36px] gap-2 items-center px-3 py-2 rounded-xl border border-stone-200 bg-white transition">
+        <div class="min-w-0">
+          <div class="flex items-center gap-1.5"><span class="text-[11px] font-bold px-1.5 py-0.5 rounded ${l.unit === 'PK' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}">${CAT_LABEL[l.cat] || ''}</span><span class="font-bold text-stone-900 truncate" title="${esc(l.name)}">${esc(l.name)}</span>${added ? '<span class="text-[11px] font-bold text-blue-700">계획 외</span>' : ''}</div>
+          <div class="text-xs text-stone-500 mt-0.5 truncate">${l.unit === '배합' ? `1배합 = ${num(linePkPerBatch(l))}PK · ` : ''}${su !== 'PK' ? `재고 ${su} (${linePerStock(l)}PK) · ` : ''}<span class="${cur ? 'text-rose-600' : ''}" title="${cur ? '현재 제품단가와 다름 — [현재 단가로 다시 계산]' : ''}">${won(pr)}/${su}${following ? ' (현재 단가 따름)' : ''}</span></div>
+          <div class="text-xs text-stone-400" data-k="conv"></div>
+        </div>
+        ${unitIn(`<input type="number" min="0" step="any" value="${l.target || ''}" placeholder="0" oninput="Prod.setLineField('${l.id}','target',this.value)" class="${inCls}">`, l.unit)}
+        ${unitIn(`<input type="number" min="0" step="any" value="${l.actual || ''}" placeholder="0" oninput="Prod.setLineField('${l.id}','actual',this.value)" class="${inCls} bg-amber-50/70">`, l.unit)}
+        ${unitIn(`<input type="number" min="0" step="any" data-k="apk" value="${l.pkManual ? l.actualPk : ''}" placeholder="${num(lineAutoActualPk(l))}" oninput="Prod.setLineField('${l.id}','actualPk',this.value)" title="실제 포장한 수량. 비워 두면 회색 자동값 사용(원재료 손실 분석에서는 '미확인')" class="${inCls} ${l.unit === '배합' && Number(l.actual) > 0 && !l.pkManual ? 'border-amber-400' : ''}">`, su)}
+        <div class="text-right text-sm tabular-nums leading-tight"><div class="text-stone-500" data-k="tamt"></div><div class="font-extrabold text-amber-900" data-k="aamt"></div></div>
+        <button type="button" onclick="Prod.removeLine('${l.id}')" title="삭제" class="w-8 h-8 rounded-lg text-stone-400 hover:text-rose-700 hover:bg-rose-50 cursor-pointer text-lg leading-none">×</button>
+      </div>`;
     }).join('');
-    const semiOpts = (sel) => db.semiItems.map((s) => `<option ${s.name === sel ? 'selected' : ''}>${esc(s.name)}</option>`).join('');
-    const semiRows = draft.semi.map((l) => `<tr class="border-b border-stone-100">
-        <td class="py-1.5 px-1.5"><select onchange="Prod.setSemiField('${l.id}','name',this.value)" class="w-full max-w-[260px] border border-stone-300 rounded-lg px-2 py-1 text-xs font-bold">${semiOpts(l.name)}</select></td>
-        <td class="py-1.5 px-1.5 text-center text-xs font-bold text-stone-600">${esc(l.unit)}</td>
-        <td class="py-1.5 px-1.5 text-right"><input type="number" min="0" step="any" value="${l.target || ''}" placeholder="0" oninput="Prod.setSemiField('${l.id}','target',this.value)" class="${inCls}"></td>
-        <td class="py-1.5 px-1.5 text-right"><input type="number" min="0" step="any" value="${l.actual || ''}" placeholder="0" oninput="Prod.setSemiField('${l.id}','actual',this.value)" class="${inCls} bg-amber-50/60"></td>
-        <td class="py-1.5 px-1.5" colspan="5"><input type="text" value="${esc(l.note || '')}" oninput="Prod.setSemiField('${l.id}','note',this.value)" placeholder="메모" class="w-full border border-stone-300 rounded-lg px-2 py-1 text-xs"></td>
-        <td></td>
-        <td class="py-1.5 px-1.5 text-center"><button type="button" onclick="Prod.removeSemi('${l.id}')" class="px-2 py-1 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 cursor-pointer">삭제</button></td>
-      </tr>`).join('');
+    const semiRows = draft.semi.map((l) => `<div data-semi="${l.id}" class="grid grid-cols-[minmax(0,1.6fr)_110px_110px_130px_minmax(0,1fr)_36px] gap-2 items-center px-3 py-2 rounded-xl border border-dashed border-stone-300 bg-stone-50 transition">
+        <div class="min-w-0 flex items-center gap-1.5"><span class="text-[11px] font-bold px-1.5 py-0.5 rounded bg-stone-200 text-stone-600">반제품</span><span class="font-bold text-stone-800 truncate">${esc(l.name)}</span></div>
+        ${unitIn(`<input type="number" min="0" step="any" value="${l.target || ''}" placeholder="0" oninput="Prod.setSemiField('${l.id}','target',this.value)" class="${inCls}">`, esc(l.unit))}
+        ${unitIn(`<input type="number" min="0" step="any" value="${l.actual || ''}" placeholder="0" oninput="Prod.setSemiField('${l.id}','actual',this.value)" class="${inCls} bg-amber-50/70">`, esc(l.unit))}
+        <input type="text" value="${esc(l.note || '')}" oninput="Prod.setSemiField('${l.id}','note',this.value)" placeholder="메모" class="col-span-2 w-full border border-stone-300 rounded-lg px-2 py-1.5 text-sm">
+        <button type="button" onclick="Prod.removeSemi('${l.id}')" title="삭제" class="w-8 h-8 rounded-lg text-stone-400 hover:text-rose-700 hover:bg-rose-50 cursor-pointer text-lg leading-none">×</button>
+      </div>`).join('');
     const d = parseYmd(draft.date);
     const pw = prevWorkday(draft.date);
     const lastWeek = (() => { const x = parseYmd(draft.date); x.setDate(x.getDate() - 7); return ymd(x); })();
-    host.innerHTML = `<div class="fixed inset-0 z-50 bg-stone-900/40 flex items-start justify-center p-3 sm:p-6 overflow-y-auto" onclick="if(event.target===this)Prod.closeDay()">
-      <div class="bg-white rounded-2xl shadow-xl w-full max-w-[1180px] flex flex-col">
-        <div class="px-5 py-3 border-b border-stone-200 flex flex-wrap items-center justify-between gap-2">
-          <div><h3 class="text-base font-extrabold text-stone-900">${d.getMonth() + 1}월 ${d.getDate()}일 (${DOW[d.getDay()]}) 생산일지</h3><div id="prodEditTotals" class="text-sm text-stone-700 mt-0.5"></div></div>
+    const keepScroll = (document.getElementById('prodEditBody') || {}).scrollTop || 0;
+    host.innerHTML = `<div class="fixed inset-0 z-50 bg-stone-900/50 flex items-center justify-center p-3 sm:p-6" onclick="if(event.target===this)Prod.closeDay()">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[1100px] max-h-[92vh] flex flex-col overflow-hidden">
+        <div class="px-6 py-4 border-b border-stone-200 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 class="text-lg font-extrabold text-stone-900">${d.getMonth() + 1}월 ${d.getDate()}일 (${DOW[d.getDay()]}) 생산일지</h3>
+            <div class="text-xs text-stone-500 mt-0.5" id="prodEditCount"></div>
+          </div>
           <div class="flex flex-wrap items-center gap-1.5 text-xs">
-            <button type="button" onclick="Prod.copyTargetsFrom('${pw}')" class="px-2.5 py-1.5 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">전 근무일(${pw.slice(5)}) 품목 불러오기</button>
-            <button type="button" onclick="Prod.copyTargetsFrom('${lastWeek}')" class="px-2.5 py-1.5 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">지난주 같은 요일 불러오기</button>
-            <button type="button" onclick="Prod.refreshPrices()" class="px-2.5 py-1.5 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">현재 단가로 다시 계산</button>
+            <button type="button" onclick="Prod.copyTargetsFrom('${pw}')" class="px-3 py-1.5 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">전 근무일(${pw.slice(5).replace('-', '/')}) 품목 불러오기</button>
+            <button type="button" onclick="Prod.copyTargetsFrom('${lastWeek}')" class="px-3 py-1.5 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">지난주 같은 요일</button>
+            <button type="button" onclick="Prod.refreshPrices()" class="px-3 py-1.5 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">현재 단가로 다시 계산</button>
+            <button type="button" onclick="Prod.closeDay()" title="닫기" class="ml-1 w-8 h-8 rounded-lg text-stone-500 hover:bg-stone-100 cursor-pointer text-xl leading-none">×</button>
           </div>
         </div>
-        <div class="p-4 overflow-x-auto">
-          <table class="w-full text-left border-collapse text-sm min-w-[1000px]">
-            <thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600"><th class="py-2 px-1.5">품목 (제품단가 탭)</th><th class="py-2 px-1.5 text-center">단위</th><th class="py-2 px-1.5 text-right">목표</th><th class="py-2 px-1.5 text-right">실행</th><th class="py-2 px-1.5 text-right">목표 재고수량</th><th class="py-2 px-1.5 text-right">실행 재고수량</th><th class="py-2 px-1.5 text-right">단가</th><th class="py-2 px-1.5 text-right">목표 금액</th><th class="py-2 px-1.5 text-right">실행 금액</th><th class="py-2 px-1.5">메모</th><th></th></tr></thead>
-            <tbody>${rows || '<tr><td colspan="11" class="py-6 text-center text-xs text-stone-400">아직 품목이 없습니다. [+ 품목 추가]를 눌러 주세요.</td></tr>'}</tbody>
-          </table>
-          <button type="button" onclick="Prod.addLine()" class="mt-2 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold cursor-pointer">+ 품목 추가</button>
-          <span class="ml-2 text-xs text-stone-500">계획에 없던 품목을 만들었으면 목표는 0으로 두고 실행만 입력하세요. <b class="text-amber-800">생지는 실제 포장한 수량을 '실행 재고수량'에 적어야 원재료 손실 분석에 들어갑니다.</b></span>
-          <div class="mt-5 mb-1 flex items-center gap-2"><h4 class="text-sm font-extrabold text-stone-800">반제품 (반죽 믹싱·라미네이팅)</h4><span class="text-xs text-stone-500">수량만 기록 · 금액·재고 합계 제외</span></div>
-          ${semiRows ? `<table class="w-full text-left border-collapse text-sm min-w-[1000px]"><thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600"><th class="py-2 px-1.5">반제품</th><th class="py-2 px-1.5 text-center">단위</th><th class="py-2 px-1.5 text-right">목표</th><th class="py-2 px-1.5 text-right">실행</th><th class="py-2 px-1.5" colspan="5">메모</th><th></th><th></th></tr></thead><tbody>${semiRows}</tbody></table>` : '<div class="py-2 text-xs text-stone-400">반제품 기록 없음</div>'}
-          <button type="button" onclick="Prod.addSemi()" class="mt-2 px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-bold cursor-pointer hover:bg-stone-50">+ 반제품 추가</button>
-          <div class="mt-4"><label class="text-xs font-bold text-stone-600">그날 메모 (사정·변경 사유 등)</label><textarea oninput="Prod.setMemo(this.value)" rows="2" class="mt-1 w-full border border-stone-300 rounded-lg px-2 py-1.5 text-sm">${esc(draft.memo || '')}</textarea></div>
+        <div id="prodEditBody" class="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-5">
+          <section>
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <h4 class="text-sm font-extrabold text-stone-800">품목 추가</h4>
+              <input type="search" value="${esc(pickerQuery)}" oninput="Prod.setPicker(null, this.value)" placeholder="품목명·코드 검색" class="w-56 border border-stone-300 rounded-lg px-3 py-1.5 text-sm">
+            </div>
+            <div id="prodPicker" class="rounded-2xl bg-stone-50 border border-stone-200 p-3">${renderPickerBody()}</div>
+          </section>
+          <section>
+            <div class="grid grid-cols-[minmax(0,1.6fr)_110px_110px_130px_minmax(0,1fr)_36px] gap-2 px-3 pb-1 text-xs font-extrabold text-stone-500">
+              <div>오늘 품목</div><div class="text-right">목표</div><div class="text-right">실행</div><div class="text-right" title="실제 포장한 수량 (재고에 들어가는 수량)">실제 포장 수량</div><div class="text-right">목표 / 실행 금액</div><div></div>
+            </div>
+            <div class="flex flex-col gap-1.5">
+              ${lineRows || '<div class="py-6 text-center text-sm text-stone-400 rounded-xl border border-dashed border-stone-200">위에서 품목을 눌러 추가하세요.</div>'}
+              ${semiRows}
+            </div>
+            <div class="text-xs text-stone-500 mt-2 leading-relaxed">· 계획에 없던 품목은 목표를 비우고 실행만 적으면 됩니다. · 생지는 <b class="text-amber-800">실제 포장 수량</b>을 적어야 원재료 손실 분석에 들어갑니다(주황 테두리 = 아직 안 적음). · 반제품은 금액에 들어가지 않습니다.</div>
+          </section>
+          <section>
+            <label class="text-sm font-extrabold text-stone-800">그날 메모</label>
+            <textarea oninput="Prod.setMemo(this.value)" rows="2" placeholder="사정·변경 사유 등" class="mt-1 w-full border border-stone-300 rounded-lg px-3 py-2 text-sm">${esc(draft.memo || '')}</textarea>
+          </section>
         </div>
-        <div class="px-5 py-3 border-t border-stone-200 flex justify-end gap-2">
-          <button type="button" onclick="Prod.closeDay()" class="px-4 py-2 rounded-xl border border-stone-300 text-sm font-bold cursor-pointer">취소</button>
-          <button type="button" onclick="Prod.saveDay()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">적용</button>
+        <div class="px-6 py-3 border-t border-stone-200 bg-stone-50 flex flex-wrap items-center justify-between gap-3">
+          <div id="prodEditTotals" class="text-sm"></div>
+          <div class="flex gap-2">
+            <button type="button" onclick="Prod.closeDay()" class="px-5 py-2 rounded-xl border border-stone-300 bg-white text-sm font-bold cursor-pointer">취소</button>
+            <button type="button" onclick="Prod.saveDay()" class="px-6 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-sm font-extrabold cursor-pointer">적용</button>
+          </div>
         </div>
       </div></div>`;
+    const body = document.getElementById('prodEditBody'); if (body) body.scrollTop = keepScroll;
     renderEditorTotals();
   }
 
@@ -831,7 +901,7 @@
     retryProducts: () => { _liveCache = null; if (typeof window.reloadProductPriceDb === 'function' && !getProducts().length) { try { window.reloadProductPriceDb(); } catch (e) {} } render(); waitForProducts(); },
     setView: (v) => { view = v; render(); }, setMonth: (m) => { cursorMonth = m; lossPeriodKey = 'M'; render(); }, pull: () => pullCloud(true),
     openDay, closeDay, addLine, setLineProduct, setLineField, removeLine, refreshPrices, copyTargetsFrom,
-    addSemi, setSemiField, removeSemi, setMemo: (v) => { if (draft) draft.memo = v; }, saveDay,
+    addSemi, setSemiField, removeSemi, addProduct, addSemiByName, setPicker, setMemo: (v) => { if (draft) draft.memo = v; }, saveDay,
     setLossPeriod: (k) => { lossPeriodKey = k; render(); }, openLossSettings, saveLossSettings,
     openCountModal, saveCount, openAdjustModal, saveAdjust, removeAdjust, closeModal, loadMs, openDbModal, saveDbUrl,
     _debug: () => ({ db, dbRevision, cloudLoaded, products: getProducts() }),
