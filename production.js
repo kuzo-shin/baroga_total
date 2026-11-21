@@ -1,4 +1,4 @@
-// [VERSION: production.js v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
+// [VERSION: production.js v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
 //  - 품목 목록·단가: 제품단가 탭(barogaProductPriceBridge.getProductionProducts)
 //      파이 = PK로 입력 / 알생지·파베이크·제과 = 배합으로 입력 → '1배합 PK수'로 PK 환산 (실제 포장 PK를 직접 고칠 수 있음)
 //      금액 = PK × 엠즈 매입가(PK). 줄을 만들 때의 단가를 줄에 저장 → 나중에 단가가 바뀌어도 지난 기록 금액은 그대로
@@ -236,7 +236,11 @@
     const kpi = (label, value, sub, cls = 'text-stone-900') => `<div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">${label}</div><div class="mt-1 text-xl font-extrabold tabular-nums ${cls}">${value}</div>${sub ? `<div class="text-xs text-stone-500 mt-0.5">${sub}</div>` : ''}</div>`;
     const prevYm = ymd(new Date(y, m - 2, 1)).slice(0, 7), nextYm = ymd(new Date(y, m, 1)).slice(0, 7);
     const catRows = CAT_ORDER.filter((c) => catSum[c]).map((c) => { const s = catSum[c]; return `<tr class="border-b border-stone-100 whitespace-nowrap"><td class="py-1.5 px-2 font-bold">${CAT_LABEL[c]}</td><td class="py-1.5 px-2 text-right tabular-nums">${won(s.target)}</td><td class="py-1.5 px-2 text-right tabular-nums font-extrabold">${won(s.actual)}</td><td class="py-1.5 px-2 text-right">${rateBadge(rateOf(s.actual, s.target), s.actual > 0)}</td></tr>`; }).join('');
-    const GRID = 'grid grid-cols-[repeat(7,minmax(0,1fr))_128px] gap-1.5';
+    // 주말(토·일)은 좁게: 평일 1 : 주말 0.45. 그 달에 토/일 근무 기록이 있으면 그 요일 열은 평일만큼 넓힘
+    const worked = (dow) => Object.keys(db.days).some((d) => d.slice(0, 7) === ym && parseYmd(d).getDay() === dow && (((db.days[d].lines || []).length) || ((db.days[d].semi || []).length)));
+    const satW = worked(6) ? '1fr' : '0.45fr', sunW = worked(0) ? '1fr' : '0.45fr';
+    const GRID_STYLE = `grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(0, ${satW}) minmax(0, ${sunW}) 136px`;
+    const unitBadge = (u) => `<span class="px-1 rounded text-[10px] leading-4 font-extrabold ${u === 'PK' ? 'bg-blue-50 text-blue-700' : u === '배합' ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-500'}">${esc(u)}</span>`;
 
     const weekRows = weeks.map((w, wi) => {
       let wT = 0, wA = 0;
@@ -251,22 +255,27 @@
         const items = [
           ...lines.map((l) => {
             const tq = Number(l.target) || 0, aq = Number(l.actual) || 0, added = tq === 0 && aq > 0;
-            return `<div class="flex justify-between gap-1 text-xs leading-tight"><span class="truncate ${added ? 'text-blue-700' : 'text-stone-700'}" title="${esc(l.name)}">${added ? '＋' : ''}${esc(l.name)}</span><span class="shrink-0 tabular-nums text-stone-500">${num(tq)}→<b class="text-stone-900">${num(aq)}</b>${l.unit === 'PK' ? '' : '<span class="text-stone-400">배</span>'}</span></div>`;
+            return `<div class="flex items-center justify-between gap-1 text-xs leading-tight"><span class="truncate font-semibold ${added ? 'text-blue-700' : 'text-stone-800'}" title="${esc(l.name)}">${added ? '＋' : ''}${esc(l.name)}</span><span class="shrink-0 flex items-center gap-1 tabular-nums">${unitBadge(l.unit)}<span class="font-semibold text-stone-500">${num(tq)}</span><span class="text-stone-300">→</span><b class="font-extrabold text-stone-900">${num(aq)}</b></span></div>`;
           }),
-          ...semi.map((l) => `<div class="flex justify-between gap-1 text-xs leading-tight text-stone-400"><span class="truncate" title="반제품 · ${esc(l.name)}"><span class="px-1 mr-0.5 rounded bg-stone-100 text-stone-500 text-[11px] font-bold">반</span>${esc(l.name)}</span><span class="shrink-0 tabular-nums">${num(l.target)}→<b class="text-stone-600">${num(l.actual)}</b><span class="text-stone-400">${esc(String(l.unit || '').slice(0, 1))}</span></span></div>`),
+          ...semi.map((l) => `<div class="flex items-center justify-between gap-1 text-xs leading-tight text-stone-500"><span class="truncate font-semibold" title="반제품 · ${esc(l.name)}"><span class="px-1 mr-0.5 rounded bg-stone-100 text-stone-500 text-[10px] font-extrabold">반</span>${esc(l.name)}</span><span class="shrink-0 flex items-center gap-1 tabular-nums">${unitBadge(l.unit || '')}<span class="font-semibold">${num(l.target)}</span><span class="text-stone-300">→</span><b class="font-extrabold text-stone-700">${num(l.actual)}</b></span></div>`),
         ];
         const shown = items.slice(0, MAX).join('') + (items.length > MAX ? `<div class="text-xs text-stone-400">외 ${items.length - MAX}개</div>` : '');
         const isToday = c.date === tdy;
         const dayCls = c.dow === 0 ? 'text-rose-600' : c.dow === 6 ? 'text-blue-600' : 'text-stone-900';
         return `<button type="button" onclick="Prod.openDay('${c.date}')" class="text-left min-h-[168px] rounded-xl border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : 'border-stone-200'} ${weekend && !items.length ? 'bg-stone-50' : 'bg-white'} hover:border-amber-400 hover:shadow-xs p-2 flex flex-col gap-1 cursor-pointer min-w-0">
           <div class="flex items-center justify-between gap-1"><span class="text-sm font-extrabold ${isToday ? 'text-amber-700' : dayCls}">${c.day}</span>${rateBadge(rateOf(t.actual, t.target), t.actual > 0)}</div>
-          ${lines.length ? `<div class="grid grid-cols-[auto_1fr] gap-x-1 text-xs tabular-nums"><span class="text-stone-500">목표</span><span class="text-right font-bold">${won(t.target)}</span><span class="text-stone-500">실행</span><span class="text-right font-extrabold text-amber-900">${won(t.actual)}</span></div>` : ''}
+          ${lines.length ? `<div class="grid grid-cols-[auto_1fr] gap-x-1 text-xs tabular-nums"><span class="font-semibold text-stone-500">목표</span><span class="text-right font-bold">${won(t.target)}</span><span class="font-semibold text-stone-500">실행</span><span class="text-right font-extrabold text-amber-900">${won(t.actual)}</span></div>` : ''}
           ${items.length ? `<div class="${lines.length ? 'border-t border-stone-100 pt-1 ' : ''}flex flex-col gap-0.5">${shown}</div>` : `<div class="text-xs text-stone-300 mt-1">${weekend ? '주말' : '클릭해서 목표 입력'}</div>`}
         </button>`;
       }).join('');
       const wr = rateOf(wA, wT);
-      return `<div class="${GRID}">${cells}
-        <div class="rounded-xl bg-stone-900 text-white p-2 flex flex-col justify-center gap-1 text-xs tabular-nums"><div class="font-extrabold text-stone-300">${wi + 1}주</div><div class="text-stone-400">목표</div><div class="font-bold -mt-1">${won(wT)}</div><div class="text-stone-400">실행</div><div class="font-bold text-amber-300 -mt-1">${won(wA)}</div><div>${wr === null ? '-' : wr.toFixed(1) + '%'}</div></div></div>`;
+      return `<div class="grid gap-1.5" style="${GRID_STYLE}">${cells}
+        <div class="rounded-xl border border-amber-200 bg-amber-50/60 p-2.5 flex flex-col justify-center gap-1.5 text-xs tabular-nums">
+          <div class="flex items-center justify-between"><span class="px-1.5 py-0.5 rounded-md bg-white border border-amber-200 text-amber-800 font-extrabold">${wi + 1}주</span>${wr === null ? '' : rateBadge(wr, wA > 0)}</div>
+          <div><div class="font-semibold text-stone-500">목표</div><div class="font-bold text-stone-800 text-sm">${won(wT)}</div></div>
+          <div><div class="font-semibold text-stone-500">실행</div><div class="font-extrabold text-amber-900 text-sm">${won(wA)}</div></div>
+          <div class="h-1.5 rounded-full bg-white border border-amber-100 overflow-hidden"><div class="h-full rounded-full ${wr !== null && wr >= 100 ? 'bg-emerald-500' : 'bg-amber-500'}" style="width:${wr === null ? 0 : Math.min(100, wr)}%"></div></div>
+        </div></div>`;
     }).join('');
 
     const products = getProducts();
@@ -295,9 +304,9 @@
             <div class="flex flex-wrap items-center gap-1">${monthBtns}</div>
             <button type="button" onclick="Prod.setMonth('${today().slice(0, 7)}')" class="px-2.5 py-1 rounded-xl border border-stone-200 text-xs font-bold cursor-pointer hover:bg-stone-50">이번 달</button>
           </div>
-          <span class="text-xs text-stone-500">칸을 눌러 입력 · <span class="text-blue-700 font-bold">＋</span> 계획에 없던 품목 · 배 = 배합 · <span class="px-1 rounded bg-stone-100 text-stone-500 font-bold">반</span> 반제품(금액 제외)</span>
+          <span class="text-xs text-stone-500">칸을 눌러 입력 · <span class="text-blue-700 font-bold">＋</span> 계획에 없던 품목 · 목표→실행 · <span class="px-1 rounded bg-stone-100 text-stone-500 font-bold">반</span> 반제품(금액 제외)</span>
         </div>
-        <div class="${GRID} text-xs font-extrabold text-center"><div class="text-stone-500">월</div><div class="text-stone-500">화</div><div class="text-stone-500">수</div><div class="text-stone-500">목</div><div class="text-stone-500">금</div><div class="text-blue-600">토</div><div class="text-rose-600">일</div><div class="text-stone-500">주 합계</div></div>
+        <div class="grid gap-1.5 text-xs font-extrabold text-center" style="${GRID_STYLE}"><div class="text-stone-500">월</div><div class="text-stone-500">화</div><div class="text-stone-500">수</div><div class="text-stone-500">목</div><div class="text-stone-500">금</div><div class="text-blue-600">토</div><div class="text-rose-600">일</div><div class="text-stone-500">주 합계</div></div>
         ${weekRows}
       </div>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
