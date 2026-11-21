@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: ms_inbound.js v1.14 - 2026-11-20 3~5단계 (매입일자 기준·입고확정 명칭·한국시간 날짜·레시피 정확일치 연결·옛 판매금액 미사용·월별 정산 단가 확정) / v1.13 2단계 보안 (DB 요청에 접속 코드 첨부 · SRM 계정정보 삭제 · 화면 출력 이스케이프) / v1.12 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 기본 데이터 자동탑재 제거 · 재업로드 시 수동입력 보존 · 운임 0원 버그)]
+// [VERSION: ms_inbound.js v1.15 - 2026-11-21 생산일지 생지 재고 차감용 입고 기록 제공 / v1.14 - 2026-11-20 3~5단계 (매입일자 기준·입고확정 명칭·한국시간 날짜·레시피 정확일치 연결·옛 판매금액 미사용·월별 정산 단가 확정) / v1.13 2단계 보안 (DB 요청에 접속 코드 첨부 · SRM 계정정보 삭제 · 화면 출력 이스케이프) / v1.12 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 기본 데이터 자동탑재 제거 · 재업로드 시 수동입력 보존 · 운임 0원 버그)]
 // 바로가 공장 통합 관리 시스템 - 엠즈 입고 전용 모듈 (ms_inbound.js)
 // ============================================================================
 (function () {
@@ -292,6 +292,13 @@
 
     window.mountMsInboundApp = mountMsInboundApp;
     window.exportMsInboundExcel = downloadSettlementExcel;
+    // [생산일지] 생지 재고 차감용: 엠즈 입고(=공장 출고) 기록과 엠즈 상품코드→제품 품목코드 연결
+    function readLocalJson(key, fallback) { try { const v = JSON.parse(localStorage.getItem(key) || 'null'); return v == null ? fallback : v; } catch (e) { return fallback; } }
+    window.barogaMsStockFeed = function () {
+      const recs = msDbLoaded ? records : readLocalJson(STORAGE_KEY, []);
+      const links = msDbLoaded ? recipeLinks : readLocalJson(RECIPE_LINKS_STORAGE_KEY, {});
+      return { loaded: msDbLoaded, records: Array.isArray(recs) ? recs : [], links: links && typeof links === 'object' ? links : {} };
+    };
     window.MSInbound = {
       downloadSettlementExcel, pullFromCloud, pushToCloud, openCloudModal, closeCloudModal, openGuideModal, closeGuideModal, copyAccountInfo, saveCloudConfig, openConfirmModal, closeConfirmModal, handleFiles, renderAll, switchMainView, toggleAllCards, toggleCard, toggleRecordStatus, setFilter, selectReturnReason, addReturnRecord, requestDeleteReturn, requestDeleteRecord, handlePriceExcel, editUnitPriceModal, editRecordField, closeEditModal, clearEditField, saveEditModal, setItemUnitPrice, setItemRecipeCode, autoMatchRecipeCodes, showToast, exportData, importData, lockMonthPrices, unlockMonthPrices
     };

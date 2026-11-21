@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: price.js v1.13 - 2026-11-20 공정 상세 원재료비 카드도 레시피 실시간 값 표시 / v1.12 3~5단계 (레시피 재료비 실시간 반영·매장 수수료율 설정화·퇴직금 표기 정리) / v1.11 2단계 보안 (급여·고정비·매출·단가 기본값 코드에서 제거, DB 값만 사용) / v1.10 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 빈 DB 자동 덮어쓰기 제거)]
+// [VERSION: price.js v1.14 - 2026-11-21 생산일지용 품목 목록(PK 총생산원가 포함) 제공 / v1.13 - 2026-11-20 공정 상세 원재료비 카드도 레시피 실시간 값 표시 / v1.12 3~5단계 (레시피 재료비 실시간 반영·매장 수수료율 설정화·퇴직금 표기 정리) / v1.11 2단계 보안 (급여·고정비·매출·단가 기본값 코드에서 제거, DB 값만 사용) / v1.10 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 빈 DB 자동 덮어쓰기 제거)]
 // 바로가 공장 통합 관리 시스템 - 제품단가 전용 모듈 (price.js)
 // ============================================================================
 (function () {
@@ -2185,6 +2185,38 @@
         window.barogaProductPriceBridge = {
           getPkCostRows: () => pkCostRows,
           getCategoryDbs: () => categoryDbs,
+          // [생산일지] 품목 목록: 품목코드·카테고리·PK입수·1배합 PK수·엠즈 매입가(PK)·PK 총생산원가
+          //  (PK단위 원가표와 같은 계산식: 원재료/PK + 인건비/PK×파트계수 + 출고가×PK입수×고정비율)
+          getProductionProducts: () => {
+            const fixedRatio = calc.fixedCostRatioPercent > 0 ? calc.fixedCostRatioPercent / 100 : 0;
+            return pkCostRows.filter(Boolean).map((r) => {
+              const m = laborDbByProductName.findMatch(r);
+              const code = m ? (m.productCode || normalizeCodeStr(r.productCode)) : normalizeCodeStr(r.productCode);
+              const pkEa = m ? Number(m.pkQuantityEa) || 0 : 0;
+              const batchPk = m ? Number(m.batchOutputPk) || 0 : 0;
+              const matCost = m ? Number(m.batchMaterialCost) || 0 : 0;
+              const laborCost = m ? Number(m.totalBatchLaborCost) || 0 : 0;
+              const part = m ? settings.partAllocations.find((p) => (
+                (m.catKey === 'PIE' && p.name.includes('파이')) || (m.catKey === 'DOUGH' && p.name.includes('알생지')) ||
+                (m.catKey === 'PARBAKE' && p.name.includes('파베이크')) || (m.catKey === 'BAKERY' && p.name.includes('제과'))
+              )) : null;
+              const laborFactor = part && Number(part.laborFactor) > 0 ? Number(part.laborFactor) : 1;
+              const relEa = Number(r.releasePriceEa) || 0;
+              const pkMat = m && matCost > 0 && batchPk > 0 ? Math.round(matCost / batchPk + Number.EPSILON) : null;
+              const pkLabor = m && laborCost > 0 && batchPk > 0 ? Math.round((laborCost / batchPk) * laborFactor + Number.EPSILON) : null;
+              const pkFixed = m && relEa > 0 && pkEa > 0 && fixedRatio > 0 ? Math.round(relEa * pkEa * fixedRatio + Number.EPSILON) : null;
+              return {
+                productCode: code || '',
+                productName: r.productName || '',
+                section: r.section || '',
+                catKey: m ? m.catKey : '',
+                pkQuantityEa: pkEa,
+                batchOutputPk: batchPk,
+                msBuyPricePk: Number(r.msBuyPricePk) || 0,
+                pkTotalCost: pkMat === null || pkLabor === null || pkFixed === null ? null : pkMat + pkLabor + pkFixed,
+              };
+            });
+          },
           findPriceByRecipe: (code, name, recipeType = 'PRODUCT') => {
             const cleanCode = normalizeCodeStr(code);
             const normRcName = normalizeProductName(name);
@@ -2238,7 +2270,7 @@
         ) {
           window.renderRecipeDetailPanel();
         }
-      }, [settings, categoryDbs, pkCostRows, msUpdatedDate, laborDbByProductName]);
+      }, [settings, categoryDbs, pkCostRows, msUpdatedDate, laborDbByProductName, calc]);
 
       const handleExportProductPriceExcel = () => {
         const dStr = typeof window.getTodayStr === 'function' ? window.getTodayStr() : new Date().toISOString().slice(0, 10);

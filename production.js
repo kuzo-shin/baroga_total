@@ -1,0 +1,629 @@
+// [VERSION: production.js v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
+//  - 품목 목록·단가: 제품단가 탭(barogaProductPriceBridge.getProductionProducts)
+//      파이 = PK로 입력 / 알생지·파베이크·제과 = 배합으로 입력 → '1배합 PK수'로 PK 환산 (실제 포장 PK를 직접 고칠 수 있음)
+//      금액 = PK × 엠즈 매입가(PK). 줄을 만들 때의 단가를 줄에 저장 → 나중에 단가가 바뀌어도 지난 기록 금액은 그대로
+//  - 반제품(반죽 믹싱·라미네이팅): 수량만 기록, 금액·재고 합계 제외
+//  - 생지 재고(PK) = 재고 실사 수량 + 실사일 이후 실행 PK − 실사일 이후 엠즈 입고 PK(상품코드→품목코드 연결) ± 조정
+//  - 저장: 이 기기(localStorage) + 생산일지 DB(GAS 5_production.gs, 주소 설정 시) 리비전 확인 저장
+(function () {
+  'use strict';
+
+  const LS_KEY = 'baroga_production_v1';
+  const URL_KEY = 'baroga_production_gas_url_v1';
+  const CAT_LABEL = { PIE: '파이', DOUGH: '알생지', PARBAKE: '파베이크', BAKERY: '제과' };
+  const CAT_ORDER = ['PIE', 'DOUGH', 'PARBAKE', 'BAKERY'];
+  // 재고·엠즈 거래 단위가 PK가 아닌 품목 (생산 입력은 PK/배합 그대로, 재고·금액은 이 단위)
+  //  쇼숑오뽐므: 파손 방지로 엠즈 입고·가맹점 판매가 BOX 단위 → 1BOX = 4PK, 엠즈 매입가도 BOX당
+  const STOCK_UNIT_RULES = { '1006': { stockUnit: 'BOX', pkPerStock: 4 } };
+  const DEFAULT_SEMI_ITEMS = [
+    ['패스츄리 반죽 믹싱', '배합'], ['쇼숑 반죽 믹싱', '배합'], ['몽마르트 반죽 믹싱', '배합'], ['셰브런 토스트 반죽 믹싱', '배합'], ['정사각퍼프도우 반죽 믹싱', '배합'],
+    ['패스츄리 반죽 라미네이팅', '카트'], ['쇼숑 반죽 라미네이팅', '카트'], ['몽마르트 반죽 라미네이팅', '카트'], ['셰브런 토스트 반죽 라미네이팅', '카트'], ['정사각퍼프도우 반죽 라미네이팅', '카트'],
+  ].map(([name, unit], i) => ({ id: 'semi-' + (i + 1), name, unit }));
+
+  // ---------- 공용 도우미 (index.html 것을 쓰고, 없으면 대체) ----------
+  const esc = (s) => (typeof window.escapeHtml === 'function' ? window.escapeHtml(s) : String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])));
+  const won = (n) => Math.round(Number(n) || 0).toLocaleString('ko-KR') + '원';
+  const num = (n, d = 1) => (Number(n) || 0).toLocaleString('ko-KR', { maximumFractionDigits: d });
+  const toast = (m, t) => (typeof window.showToast === 'function' ? window.showToast(m, t) : alert(m));
+  const nowHm = () => (typeof window.barogaNowHm === 'function' ? window.barogaNowHm() : new Date().toTimeString().slice(0, 5));
+  const pad = (n) => String(n).padStart(2, '0');
+  const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const today = () => ymd(new Date());
+  const parseYmd = (s) => { const [y, m, d] = String(s).split('-').map(Number); return new Date(y, m - 1, d); };
+  const r1 = (n) => Math.round((Number(n) || 0) * 10) / 10;
+  const uid = () => 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const DOW = ['일', '월', '화', '수', '목', '금', '토'];
+
+  // ---------- 상태 ----------
+  let db = blankDb();
+  let dbRevision = null;
+  let cloudLoaded = false;     // 클라우드에서 정상적으로 불러온 뒤에만 클라우드 저장
+  let cloudBlocked = '';       // 저장 중지 사유 (충돌 등)
+  let saveTimer = null, saving = false, unsaved = false, lastSavedHm = '', statusText = '';
+  let view = 'CAL';
+  let cursorMonth = today().slice(0, 7);
+  let draft = null;            // 일자 편집 중인 사본 { date, lines, semi, memo }
+  let mounted = false;
+
+  function blankDb() {
+    return { version: 1, days: {}, semiItems: DEFAULT_SEMI_ITEMS.map((x) => ({ ...x })), stockBase: null, stockAdjusts: [], updatedAt: '' };
+  }
+  function normalizeDb(p) {
+    const d = blankDb();
+    if (!p || typeof p !== 'object') return d;
+    d.days = p.days && typeof p.days === 'object' ? p.days : {};
+    d.semiItems = Array.isArray(p.semiItems) && p.semiItems.length ? p.semiItems : d.semiItems;
+    d.stockBase = p.stockBase && p.stockBase.date ? p.stockBase : null;
+    d.stockAdjusts = Array.isArray(p.stockAdjusts) ? p.stockAdjusts : [];
+    d.updatedAt = p.updatedAt || '';
+    return d;
+  }
+
+  // ---------- 품목 (제품단가 탭) ----------
+  function getProducts() {
+    const b = window.barogaProductPriceBridge;
+    let list = [];
+    try { if (b && typeof b.getProductionProducts === 'function') list = b.getProductionProducts() || []; } catch (e) { list = []; }
+    return list
+      .filter((p) => p && p.productName)
+      .map((p) => {
+        const cat = CAT_LABEL[p.catKey] ? p.catKey : (/파이/.test(p.section) ? 'PIE' : /파베/.test(p.section) ? 'PARBAKE' : /제과/.test(p.section) ? 'BAKERY' : 'DOUGH');
+        const rule = STOCK_UNIT_RULES[String(p.productCode)] || { stockUnit: 'PK', pkPerStock: 1 };
+        return { ...p, cat, unit: cat === 'PIE' ? 'PK' : '배합', stockUnit: rule.stockUnit, pkPerStock: rule.pkPerStock };
+      })
+      .sort((a, b) => CAT_ORDER.indexOf(a.cat) - CAT_ORDER.indexOf(b.cat) || String(a.productCode).localeCompare(String(b.productCode)));
+  }
+  function productByCode(code, products) { return (products || getProducts()).find((p) => String(p.productCode) === String(code)) || null; }
+
+  // ---------- 줄 계산 ----------
+  // 줄 단가·1배합 PK수: 줄에 저장된 값(>0)을 쓰고, 0이면(단종·미출시로 아직 0원) 제품단가 탭의 현재 값을 따라감 → 나중에 금액을 넣으면 자동 반영
+  let _liveCache = null, _liveAt = 0;
+  function liveProduct(code) { if (!_liveCache || Date.now() - _liveAt > 2000) { _liveCache = getProducts(); _liveAt = Date.now(); } return productByCode(code, _liveCache); }
+  function linePrice(l) { if (Number(l.pricePk) > 0) return Number(l.pricePk); const p = liveProduct(l.code); return p ? Number(p.msBuyPricePk) || 0 : 0; }
+  function linePkPerBatch(l) { if (Number(l.pkPerBatch) > 0) return Number(l.pkPerBatch); const p = liveProduct(l.code); return p ? Number(p.batchOutputPk) || 0 : 0; }
+  function linePerStock(l) { return Number(l.pkPerStock) > 0 ? Number(l.pkPerStock) : 1; }
+  function lineStockUnit(l) { return l.stockUnit || 'PK'; }
+  // 입력(PK 또는 배합) → 재고 단위(PK, 쇼숑은 BOX)
+  function toStock(l, q) { const pk = l.unit === 'PK' ? (Number(q) || 0) : (Number(q) || 0) * linePkPerBatch(l); return r1(pk / linePerStock(l)); }
+  function lineTargetPk(l) { return toStock(l, l.target); }
+  function lineAutoActualPk(l) { return toStock(l, l.actual); }
+  function lineActualPk(l) { return l.pkManual ? (Number(l.actualPk) || 0) : lineAutoActualPk(l); }
+  function dayTotals(day) {
+    const t = { target: 0, actual: 0, byCat: {} };
+    ((day && day.lines) || []).forEach((l) => {
+      const pr = linePrice(l);
+      const ta = lineTargetPk(l) * pr, aa = lineActualPk(l) * pr;
+      t.target += ta; t.actual += aa;
+      const c = t.byCat[l.cat] || (t.byCat[l.cat] = { target: 0, actual: 0 });
+      c.target += ta; c.actual += aa;
+    });
+    return t;
+  }
+  function rateOf(actual, target) { return target > 0 ? (actual / target) * 100 : null; }
+  function rateBadge(rate, hasActual) {
+    if (rate === null) return hasActual ? '<span class="px-1.5 py-0.5 rounded bg-stone-100 text-stone-600 text-xs font-bold">목표 없음</span>' : '';
+    const cls = rate >= 100 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : rate >= 80 ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-rose-50 text-rose-700 border-rose-200';
+    return `<span class="px-1.5 py-0.5 rounded border text-xs font-extrabold tabular-nums ${cls}">${rate.toFixed(1)}%</span>`;
+  }
+
+  // ---------- 저장 ----------
+  function getUrl() { try { return localStorage.getItem(URL_KEY) || ''; } catch (e) { return ''; } }
+  function saveLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify(db)); } catch (e) {} }
+  function loadLocal() { try { const v = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); if (v) db = normalizeDb(v); } catch (e) {} }
+  function setStatus(t) { statusText = t; const el = document.getElementById('prodStatus'); if (el) el.textContent = t; }
+  function markChanged() {
+    db.updatedAt = new Date().toISOString();
+    saveLocal();
+    unsaved = true;
+    if (!getUrl()) { setStatus('이 기기에만 저장됨 (DB 미연결)'); return; }
+    if (!cloudLoaded) { setStatus(cloudBlocked ? '저장 중지: ' + cloudBlocked : 'DB를 불러온 뒤 저장됩니다'); return; }
+    setStatus('저장 대기...');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => { saveTimer = null; pushCloud(); }, 1500);
+  }
+  async function api(body) {
+    if (typeof window.barogaApi !== 'function') throw new Error('접속 도구를 찾을 수 없습니다');
+    return window.barogaApi(getUrl(), body, 30000);
+  }
+  async function pullCloud(showMsg) {
+    const url = getUrl();
+    if (!url) { setStatus('이 기기에만 저장됨 (DB 미연결)'); return; }
+    if (saving || saveTimer) { if (showMsg) toast('저장이 끝난 뒤 다시 불러와 주세요.', 'error'); return; }
+    setStatus('불러오는 중...');
+    try {
+      const json = await api({ action: 'getAll' });
+      if (!json || json.ok === false) throw new Error((json && (json.message || json.error)) || '불러오기 실패');
+      const localHasData = Object.keys(db.days).length > 0 || db.stockBase;
+      if (json.status === 'empty') {
+        dbRevision = Number(json.revision) || 0;
+        cloudLoaded = true; cloudBlocked = '';
+        if (localHasData) { setStatus('DB 비어 있음 → 이 기기 기록을 DB에 올립니다'); unsaved = true; pushCloud(); }
+        else { setStatus('불러옴 ' + nowHm() + ' · 기록 없음'); unsaved = false; }
+      } else {
+        db = normalizeDb(json.payload);
+        dbRevision = Number(json.revision) || 0;
+        cloudLoaded = true; cloudBlocked = ''; unsaved = false;
+        saveLocal();
+        setStatus('불러옴 ' + nowHm() + ' · ' + Object.keys(db.days).length + '일');
+        if (showMsg) toast('생산일지 DB를 불러왔습니다.', 'success');
+      }
+      render();
+    } catch (e) {
+      cloudLoaded = false;
+      if (!e.unauthorized) cloudBlocked = '불러오기 실패';
+      setStatus('불러오기 실패 — 저장 중지 (새로고침 필요)');
+      if (showMsg) toast('생산일지 DB 불러오기 실패: ' + e.message, 'error');
+    }
+  }
+  async function pushCloud() {
+    if (!getUrl() || !cloudLoaded || saving) return;
+    saving = true; setStatus('저장 중...');
+    const snapshot = JSON.stringify(db);
+    try {
+      const json = await api({ action: 'replaceAll', baseRevision: dbRevision, payload: JSON.parse(snapshot) });
+      if (!json || json.ok === false) {
+        if (json && json.conflict) { cloudLoaded = false; cloudBlocked = '다른 기기에서 먼저 저장함'; setStatus('저장 중지: 다른 기기에서 먼저 저장됨 — [불러오기] 후 다시 입력'); toast('다른 기기에서 생산일지를 먼저 저장했습니다. [불러오기]로 최신 내용을 받은 뒤 다시 입력해 주세요. (이 기기 입력분은 이 기기에 남아 있습니다)', 'error'); }
+        else { setStatus('저장 실패 — 다시 시도하려면 내용을 한 번 더 저장'); toast('생산일지 저장 실패: ' + ((json && (json.message || json.error)) || ''), 'error'); }
+        return;
+      }
+      dbRevision = Number(json.revision) || dbRevision;
+      lastSavedHm = nowHm();
+      if (JSON.stringify(db) === snapshot) unsaved = false;
+      setStatus('저장됨 ' + lastSavedHm + ' · ' + Object.keys(db.days).length + '일');
+    } catch (e) {
+      setStatus('저장 실패 (' + e.message + ')');
+    } finally {
+      saving = false;
+      if (unsaved && cloudLoaded && !saveTimer) { saveTimer = setTimeout(() => { saveTimer = null; pushCloud(); }, 1500); }
+    }
+  }
+  window.barogaUnsavedCheckers = window.barogaUnsavedCheckers || {};
+  window.barogaUnsavedCheckers.production = () => Boolean(getUrl() && (saveTimer || saving || unsaved));
+  window.saveProductionDb = () => { if (!getUrl()) { toast('생산일지 DB 주소가 없어 이 기기에만 저장돼 있습니다. [DB 연결]에서 주소를 넣어 주세요.', 'info'); return; } clearTimeout(saveTimer); saveTimer = null; pushCloud(); };
+
+  // ---------- 화면 ----------
+  function root() { return document.getElementById('productionRoot'); }
+  function render() {
+    const el = root(); if (!el || !mounted) return;
+    const tabBtn = (k, label) => `<button type="button" onclick="Prod.setView('${k}')" class="px-3.5 py-1.5 rounded-xl text-sm font-bold cursor-pointer ${view === k ? 'bg-stone-900 text-white' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'}">${label}</button>`;
+    const url = getUrl();
+    el.innerHTML = `
+      <div class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-4 flex flex-col gap-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">${tabBtn('CAL', '생산 달력')}${tabBtn('STOCK', '생지 재고')}</div>
+          <div class="flex items-center gap-2 text-xs">
+            <span id="prodStatus" class="px-2.5 py-1 rounded-lg bg-white border border-stone-200 font-bold text-stone-600">${esc(statusText || (url ? '' : '이 기기에만 저장됨 (DB 미연결)'))}</span>
+            ${url ? `<button type="button" onclick="Prod.pull()" class="px-2.5 py-1 rounded-lg bg-white border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">불러오기</button>` : ''}
+            <button type="button" onclick="Prod.openDbModal()" class="px-2.5 py-1 rounded-lg ${url ? 'bg-white border border-stone-200 text-stone-700' : 'bg-amber-600 text-white'} font-bold cursor-pointer">DB 연결</button>
+          </div>
+        </div>
+        ${view === 'CAL' ? renderCalendar() : renderStock()}
+      </div>
+      <div id="prodModal"></div>`;
+    if (draft) renderEditor();
+  }
+
+  // ----- 생산 달력 -----
+  function monthWeeks(ym) {
+    const [y, m] = ym.split('-').map(Number);
+    const first = new Date(y, m - 1, 1), last = new Date(y, m, 0);
+    const start = new Date(first); start.setDate(first.getDate() - ((first.getDay() + 6) % 7)); // 그 주 월요일
+    const weeks = [];
+    for (let d = new Date(start); d <= last; d.setDate(d.getDate() + 7)) {
+      const w = [];
+      for (let i = 0; i < 5; i++) { const x = new Date(d); x.setDate(d.getDate() + i); w.push({ date: ymd(x), inMonth: x.getMonth() === m - 1, day: x.getDate() }); }
+      if (w.some((c) => c.inMonth)) weeks.push(w);
+    }
+    return weeks;
+  }
+  function renderCalendar() {
+    const ym = cursorMonth, [y, m] = ym.split('-').map(Number);
+    const weeks = monthWeeks(ym);
+    const tdy = today();
+    let mT = 0, mA = 0, toDateT = 0, workDays = 0;
+    const catSum = {};
+    Object.keys(db.days).forEach((d) => {
+      if (d.slice(0, 7) !== ym) return;
+      const t = dayTotals(db.days[d]);
+      mT += t.target; mA += t.actual;
+      if (d <= tdy) toDateT += t.target;
+      if (t.actual > 0) workDays++;
+      Object.entries(t.byCat).forEach(([c, v]) => { const s = catSum[c] || (catSum[c] = { target: 0, actual: 0 }); s.target += v.target; s.actual += v.actual; });
+    });
+    const rate = rateOf(mA, mT), rateToDate = rateOf(mA, toDateT);
+    const kpi = (label, value, sub, cls = 'text-stone-900') => `<div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">${label}</div><div class="mt-1 text-xl font-extrabold tabular-nums ${cls}">${value}</div>${sub ? `<div class="text-xs text-stone-500 mt-0.5">${sub}</div>` : ''}</div>`;
+    const prevYm = (() => { const d = new Date(y, m - 2, 1); return ymd(d).slice(0, 7); })();
+    const nextYm = (() => { const d = new Date(y, m, 1); return ymd(d).slice(0, 7); })();
+    const catRows = CAT_ORDER.filter((c) => catSum[c]).map((c) => { const s = catSum[c]; return `<tr class="border-b border-stone-100 whitespace-nowrap"><td class="py-1.5 px-2 font-bold">${CAT_LABEL[c]}</td><td class="py-1.5 px-2 text-right tabular-nums">${won(s.target)}</td><td class="py-1.5 px-2 text-right tabular-nums font-extrabold">${won(s.actual)}</td><td class="py-1.5 px-2 text-right">${rateBadge(rateOf(s.actual, s.target), s.actual > 0)}</td></tr>`; }).join('');
+
+    const weekRows = weeks.map((w, wi) => {
+      let wT = 0, wA = 0;
+      const cells = w.map((c) => {
+        const day = db.days[c.date];
+        const t = dayTotals(day);
+        if (c.inMonth) { wT += t.target; wA += t.actual; }
+        if (!c.inMonth) return `<div class="min-h-[132px] rounded-xl bg-stone-50/60 border border-dashed border-stone-200 p-2 text-xs text-stone-300 font-bold">${c.day}</div>`;
+        const lines = (day && day.lines) || [];
+        const shown = lines.slice(0, 4).map((l) => {
+          const tq = Number(l.target) || 0, aq = Number(l.actual) || 0;
+          const changed = tq === 0 && aq > 0;
+          return `<div class="flex justify-between gap-1 text-xs leading-tight"><span class="truncate ${changed ? 'text-blue-700' : 'text-stone-700'}" title="${esc(l.name)}">${changed ? '＋' : ''}${esc(l.name)}</span><span class="shrink-0 tabular-nums text-stone-500">${num(tq)}→<b class="text-stone-900">${num(aq)}</b>${l.unit === 'PK' ? '' : '<span class="text-stone-400">배</span>'}</span></div>`;
+        }).join('');
+        const more = lines.length > 4 ? `<div class="text-xs text-stone-400">외 ${lines.length - 4}개</div>` : '';
+        const semiN = ((day && day.semi) || []).length;
+        const isToday = c.date === tdy;
+        return `<button type="button" onclick="Prod.openDay('${c.date}')" class="text-left min-h-[132px] rounded-xl border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : 'border-stone-200'} bg-white hover:border-amber-400 hover:shadow-xs p-2 flex flex-col gap-1 cursor-pointer">
+          <div class="flex items-center justify-between"><span class="text-sm font-extrabold ${isToday ? 'text-amber-700' : 'text-stone-900'}">${c.day}<span class="ml-1 text-xs font-bold text-stone-400">${DOW[parseYmd(c.date).getDay()]}</span></span>${rateBadge(rateOf(t.actual, t.target), t.actual > 0)}</div>
+          ${lines.length ? `<div class="grid grid-cols-2 gap-x-1 text-xs tabular-nums"><span class="text-stone-500">목표</span><span class="text-right font-bold">${won(t.target)}</span><span class="text-stone-500">실행</span><span class="text-right font-extrabold text-amber-900">${won(t.actual)}</span></div><div class="border-t border-stone-100 pt-1 flex flex-col gap-0.5">${shown}${more}</div>` : '<div class="text-xs text-stone-300 mt-2">클릭해서 목표 입력</div>'}
+          ${semiN ? `<div class="text-xs text-stone-400">반제품 ${semiN}건</div>` : ''}
+        </button>`;
+      }).join('');
+      return `<div class="grid grid-cols-[repeat(5,minmax(0,1fr))_120px] gap-2">${cells}
+        <div class="rounded-xl bg-stone-900 text-white p-2 flex flex-col justify-center gap-1 text-xs tabular-nums"><div class="font-extrabold text-stone-300">${wi + 1}주</div><div>목표 <b>${won(wT)}</b></div><div>실행 <b class="text-amber-300">${won(wA)}</b></div><div>${rateOf(wA, wT) === null ? '-' : rateOf(wA, wT).toFixed(1) + '%'}</div></div></div>`;
+    }).join('');
+
+    const products = getProducts();
+    const noProducts = products.length === 0 ? `<div class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold">제품단가 탭의 품목 목록을 아직 불러오지 못했습니다. [제품단가] 탭을 한 번 열었다가 돌아와 주세요.</div>` : '';
+    return `${noProducts}
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        ${kpi(`${m}월 목표 금액`, won(mT), '엠즈 매입가(PK) 기준')}
+        ${kpi(`${m}월 실행 금액`, won(mA), '반제품 제외', 'text-amber-900')}
+        ${kpi('달성률 (월 목표 대비)', rate === null ? '-' : rate.toFixed(1) + '%', mT > mA ? '부족 ' + won(mT - mA) : (mT > 0 ? '목표 달성' : ''), rate !== null && rate >= 100 ? 'text-emerald-700' : 'text-stone-900')}
+        ${kpi('오늘까지 목표 대비', rateToDate === null ? '-' : rateToDate.toFixed(1) + '%', '오늘까지 목표 ' + won(toDateT))}
+        ${kpi('실행일 평균', workDays ? won(mA / workDays) : '-', `실행 입력된 날 ${workDays}일`)}
+      </div>
+      <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+        <div class="xl:col-span-9 bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4 flex flex-col gap-2">
+          <div class="flex items-center justify-between mb-1">
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="Prod.setMonth('${prevYm}')" class="w-8 h-8 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">‹</button>
+              <h3 class="text-base font-extrabold text-stone-900">${y}년 ${m}월 생산일지</h3>
+              <button type="button" onclick="Prod.setMonth('${nextYm}')" class="w-8 h-8 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">›</button>
+              <button type="button" onclick="Prod.setMonth('${today().slice(0, 7)}')" class="px-2.5 h-8 rounded-lg border border-stone-200 text-xs font-bold cursor-pointer hover:bg-stone-50">이번 달</button>
+            </div>
+            <span class="text-xs text-stone-500">칸을 눌러 목표·실행 입력 · <span class="text-blue-700 font-bold">＋</span> 목표에 없던 실행 품목 · 배 = 배합</span>
+          </div>
+          <div class="grid grid-cols-[repeat(5,minmax(0,1fr))_120px] gap-2 text-xs font-extrabold text-stone-500 text-center"><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>주 합계</div></div>
+          ${weekRows}
+        </div>
+        <div class="xl:col-span-3 flex flex-col gap-4">
+          <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
+            <h3 class="text-sm font-extrabold text-stone-900 mb-2">${m}월 파트별</h3>
+            ${catRows ? `<table class="w-full text-xs"><thead><tr class="text-stone-500 border-b border-stone-200"><th class="py-1 px-2 text-left">파트</th><th class="py-1 px-2 text-right">목표</th><th class="py-1 px-2 text-right">실행</th><th class="py-1 px-2 text-right">달성률</th></tr></thead><tbody>${catRows}</tbody></table>` : '<div class="text-xs text-stone-400 py-4 text-center">이번 달 기록이 없습니다.</div>'}
+          </div>
+          <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4 text-xs text-stone-600 leading-relaxed">
+            <h3 class="text-sm font-extrabold text-stone-900 mb-1">입력 기준</h3>
+            <div>· 파이는 <b>PK</b>, 알생지·파베이크·제과는 <b>배합</b>으로 입력합니다.</div>
+            <div>· 배합은 제품단가 탭의 '1배합 PK수'로 PK를 계산합니다. 실제 포장한 PK가 다르면 <b>실행 PK</b> 칸을 고쳐 주세요. 재고는 이 PK로 잡힙니다.</div>
+            <div>· 금액 = 재고수량 × 엠즈 매입가. 줄을 만든 날의 단가로 고정됩니다. 단가가 0원인 품목은 제품단가 탭에 금액이 들어가면 자동으로 따라갑니다.</div>
+            <div>· 쇼숑오뽐므는 PK로 입력하면 4PK = 1BOX로 바꿔 재고·금액을 BOX로 잡습니다.</div>
+            <div>· 반제품은 수량만 기록하고 금액·재고에는 넣지 않습니다.</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // ----- 일자 편집 -----
+  function openDay(date) {
+    const day = db.days[date] || { lines: [], semi: [], memo: '' };
+    draft = { date, lines: JSON.parse(JSON.stringify(day.lines || [])), semi: JSON.parse(JSON.stringify(day.semi || [])), memo: day.memo || '' };
+    renderEditor();
+  }
+  function closeDay() { draft = null; const m = document.getElementById('prodModal'); if (m) m.innerHTML = ''; }
+  function newLineFor(p) {
+    return { id: uid(), code: String(p.productCode || ''), name: p.productName, cat: p.cat, unit: p.unit, stockUnit: p.stockUnit || 'PK', pkPerStock: p.pkPerStock || 1, pkPerBatch: Number(p.batchOutputPk) || 0, pricePk: Number(p.msBuyPricePk) || 0, target: 0, actual: 0, actualPk: 0, pkManual: false, note: '' };
+  }
+  function addLine() {
+    if (!draft) return;
+    const products = getProducts();
+    if (!products.length) { toast('제품단가 탭의 품목 목록이 없습니다.', 'error'); return; }
+    const used = new Set(draft.lines.map((l) => l.code));
+    const p = products.find((x) => !used.has(String(x.productCode))) || products[0];
+    draft.lines.push(newLineFor(p));
+    renderEditor();
+  }
+  function setLineProduct(id, code) {
+    const l = draft && draft.lines.find((x) => x.id === id); if (!l) return;
+    const p = productByCode(code); if (!p) return;
+    const keep = { id: l.id, target: l.target, actual: l.actual, note: l.note };
+    Object.assign(l, newLineFor(p), keep);
+    renderEditor();
+  }
+  function setLineField(id, field, value) {
+    const l = draft && draft.lines.find((x) => x.id === id); if (!l) return;
+    if (field === 'note') l.note = value;
+    else if (field === 'actualPk') {
+      if (String(value).trim() === '') { l.pkManual = false; l.actualPk = 0; }
+      else { l.pkManual = true; l.actualPk = Math.max(0, parseFloat(value) || 0); }
+    } else l[field] = Math.max(0, parseFloat(value) || 0);
+    renderEditorTotals();
+  }
+  function removeLine(id) { if (!draft) return; draft.lines = draft.lines.filter((x) => x.id !== id); renderEditor(); }
+  function refreshPrices() {
+    if (!draft) return;
+    const products = getProducts(); let n = 0;
+    draft.lines.forEach((l) => { const p = productByCode(l.code, products); if (p) { if (l.pricePk !== p.msBuyPricePk || l.pkPerBatch !== p.batchOutputPk) n++; l.pricePk = Number(p.msBuyPricePk) || 0; l.pkPerBatch = Number(p.batchOutputPk) || 0; l.stockUnit = p.stockUnit; l.pkPerStock = p.pkPerStock; } });
+    toast(n ? `${n}개 줄을 현재 제품단가로 다시 계산했습니다.` : '모든 줄이 이미 현재 단가입니다.', 'info');
+    renderEditor();
+  }
+  function copyTargetsFrom(srcDate) {
+    if (!draft) return;
+    const src = db.days[srcDate];
+    if (!src || !(src.lines || []).length) { toast(`${srcDate}에 기록된 품목이 없습니다.`, 'info'); return; }
+    const products = getProducts(); let added = 0;
+    src.lines.forEach((sl) => {
+      if (draft.lines.some((l) => l.code === sl.code)) return;
+      const p = productByCode(sl.code, products);
+      const l = p ? newLineFor(p) : { ...sl, id: uid(), actual: 0, actualPk: 0, pkManual: false };
+      l.target = Number(sl.target) || 0; draft.lines.push(l); added++;
+    });
+    toast(added ? `${srcDate}의 품목 ${added}개를 목표로 불러왔습니다 (실행은 비움).` : '이미 같은 품목이 모두 있습니다.', 'info');
+    renderEditor();
+  }
+  function prevWorkday(date) { const d = parseYmd(date); do { d.setDate(d.getDate() - 1); } while (d.getDay() === 0 || d.getDay() === 6); return ymd(d); }
+  function addSemi() { if (!draft) return; const s = db.semiItems[0] || { name: '', unit: '배합' }; draft.semi.push({ id: uid(), name: s.name, unit: s.unit, target: 0, actual: 0, note: '' }); renderEditor(); }
+  function setSemiField(id, field, value) {
+    const l = draft && draft.semi.find((x) => x.id === id); if (!l) return;
+    if (field === 'name') { const s = db.semiItems.find((x) => x.name === value); l.name = value; if (s) l.unit = s.unit; renderEditor(); return; }
+    if (field === 'note') l.note = value; else l[field] = Math.max(0, parseFloat(value) || 0);
+  }
+  function removeSemi(id) { if (!draft) return; draft.semi = draft.semi.filter((x) => x.id !== id); renderEditor(); }
+  function saveDay() {
+    if (!draft) return;
+    const dup = {}; let dupName = '';
+    draft.lines.forEach((l) => { if (dup[l.code]) dupName = l.name; dup[l.code] = true; });
+    if (dupName) { toast(`'${dupName}'이(가) 두 줄 있습니다. 한 줄로 합쳐 주세요.`, 'error'); return; }
+    const lines = draft.lines.filter((l) => (Number(l.target) || 0) > 0 || (Number(l.actual) || 0) > 0 || (l.pkManual && Number(l.actualPk) > 0));
+    lines.forEach((l) => { if (!l.pkManual) l.actualPk = lineAutoActualPk(l); l.targetPk = lineTargetPk(l); });  // 단가 0이면 0 그대로 저장 → 계속 현재 단가를 따라감
+    const semi = draft.semi.filter((l) => l.name && ((Number(l.target) || 0) > 0 || (Number(l.actual) || 0) > 0));
+    if (!lines.length && !semi.length && !draft.memo) delete db.days[draft.date];
+    else db.days[draft.date] = { lines, semi, memo: draft.memo, updatedAt: new Date().toISOString() };
+    const d = draft.date;
+    draft = null;
+    markChanged();
+    render();
+    toast(`${d} 생산일지를 적용했습니다.`, 'success');
+  }
+  function renderEditorTotals() {
+    if (!draft) return;
+    const t = dayTotals(draft);
+    draft.lines.forEach((l) => {
+      const row = document.querySelector(`[data-line="${l.id}"]`); if (!row) return;
+      const tp = lineTargetPk(l), ap = lineActualPk(l);
+      row.querySelector('[data-k="tpk"]').textContent = num(tp) + ' ' + lineStockUnit(l);
+      const pkIn = row.querySelector('[data-k="apk"]'); if (pkIn && !l.pkManual) pkIn.placeholder = num(lineAutoActualPk(l));
+      row.querySelector('[data-k="tamt"]').textContent = won(tp * linePrice(l));
+      row.querySelector('[data-k="aamt"]').textContent = won(ap * linePrice(l));
+    });
+    const box = document.getElementById('prodEditTotals');
+    if (box) box.innerHTML = `목표 <b class="tabular-nums">${won(t.target)}</b> · 실행 <b class="tabular-nums text-amber-900">${won(t.actual)}</b> · ${rateBadge(rateOf(t.actual, t.target), t.actual > 0) || '<span class="text-stone-400">-</span>'}`;
+  }
+  function renderEditor() {
+    const host = document.getElementById('prodModal'); if (!host || !draft) return;
+    const products = getProducts();
+    const optHtml = (sel) => CAT_ORDER.map((c) => {
+      const ps = products.filter((p) => p.cat === c); if (!ps.length) return '';
+      return `<optgroup label="${CAT_LABEL[c]} (${c === 'PIE' ? 'PK' : '배합'})">${ps.map((p) => `<option value="${esc(p.productCode)}" ${String(p.productCode) === String(sel) ? 'selected' : ''}>${esc(p.productCode)} ${esc(p.productName)}</option>`).join('')}</optgroup>`;
+    }).join('');
+    const inCls = 'no-spinner w-20 text-right border border-stone-300 rounded-lg px-2 py-1 font-bold tabular-nums';
+    const rows = draft.lines.map((l) => {
+      const known = productByCode(l.code, products);
+      const cur = known && ((Number(l.pricePk) > 0 && known.msBuyPricePk !== l.pricePk) || (Number(l.pkPerBatch) > 0 && known.batchOutputPk !== l.pkPerBatch));
+      const su = lineStockUnit(l), pr = linePrice(l), following = !(Number(l.pricePk) > 0);
+      return `<tr data-line="${l.id}" class="border-b border-stone-100">
+        <td class="py-1.5 px-1.5"><select onchange="Prod.setLineProduct('${l.id}', this.value)" class="w-full max-w-[260px] border border-stone-300 rounded-lg px-2 py-1 text-xs font-bold">${known ? '' : `<option selected>${esc(l.code)} ${esc(l.name)} (목록에 없음)</option>`}${optHtml(l.code)}</select></td>
+        <td class="py-1.5 px-1.5 text-center text-xs font-bold ${l.unit === 'PK' ? 'text-blue-700' : 'text-emerald-700'}">${l.unit}${l.unit === '배합' ? `<div class="text-[11px] font-semibold text-stone-400">1배합 ${num(linePkPerBatch(l))}PK</div>` : ''}${su !== 'PK' ? `<div class="text-[11px] font-semibold text-stone-400">재고 ${su} (${linePerStock(l)}PK)</div>` : ''}</td>
+        <td class="py-1.5 px-1.5 text-right"><input type="number" min="0" step="any" value="${l.target || ''}" placeholder="0" oninput="Prod.setLineField('${l.id}','target',this.value)" class="${inCls}"></td>
+        <td class="py-1.5 px-1.5 text-right"><input type="number" min="0" step="any" value="${l.actual || ''}" placeholder="0" oninput="Prod.setLineField('${l.id}','actual',this.value)" class="${inCls} bg-amber-50/60"></td>
+        <td class="py-1.5 px-1.5 text-right text-xs text-stone-500 tabular-nums" data-k="tpk">${num(lineTargetPk(l))} ${su}</td>
+        <td class="py-1.5 px-1.5 text-right"><input type="number" min="0" step="any" data-k="apk" value="${l.pkManual ? l.actualPk : ''}" placeholder="${num(lineAutoActualPk(l))}" oninput="Prod.setLineField('${l.id}','actualPk',this.value)" title="비워 두면 자동 계산값(회색)을 씁니다. 실제 포장 수량이 다르면 입력 (${su})" class="${inCls} w-20"> <span class="text-[11px] text-stone-400">${su}</span></td>
+        <td class="py-1.5 px-1.5 text-right text-xs tabular-nums ${cur ? 'text-rose-600' : 'text-stone-600'}" title="${cur ? '현재 제품단가와 다름 — [현재 단가로 다시 계산]으로 바꿀 수 있음' : following ? '단가 0원 → 제품단가 탭에 금액이 들어가면 자동 반영' : ''}">${won(pr)}${su !== 'PK' ? `<span class="text-stone-400">/${su}</span>` : ''}${following ? '<div class="text-[11px] text-stone-400">현재 단가 따름</div>' : ''}</td>
+        <td class="py-1.5 px-1.5 text-right text-xs tabular-nums" data-k="tamt">${won(lineTargetPk(l) * pr)}</td>
+        <td class="py-1.5 px-1.5 text-right text-xs font-extrabold tabular-nums text-amber-900" data-k="aamt">${won(lineActualPk(l) * pr)}</td>
+        <td class="py-1.5 px-1.5"><input type="text" value="${esc(l.note || '')}" oninput="Prod.setLineField('${l.id}','note',this.value)" placeholder="메모" class="w-28 border border-stone-300 rounded-lg px-2 py-1 text-xs"></td>
+        <td class="py-1.5 px-1.5 text-center"><button type="button" onclick="Prod.removeLine('${l.id}')" class="px-2 py-1 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 cursor-pointer">삭제</button></td>
+      </tr>`;
+    }).join('');
+    const semiOpts = (sel) => db.semiItems.map((s) => `<option ${s.name === sel ? 'selected' : ''}>${esc(s.name)}</option>`).join('');
+    const semiRows = draft.semi.map((l) => `<tr class="border-b border-stone-100">
+        <td class="py-1.5 px-1.5"><select onchange="Prod.setSemiField('${l.id}','name',this.value)" class="w-full max-w-[260px] border border-stone-300 rounded-lg px-2 py-1 text-xs font-bold">${semiOpts(l.name)}</select></td>
+        <td class="py-1.5 px-1.5 text-center text-xs font-bold text-stone-600">${esc(l.unit)}</td>
+        <td class="py-1.5 px-1.5 text-right"><input type="number" min="0" step="any" value="${l.target || ''}" placeholder="0" oninput="Prod.setSemiField('${l.id}','target',this.value)" class="${inCls}"></td>
+        <td class="py-1.5 px-1.5 text-right"><input type="number" min="0" step="any" value="${l.actual || ''}" placeholder="0" oninput="Prod.setSemiField('${l.id}','actual',this.value)" class="${inCls} bg-amber-50/60"></td>
+        <td class="py-1.5 px-1.5" colspan="5"><input type="text" value="${esc(l.note || '')}" oninput="Prod.setSemiField('${l.id}','note',this.value)" placeholder="메모" class="w-full border border-stone-300 rounded-lg px-2 py-1 text-xs"></td>
+        <td></td>
+        <td class="py-1.5 px-1.5 text-center"><button type="button" onclick="Prod.removeSemi('${l.id}')" class="px-2 py-1 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 cursor-pointer">삭제</button></td>
+      </tr>`).join('');
+    const d = parseYmd(draft.date);
+    const pw = prevWorkday(draft.date);
+    const lastWeek = (() => { const x = parseYmd(draft.date); x.setDate(x.getDate() - 7); return ymd(x); })();
+    host.innerHTML = `<div class="fixed inset-0 z-50 bg-stone-900/40 flex items-start justify-center p-3 sm:p-6 overflow-y-auto" onclick="if(event.target===this)Prod.closeDay()">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-[1180px] flex flex-col">
+        <div class="px-5 py-3 border-b border-stone-200 flex flex-wrap items-center justify-between gap-2">
+          <div><h3 class="text-base font-extrabold text-stone-900">${d.getMonth() + 1}월 ${d.getDate()}일 (${DOW[d.getDay()]}) 생산일지</h3><div id="prodEditTotals" class="text-sm text-stone-700 mt-0.5"></div></div>
+          <div class="flex flex-wrap items-center gap-1.5 text-xs">
+            <button type="button" onclick="Prod.copyTargetsFrom('${pw}')" class="px-2.5 py-1.5 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">전 근무일(${pw.slice(5)}) 품목 불러오기</button>
+            <button type="button" onclick="Prod.copyTargetsFrom('${lastWeek}')" class="px-2.5 py-1.5 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">지난주 같은 요일 불러오기</button>
+            <button type="button" onclick="Prod.refreshPrices()" class="px-2.5 py-1.5 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">현재 단가로 다시 계산</button>
+          </div>
+        </div>
+        <div class="p-4 overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm min-w-[1000px]">
+            <thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600"><th class="py-2 px-1.5">품목 (제품단가 탭)</th><th class="py-2 px-1.5 text-center">단위</th><th class="py-2 px-1.5 text-right">목표</th><th class="py-2 px-1.5 text-right">실행</th><th class="py-2 px-1.5 text-right">목표 재고수량</th><th class="py-2 px-1.5 text-right">실행 재고수량</th><th class="py-2 px-1.5 text-right">단가</th><th class="py-2 px-1.5 text-right">목표 금액</th><th class="py-2 px-1.5 text-right">실행 금액</th><th class="py-2 px-1.5">메모</th><th></th></tr></thead>
+            <tbody>${rows || '<tr><td colspan="11" class="py-6 text-center text-xs text-stone-400">아직 품목이 없습니다. [+ 품목 추가]를 눌러 주세요.</td></tr>'}</tbody>
+          </table>
+          <button type="button" onclick="Prod.addLine()" class="mt-2 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold cursor-pointer">+ 품목 추가</button>
+          <span class="ml-2 text-xs text-stone-500">계획에 없던 품목을 만들었으면 목표는 0으로 두고 실행만 입력하세요.</span>
+          <div class="mt-5 mb-1 flex items-center gap-2"><h4 class="text-sm font-extrabold text-stone-800">반제품 (반죽 믹싱·라미네이팅)</h4><span class="text-xs text-stone-500">수량만 기록 · 금액·재고 합계 제외</span></div>
+          ${semiRows ? `<table class="w-full text-left border-collapse text-sm min-w-[1000px]"><thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600"><th class="py-2 px-1.5">반제품</th><th class="py-2 px-1.5 text-center">단위</th><th class="py-2 px-1.5 text-right">목표</th><th class="py-2 px-1.5 text-right">실행</th><th class="py-2 px-1.5" colspan="5">메모</th><th></th><th></th></tr></thead><tbody>${semiRows}</tbody></table>` : '<div class="py-2 text-xs text-stone-400">반제품 기록 없음</div>'}
+          <button type="button" onclick="Prod.addSemi()" class="mt-2 px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-bold cursor-pointer hover:bg-stone-50">+ 반제품 추가</button>
+          <div class="mt-4"><label class="text-xs font-bold text-stone-600">그날 메모 (사정·변경 사유 등)</label><textarea oninput="Prod.setMemo(this.value)" rows="2" class="mt-1 w-full border border-stone-300 rounded-lg px-2 py-1.5 text-sm">${esc(draft.memo || '')}</textarea></div>
+        </div>
+        <div class="px-5 py-3 border-t border-stone-200 flex justify-end gap-2">
+          <button type="button" onclick="Prod.closeDay()" class="px-4 py-2 rounded-xl border border-stone-300 text-sm font-bold cursor-pointer">취소</button>
+          <button type="button" onclick="Prod.saveDay()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">적용</button>
+        </div>
+      </div></div>`;
+    renderEditorTotals();
+  }
+
+  // ----- 생지 재고 -----
+  function computeStock() {
+    const products = getProducts();
+    const base = db.stockBase;
+    const feed = typeof window.barogaMsStockFeed === 'function' ? window.barogaMsStockFeed() : { loaded: false, records: [], links: {} };
+    const map = {};
+    const ensure = (code, name) => map[code] || (map[code] = { code, name, base: 0, produced: 0, shipped: 0, adjust: 0 });
+    products.forEach((p) => ensure(String(p.productCode), p.productName));
+    const after = (d) => !base || String(d || '') > base.date;
+    if (base) Object.entries(base.counts || {}).forEach(([code, pk]) => { ensure(code, (productByCode(code, products) || {}).productName || code).base = Number(pk) || 0; });
+    Object.entries(db.days).forEach(([d, day]) => { if (!after(d)) return; (day.lines || []).forEach((l) => { ensure(String(l.code), l.name).produced += lineActualPk(l); }); });
+    const unmapped = {};
+    feed.records.forEach((r) => {
+      if (!after(r.date)) return;
+      (r.items || []).forEach((it) => {
+        const code = String((it.code && feed.links[it.code]) || (it.name && feed.links[it.name]) || '').trim();
+        const prod = code ? productByCode(code, products) : null;
+        const pk = prod && prod.stockUnit === 'BOX' ? (Number(it.box) || 0) : (Number(it.pk) || 0); // BOX 운영 품목은 엠즈 BOX 수량
+        if (code && map[code]) map[code].shipped += pk;
+        else { const k = it.code + ' ' + it.name; unmapped[k] = (unmapped[k] || 0) + pk; }
+      });
+    });
+    db.stockAdjusts.forEach((a) => { if (after(a.date)) ensure(String(a.code), a.name).adjust += Number(a.deltaPk) || 0; });
+    const rows = Object.values(map).map((x) => {
+      const p = productByCode(x.code, products);
+      const cur = r1(x.base + x.produced - x.shipped + x.adjust);
+      const per = p ? p.pkPerStock || 1 : 1;
+      const cost = p && p.pkTotalCost != null ? p.pkTotalCost * per : null, buy = p ? p.msBuyPricePk : 0; // 원가는 PK당 → 재고 단위(BOX)로 환산
+      return { ...x, cat: p ? p.cat : '', unit: p ? p.stockUnit : 'PK', cur, cost, buy, costAmt: cost == null ? null : cur * cost, buyAmt: cur * buy };
+    }).sort((a, b) => CAT_ORDER.indexOf(a.cat) - CAT_ORDER.indexOf(b.cat) || a.code.localeCompare(b.code));
+    return { rows, unmapped, feed, base };
+  }
+  function renderStock() {
+    const { rows, unmapped, feed, base } = computeStock();
+    const active = rows.filter((r) => r.base || r.produced || r.shipped || r.adjust || r.cur);
+    const totCost = active.reduce((s, r) => s + (r.costAmt > 0 ? r.costAmt : 0), 0), totBuy = active.reduce((s, r) => s + (r.buyAmt > 0 ? r.buyAmt : 0), 0);
+    const noCost = active.filter((r) => r.cur > 0 && r.cost == null).length;
+    const negative = active.filter((r) => r.cur < 0);
+    const unmappedList = Object.entries(unmapped);
+    const trs = rows.map((r) => `<tr class="border-b border-stone-100 ${r.cur < 0 ? 'bg-rose-50' : ''}">
+        <td class="py-1.5 px-2 text-xs text-stone-500">${CAT_LABEL[r.cat] || '-'}</td>
+        <td class="py-1.5 px-2 font-mono text-xs">${esc(r.code)}</td>
+        <td class="py-1.5 px-2 font-bold">${esc(r.name)}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums">${num(r.base)}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums text-emerald-700">${r.produced ? '+' + num(r.produced) : '-'}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums text-rose-700">${r.shipped ? '-' + num(r.shipped) : '-'}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums">${r.adjust ? (r.adjust > 0 ? '+' : '') + num(r.adjust) : '-'}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums font-extrabold ${r.cur < 0 ? 'text-rose-700' : 'text-stone-900'}">${num(r.cur)}${r.unit !== 'PK' ? ` <span class="text-xs font-bold text-stone-500">${r.unit}</span>` : ''}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums text-stone-600">${r.cost == null ? '<span class="text-rose-600" title="제품단가 탭에서 PK 총생산원가가 계산되지 않음">미산출</span>' : won(r.cost)}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums font-bold">${r.costAmt == null ? '-' : won(r.costAmt)}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums text-stone-600">${won(r.buy)}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums font-bold text-amber-900">${won(r.buyAmt)}</td>
+      </tr>`).join('');
+    const adjRows = db.stockAdjusts.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map((a) => `<tr class="border-b border-stone-100"><td class="py-1 px-2">${esc(a.date)}</td><td class="py-1 px-2">${esc(a.name)}</td><td class="py-1 px-2 text-right tabular-nums font-bold ${a.deltaPk < 0 ? 'text-rose-700' : 'text-emerald-700'}">${a.deltaPk > 0 ? '+' : ''}${num(a.deltaPk)} ${esc((productByCode(a.code) || {}).stockUnit || 'PK')}</td><td class="py-1 px-2">${esc(a.reason)}</td><td class="py-1 px-2 text-center"><button type="button" onclick="Prod.removeAdjust('${a.id}')" class="text-xs text-rose-700 font-bold cursor-pointer">삭제</button></td></tr>`).join('');
+    return `
+      ${!base ? `<div class="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-sm"><b>재고 실사 수량이 아직 없습니다.</b> 냉동창고 재고를 세어 [재고 실사 입력]에 넣으면, 그 날 이후의 생산(실행 PK)과 엠즈 입고(출고)로 재고가 자동 계산됩니다.</div>` : ''}
+      ${!feed.loaded ? `<div class="p-3 rounded-xl bg-stone-100 border border-stone-200 text-stone-700 text-xs flex flex-wrap items-center gap-2"><span>엠즈 입고 기록을 이 기기에 저장된 사본으로 계산 중입니다. 최신 출고를 반영하려면</span><button type="button" onclick="Prod.loadMs()" class="px-2.5 py-1 rounded-lg bg-stone-900 text-white font-bold cursor-pointer">엠즈 입고 불러오기</button></div>` : ''}
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">재고 실사 기준일</div><div class="mt-1 text-xl font-extrabold">${base ? esc(base.date) : '-'}</div><div class="text-xs text-stone-500">이 날 이후 생산·출고 반영</div></div>
+        <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">재고 자산 (생산원가 기준)</div><div class="mt-1 text-xl font-extrabold tabular-nums">${won(totCost)}</div><div class="text-xs text-stone-500">PK 총생산원가 × 현재고 (음수 재고 제외)${noCost ? ` · 원가 미산출 ${noCost}개 품목 제외` : ''}</div></div>
+        <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">재고 자산 (엠즈 매입가 기준)</div><div class="mt-1 text-xl font-extrabold tabular-nums text-amber-900">${won(totBuy)}</div><div class="text-xs text-stone-500">엠즈 매입가(PK) × 현재고 (음수 재고 제외)</div></div>
+        <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">확인 필요</div><div class="mt-1 text-xl font-extrabold ${negative.length || unmappedList.length ? 'text-rose-700' : 'text-emerald-700'}">${negative.length + unmappedList.length}건</div><div class="text-xs text-stone-500">재고 음수 ${negative.length} · 연결 안 된 엠즈 상품 ${unmappedList.length}</div></div>
+      </div>
+      <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <h3 class="text-sm font-extrabold text-stone-900">냉동창고 생지 재고 <span class="text-xs font-bold text-stone-500">(PK · 쇼숑오뽐므는 BOX=4PK)</span></h3>
+          <div class="flex gap-1.5 text-xs">
+            <button type="button" onclick="Prod.openCountModal()" class="px-3 py-1.5 rounded-lg bg-stone-900 text-white font-extrabold cursor-pointer">재고 실사 입력</button>
+            <button type="button" onclick="Prod.openAdjustModal()" class="px-3 py-1.5 rounded-lg border border-stone-300 font-bold cursor-pointer hover:bg-stone-50">재고 조정 (폐기·회송 등)</button>
+          </div>
+        </div>
+        <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm min-w-[1100px]">
+          <thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600"><th class="py-2 px-2">파트</th><th class="py-2 px-2">코드</th><th class="py-2 px-2">품목</th><th class="py-2 px-2 text-right">실사</th><th class="py-2 px-2 text-right">+생산</th><th class="py-2 px-2 text-right">−엠즈 출고</th><th class="py-2 px-2 text-right">±조정</th><th class="py-2 px-2 text-right">현재고</th><th class="py-2 px-2 text-right">원가/단위</th><th class="py-2 px-2 text-right">원가 금액</th><th class="py-2 px-2 text-right">매입가/단위</th><th class="py-2 px-2 text-right">매입가 금액</th></tr></thead>
+          <tbody>${trs || '<tr><td colspan="12" class="py-6 text-center text-xs text-stone-400">제품단가 탭 품목이 없습니다.</td></tr>'}</tbody>
+        </table></div>
+      </div>
+      ${unmappedList.length ? `<div class="bg-white rounded-2xl border border-rose-200 p-4 text-xs"><h4 class="font-extrabold text-rose-800 mb-1">재고에서 빼지 못한 엠즈 출고 (품목코드 연결 없음)</h4><div class="text-stone-600 mb-2">엠즈 입고 → 매입가 DB 관리에서 '레시피 품목코드'를 연결하면 재고에서 빠집니다. 생산일지 품목(제품단가 탭)에 없는 상품일 수도 있습니다.</div>${unmappedList.map(([k, pk]) => `<div class="flex justify-between border-b border-stone-100 py-1"><span>${esc(k)}</span><b class="tabular-nums">${num(pk)} PK</b></div>`).join('')}</div>` : ''}
+      <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4 text-xs">
+        <h4 class="text-sm font-extrabold text-stone-900 mb-2">재고 조정 기록</h4>
+        ${adjRows ? `<table class="w-full"><thead><tr class="text-stone-500 border-b"><th class="py-1 px-2 text-left">날짜</th><th class="py-1 px-2 text-left">품목</th><th class="py-1 px-2 text-right">증감</th><th class="py-1 px-2 text-left">사유</th><th></th></tr></thead><tbody>${adjRows}</tbody></table>` : '<div class="text-stone-400">조정 기록이 없습니다.</div>'}
+      </div>`;
+  }
+  function modal(html) { const h = document.getElementById('prodModal'); if (h) h.innerHTML = `<div class="fixed inset-0 z-50 bg-stone-900/40 flex items-start justify-center p-3 sm:p-6 overflow-y-auto" onclick="if(event.target===this)Prod.closeModal()"><div class="bg-white rounded-2xl shadow-xl w-full max-w-[720px]">${html}</div></div>`; }
+  function closeModal() { const h = document.getElementById('prodModal'); if (h) h.innerHTML = ''; }
+  function openCountModal() {
+    const { rows } = computeStock();
+    modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold">재고 실사 입력</h3><div class="text-xs text-stone-500 mt-0.5">기준일 <b>마감 후</b> 냉동창고에 있는 PK 수량입니다. 칸에는 지금 계산된 재고가 미리 들어 있으니, 센 수량으로 고쳐 주세요.</div></div>
+      <div class="p-4 max-h-[60vh] overflow-y-auto"><div class="mb-3"><label class="text-xs font-bold">기준일</label> <input id="prodCountDate" type="date" value="${today()}" class="ml-2 border border-stone-300 rounded-lg px-2 py-1 text-sm"></div>
+      <table class="w-full text-sm">${rows.map((r) => `<tr class="border-b border-stone-100"><td class="py-1 px-2 text-xs text-stone-500">${CAT_LABEL[r.cat] || ''}</td><td class="py-1 px-2 font-bold">${esc(r.name)}</td><td class="py-1 px-2 text-right"><input type="number" min="0" step="any" data-count-code="${esc(r.code)}" value="${r.cur > 0 ? r.cur : 0}" class="no-spinner w-24 text-right border border-stone-300 rounded-lg px-2 py-1 font-bold tabular-nums"> ${esc(r.unit || 'PK')}</td></tr>`).join('')}</table></div>
+      <div class="px-5 py-3 border-t border-stone-200 flex justify-end gap-2"><button type="button" onclick="Prod.closeModal()" class="px-4 py-2 rounded-xl border border-stone-300 text-sm font-bold cursor-pointer">취소</button><button type="button" onclick="Prod.saveCount()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">실사 수량 확정</button></div>`);
+  }
+  function saveCount() {
+    const date = (document.getElementById('prodCountDate') || {}).value;
+    if (!date) { toast('기준일을 넣어 주세요.', 'error'); return; }
+    const counts = {};
+    document.querySelectorAll('[data-count-code]').forEach((el) => { const v = parseFloat(el.value); if (v > 0) counts[el.dataset.countCode] = v; });
+    const prev = db.stockBase;
+    db.stockBase = { date, counts, savedAt: new Date().toISOString(), prevBaseDate: prev ? prev.date : '' };
+    closeModal(); markChanged(); render();
+    toast(`${date} 기준 재고 실사 ${Object.keys(counts).length}개 품목을 확정했습니다.`, 'success');
+  }
+  function openAdjustModal() {
+    const products = getProducts();
+    modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold">재고 조정</h3><div class="text-xs text-stone-500 mt-0.5">폐기·샘플·회송 입고 등 생산/엠즈 출고 말고 재고가 바뀐 경우. 빠지면 −, 들어오면 +.</div></div>
+      <div class="p-4 grid grid-cols-2 gap-3 text-sm">
+        <label class="flex flex-col gap-1 text-xs font-bold">날짜<input id="prodAdjDate" type="date" value="${today()}" class="border border-stone-300 rounded-lg px-2 py-1 text-sm font-normal"></label>
+        <label class="flex flex-col gap-1 text-xs font-bold">품목<select id="prodAdjCode" class="border border-stone-300 rounded-lg px-2 py-1 text-sm font-normal">${products.map((p) => `<option value="${esc(p.productCode)}">${esc(p.productCode)} ${esc(p.productName)}</option>`).join('')}</select></label>
+        <label class="flex flex-col gap-1 text-xs font-bold">증감 (PK, 쇼숑은 BOX)<input id="prodAdjPk" type="number" step="any" placeholder="예: -12" class="border border-stone-300 rounded-lg px-2 py-1 text-sm font-normal"></label>
+        <label class="flex flex-col gap-1 text-xs font-bold">사유<input id="prodAdjReason" type="text" placeholder="예: 유통기한 폐기" class="border border-stone-300 rounded-lg px-2 py-1 text-sm font-normal"></label>
+      </div>
+      <div class="px-5 py-3 border-t border-stone-200 flex justify-end gap-2"><button type="button" onclick="Prod.closeModal()" class="px-4 py-2 rounded-xl border border-stone-300 text-sm font-bold cursor-pointer">취소</button><button type="button" onclick="Prod.saveAdjust()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">조정 기록</button></div>`);
+  }
+  function saveAdjust() {
+    const date = document.getElementById('prodAdjDate').value, code = document.getElementById('prodAdjCode').value;
+    const delta = parseFloat(document.getElementById('prodAdjPk').value), reason = document.getElementById('prodAdjReason').value.trim();
+    if (!date || !code || !delta) { toast('날짜·품목·증감 PK를 넣어 주세요.', 'error'); return; }
+    if (!reason) { toast('사유를 적어 주세요.', 'error'); return; }
+    const p = productByCode(code);
+    db.stockAdjusts.push({ id: uid(), date, code, name: p ? p.productName : code, deltaPk: delta, reason, at: new Date().toISOString() });
+    closeModal(); markChanged(); render();
+  }
+  function removeAdjust(id) {
+    const a = db.stockAdjusts.find((x) => x.id === id); if (!a) return;
+    const go = () => { db.stockAdjusts = db.stockAdjusts.filter((x) => x.id !== id); markChanged(); render(); };
+    if (typeof window.openConfirmModal === 'function') window.openConfirmModal('재고 조정 삭제', `${a.date} ${a.name} ${a.deltaPk}PK 조정 기록을 삭제할까요?`, go); else go();
+  }
+  function loadMs() { if (typeof window.mountMsInboundApp === 'function') { window.mountMsInboundApp(); toast('엠즈 입고 기록을 불러오는 중입니다. 잠시 뒤 화면이 갱신됩니다.', 'info'); setTimeout(render, 2500); setTimeout(render, 6000); } }
+
+  // ----- DB 연결 -----
+  function openDbModal() {
+    modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold">생산일지 DB 연결</h3><div class="text-xs text-stone-500 mt-0.5">생산일지용 구글 시트에 gas/5_production.gs 를 붙여넣고 웹 앱으로 배포한 주소를 넣습니다. 접속 코드는 다른 탭과 같습니다.</div></div>
+      <div class="p-4"><input id="prodUrlInput" type="text" value="${esc(getUrl())}" placeholder="https://script.google.com/macros/s/.../exec" class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm font-mono"></div>
+      <div class="px-5 py-3 border-t border-stone-200 flex justify-end gap-2"><button type="button" onclick="Prod.closeModal()" class="px-4 py-2 rounded-xl border border-stone-300 text-sm font-bold cursor-pointer">취소</button><button type="button" onclick="Prod.saveDbUrl()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">저장 후 불러오기</button></div>`);
+  }
+  function saveDbUrl() {
+    const v = (document.getElementById('prodUrlInput').value || '').trim();
+    if (v && !/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(v)) { toast('주소 형식이 맞지 않습니다 (https://script.google.com/macros/s/.../exec).', 'error'); return; }
+    try { if (v) localStorage.setItem(URL_KEY, v); else localStorage.removeItem(URL_KEY); } catch (e) {}
+    cloudLoaded = false; dbRevision = null; closeModal(); render();
+    if (v) pullCloud(true);
+  }
+
+  // ---------- 진입 ----------
+  function mountProductionApp() {
+    if (!mounted) {
+      mounted = true;
+      loadLocal();
+      render();
+      if (getUrl()) pullCloud(false);
+    } else render();
+  }
+  window.mountProductionApp = mountProductionApp;
+  window.Prod = {
+    setView: (v) => { view = v; render(); }, setMonth: (m) => { cursorMonth = m; render(); }, pull: () => pullCloud(true),
+    openDay, closeDay, addLine, setLineProduct, setLineField, removeLine, refreshPrices, copyTargetsFrom,
+    addSemi, setSemiField, removeSemi, setMemo: (v) => { if (draft) draft.memo = v; }, saveDay,
+    openCountModal, saveCount, openAdjustModal, saveAdjust, removeAdjust, closeModal, loadMs, openDbModal, saveDbUrl,
+    _debug: () => ({ db, dbRevision, cloudLoaded, products: getProducts() }),
+  };
+})();
