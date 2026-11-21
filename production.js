@@ -1,4 +1,4 @@
-// [VERSION: production.js v2.7 - 2026-11-22 달력 칸 최소 높이 1행(빈 주는 짧게), 기록 없는 주 합계 한 줄 / v2.6 - 2026-11-22 작업 인원에 1인 생산금액(KPI·날짜·주·파트별), 작업 구분별 생산 파트·인원 기준 설정 / v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
+// [VERSION: production.js v2.8 - 2026-11-22 일자 창에서 휴무일 지정(사유 문구), 달력 칸 옅은 빨강 + 문구 / v2.7 - 2026-11-22 달력 칸 최소 높이 1행(빈 주는 짧게), 기록 없는 주 합계 한 줄 / v2.6 - 2026-11-22 작업 인원에 1인 생산금액(KPI·날짜·주·파트별), 작업 구분별 생산 파트·인원 기준 설정 / v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
 //  - 품목 목록·단가: 제품단가 탭(barogaProductPriceBridge.getProductionProducts)
 //      파이 = PK로 입력 / 알생지·파베이크·제과 = 배합으로 입력 → '1배합 PK수'로 PK 환산 (실제 포장 PK를 직접 고칠 수 있음)
 //      금액 = PK × 엠즈 매입가(PK). 줄을 만들 때의 단가를 줄에 저장 → 나중에 단가가 바뀌어도 지난 기록 금액은 그대로
@@ -109,6 +109,8 @@
     });
     return t;
   }
+  // 휴무일: db.days[date].off = true, offLabel = 사유(없으면 '휴무')
+  function dayOff(date) { const d = db.days[date]; return d && d.off ? (String(d.offLabel || '').trim() || '휴무') : ''; }
   function rateOf(actual, target) { return target > 0 ? (actual / target) * 100 : null; }
   function rateBadge(rate, hasActual) {
     if (rate === null) return hasActual ? '<span class="px-1.5 py-0.5 rounded bg-stone-100 text-stone-600 text-xs font-bold">목표 없음</span>' : '';
@@ -288,9 +290,13 @@
           return `<div class="border-l-[3px] ${st.bar} pl-1.5 flex flex-col gap-0.5"><div class="text-[10px] leading-3 font-extrabold ${st.text}">${g.label}</div>${rows.join('')}</div>`;
         }).join('') + (total > MAX ? `<div class="text-xs text-stone-400 font-semibold">외 ${total - MAX}개</div>` : '');
         const items = { length: total };
-        const isToday = c.date === tdy;
-        return `<button type="button" onclick="Prod.openDay('${c.date}')" class="text-left min-h-[64px] rounded-xl border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : 'border-stone-200'} bg-white hover:border-amber-400 hover:shadow-xs p-2 flex flex-col gap-1 cursor-pointer min-w-0">
-          <div class="flex items-center justify-between gap-1"><span class="flex items-baseline gap-1.5 min-w-0"><span class="text-xl leading-none font-black tabular-nums ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}</span>${crewBadge(c.date)}</span>${dayBadge(c, t)}</div>
+        const isToday = c.date === tdy, off = dayOff(c.date);
+        const offBlock = off ? `<div class="flex-1 flex items-center justify-center py-2 text-center text-base font-extrabold text-rose-700 break-keep">${esc(off)}</div>` : '';
+        if (off && !items.length) return `<button type="button" onclick="Prod.openDay('${c.date}')" class="text-left min-h-[64px] rounded-xl border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : 'border-rose-200'} bg-rose-50 hover:border-rose-400 p-2 flex flex-col gap-1 cursor-pointer min-w-0">
+          <div class="flex items-center justify-between gap-1"><span class="flex items-baseline gap-1.5 min-w-0"><span class="text-xl leading-none font-black tabular-nums ${isToday ? 'text-amber-700' : 'text-rose-600'}">${c.day}</span>${crewBadge(c.date)}</span></div>${offBlock}
+        </button>`;
+        return `<button type="button" onclick="Prod.openDay('${c.date}')" class="text-left min-h-[64px] rounded-xl border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : off ? 'border-rose-200' : 'border-stone-200'} ${off ? 'bg-rose-50' : 'bg-white'} hover:border-amber-400 hover:shadow-xs p-2 flex flex-col gap-1 cursor-pointer min-w-0">
+          <div class="flex items-center justify-between gap-1"><span class="flex items-baseline gap-1.5 min-w-0"><span class="text-xl leading-none font-black tabular-nums ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}</span>${crewBadge(c.date)}</span>${off ? `<span class="px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-700 text-[11px] font-extrabold">${esc(off)}</span>` : dayBadge(c, t)}</div>
           ${lines.length ? `<div class="grid grid-cols-[auto_1fr] gap-x-1 text-xs tabular-nums"><span class="font-semibold text-stone-500">목표</span><span class="text-right font-bold">${won(t.target)}</span><span class="font-semibold text-stone-500">실행</span><span class="text-right font-extrabold text-amber-900">${won(t.actual)}</span></div>` : ''}
           ${items.length ? `<div class="${lines.length ? 'border-t border-stone-100 pt-1 ' : ''}flex flex-col gap-1">${shown}</div>` : '<div class="text-xs text-stone-300 mt-1">클릭해서 목표 입력</div>'}
         </button>`;
@@ -300,8 +306,9 @@
         if (!c.inMonth) return `<div class="flex-1 rounded-lg border border-dashed border-stone-200 bg-stone-50/60 p-1.5 text-base leading-none text-stone-300 font-black">${c.day}</div>`;
         const day = db.days[c.date], t = dayTotals(day);
         const n = (((day && day.lines) || []).length) + (((day && day.semi) || []).length);
-        const isToday = c.date === tdy;
-        return `<button type="button" onclick="Prod.openDay('${c.date}')" class="flex-1 text-left rounded-lg border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : 'border-stone-200'} ${n ? 'bg-white' : 'bg-stone-50'} hover:border-amber-400 p-1.5 flex flex-col gap-0.5 cursor-pointer min-w-0">
+        const isToday = c.date === tdy, off = dayOff(c.date);
+        if (off && !n) return `<button type="button" onclick="Prod.openDay('${c.date}')" class="flex-1 text-left rounded-lg border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : 'border-rose-200'} bg-rose-50 hover:border-rose-400 p-1.5 flex flex-col gap-0.5 cursor-pointer min-w-0"><span class="text-base leading-none font-black tabular-nums text-rose-600">${c.day}<span class="text-[10px] font-extrabold ml-0.5">${DOW[c.dow]}</span></span><span class="text-[11px] font-extrabold text-rose-700 truncate" title="${esc(off)}">${esc(off)}</span></button>`;
+        return `<button type="button" onclick="Prod.openDay('${c.date}')" class="flex-1 text-left rounded-lg border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : off ? 'border-rose-200' : 'border-stone-200'} ${off ? 'bg-rose-50' : n ? 'bg-white' : 'bg-stone-50'} hover:border-amber-400 p-1.5 flex flex-col gap-0.5 cursor-pointer min-w-0">
           <div class="flex items-center justify-between gap-1"><span class="text-base leading-none font-black tabular-nums ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}<span class="text-[10px] font-extrabold ml-0.5">${DOW[c.dow]}</span></span></div>${n ? `<div class="-mt-0.5">${dayBadge(c, t)}</div>` : ''}
           ${n ? `<div class="text-[11px] font-extrabold text-amber-900 tabular-nums truncate" title="실행 ${won(t.actual)} / 목표 ${won(t.target)}">${Math.round((t.actual || 0) / 10000).toLocaleString('ko-KR')}만</div><div class="text-[11px] text-stone-500 font-semibold">${n}품목</div>` : '<div class="text-[11px] text-stone-300">휴무</div>'}
         </button>`;
@@ -369,7 +376,7 @@
   // ----- 일자 편집 -----
   function openDay(date) {
     const day = db.days[date] || { lines: [], semi: [], memo: '' };
-    draft = { date, lines: JSON.parse(JSON.stringify(day.lines || [])), semi: JSON.parse(JSON.stringify(day.semi || [])), memo: day.memo || '' };
+    draft = { date, lines: JSON.parse(JSON.stringify(day.lines || [])), semi: JSON.parse(JSON.stringify(day.semi || [])), memo: day.memo || '', off: !!day.off, offLabel: day.offLabel || '' };
     pickerQuery = ''; pickerCat = 'PIE';
     renderEditor();
   }
@@ -440,8 +447,9 @@
     const lines = draft.lines.filter((l) => (Number(l.target) || 0) > 0 || (Number(l.actual) || 0) > 0 || (l.pkManual && Number(l.actualPk) > 0));
     lines.forEach((l) => { if (!l.pkManual) l.actualPk = lineAutoActualPk(l); l.targetPk = lineTargetPk(l); });  // 단가 0이면 0 그대로 저장 → 계속 현재 단가를 따라감
     const semi = draft.semi.filter((l) => l.name && ((Number(l.target) || 0) > 0 || (Number(l.actual) || 0) > 0 || (Number(l.used) || 0) > 0 || (Number(l.waste) || 0) > 0));
-    if (!lines.length && !semi.length && !draft.memo) delete db.days[draft.date];
-    else db.days[draft.date] = { lines, semi, memo: draft.memo, updatedAt: new Date().toISOString() };
+    const off = !!draft.off, offLabel = off ? String(draft.offLabel || '').trim() : '';
+    if (!lines.length && !semi.length && !draft.memo && !off) delete db.days[draft.date];
+    else db.days[draft.date] = { lines, semi, memo: draft.memo, ...(off ? { off: true, offLabel } : {}), updatedAt: new Date().toISOString() };
     const d = draft.date;
     draft = null;
     markChanged();
@@ -566,6 +574,10 @@
             <button type="button" onclick="Prod.refreshPrices()" class="px-3 py-1.5 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">현재 단가로 다시 계산</button>
             <button type="button" onclick="Prod.closeDay()" title="닫기" class="ml-1 w-8 h-8 rounded-lg text-stone-500 hover:bg-stone-100 cursor-pointer text-xl leading-none">×</button>
           </div>
+        </div>
+        <div class="px-6 py-2.5 border-b ${draft.off ? 'bg-rose-50 border-rose-200' : 'bg-stone-50 border-stone-200'} flex flex-wrap items-center gap-3">
+          <label class="flex items-center gap-2 text-sm font-extrabold cursor-pointer ${draft.off ? 'text-rose-700' : 'text-stone-700'}"><input type="checkbox" ${draft.off ? 'checked' : ''} onchange="Prod.setOff(this.checked)" class="w-4 h-4 accent-rose-600 cursor-pointer">이 날 휴무</label>
+          ${draft.off ? `<input type="text" value="${esc(draft.offLabel || '')}" oninput="Prod.setOffLabel(this.value)" placeholder="달력에 보일 문구 (예: 추석 연휴) · 비우면 '휴무'" class="flex-1 min-w-[240px] max-w-[420px] border border-rose-200 bg-white rounded-lg px-3 py-1.5 text-sm font-semibold">` : '<span class="text-xs text-stone-500">체크하면 달력 칸이 옅은 빨간색으로 바뀌고 문구가 보입니다.</span>'}
         </div>
         <div id="prodEditBody" class="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-5">
           <section>
@@ -711,7 +723,7 @@
         : (p.actual > 0 ? '<div class="rounded-md bg-stone-50 border border-dashed border-stone-200 px-1.5 py-0.5 text-[11px] font-bold text-stone-400">생산 기록 있음 · 인원 미입력</div>' : '');
       const cells = w.slice(0, 5).map((c) => {
         if (!c.inMonth) return `<div class="rounded-xl bg-stone-50/60 border border-dashed border-stone-200 p-2 text-xl leading-none text-stone-300 font-black">${c.day}</div>`;
-        const day = days[c.date], t = crewTotals(day), isToday = c.date === tdy, pd = crewProd(c.date);
+        const day = days[c.date], t = crewTotals(day), isToday = c.date === tdy, pd = crewProd(c.date), off = dayOff(c.date);
         const ga = (day && day.assign) || {};
         // 작업 구분을 파트별로 묶고 왼쪽 색 띠로 구분 (생산 스케쥴과 같은 방식). 이름은 줄바꿈해서 전부 보이게
         const teamBlocks = teamGroups(cfg.teams).map((g) => {
@@ -727,18 +739,18 @@
             <div class="text-[11px] leading-4 font-extrabold text-rose-700 border-b border-rose-200 pb-0.5 mb-0.5">휴무 ${n1(t.leave)}명</div>
             ${lv.map((l) => `<div class="text-xs leading-[1.35]" style="${LROW}"><span class="truncate font-bold text-stone-800">${esc(staffName(l.sid))}</span><span class="min-w-0"><b class="font-extrabold text-rose-700">${esc(l.type)}</b>${l.note ? `<span class="text-stone-500 font-semibold"> · ${esc(l.note)}</span>` : ''}</span></div>`).join('')}
           </div>` : '';
-        return `<button type="button" onclick="Prod.openCrewDay('${c.date}')" class="text-left min-h-[64px] rounded-xl border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : 'border-stone-200'} bg-white hover:border-amber-400 hover:shadow-xs p-2 flex flex-col gap-1 cursor-pointer min-w-0">
+        return `<button type="button" onclick="Prod.openCrewDay('${c.date}')" class="text-left min-h-[64px] rounded-xl border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : off ? 'border-rose-200' : 'border-stone-200'} ${off ? 'bg-rose-50' : 'bg-white'} hover:border-amber-400 hover:shadow-xs p-2 flex flex-col gap-1 cursor-pointer min-w-0">
           <div class="flex items-center justify-between gap-1"><span class="text-xl leading-none font-black tabular-nums ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}</span>${crewBadge(c.date)}</div>
           ${perLine(pd)}
-          ${teamBlocks || leaveBlock ? `<div class="flex flex-col gap-1">${teamBlocks}${leaveBlock}</div>` : '<div class="text-xs text-stone-300 mt-1">클릭해서 인원 배정</div>'}
+          ${teamBlocks || leaveBlock ? `<div class="flex flex-col gap-1">${teamBlocks}${leaveBlock}</div>` : off ? `<div class="flex-1 flex items-center justify-center py-2 text-center text-base font-extrabold text-rose-700 break-keep">${esc(off)}</div>` : '<div class="text-xs text-stone-300 mt-1">클릭해서 인원 배정</div>'}
         </button>`;
       }).join('');
       const wk = w.slice(5).map((c) => {
         if (!c.inMonth) return `<div class="flex-1 rounded-lg border border-dashed border-stone-200 bg-stone-50/60 p-1.5 text-base leading-none text-stone-300 font-black">${c.day}</div>`;
-        const t = crewTotals(days[c.date]), isToday = c.date === tdy, pw = crewProd(c.date);
-        return `<button type="button" onclick="Prod.openCrewDay('${c.date}')" class="flex-1 text-left rounded-lg border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : 'border-stone-200'} ${t.work || t.leave ? 'bg-white' : 'bg-stone-50'} hover:border-amber-400 p-1.5 flex flex-col gap-0.5 cursor-pointer min-w-0">
+        const t = crewTotals(days[c.date]), isToday = c.date === tdy, pw = crewProd(c.date), offW = dayOff(c.date);
+        return `<button type="button" onclick="Prod.openCrewDay('${c.date}')" class="flex-1 text-left rounded-lg border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : offW ? 'border-rose-200' : 'border-stone-200'} ${offW ? 'bg-rose-50' : t.work || t.leave ? 'bg-white' : 'bg-stone-50'} hover:border-amber-400 p-1.5 flex flex-col gap-0.5 cursor-pointer min-w-0">
           <span class="text-base leading-none font-black tabular-nums ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}<span class="text-[10px] font-extrabold ml-0.5">${DOW[c.dow]}</span></span>
-          ${t.work || t.leave ? `<span class="text-[11px] font-bold text-stone-600">근무 ${n1(t.work)}</span>${t.leave ? `<span class="text-[11px] font-bold text-rose-600">휴무 ${n1(t.leave)}</span>` : ''}${pw.actual > 0 && pw.heads > 0 ? `<span class="text-[11px] font-extrabold text-amber-800">1인 ${man(pw.actual / pw.heads)}</span>` : ''}` : '<span class="text-[11px] text-stone-300">휴무</span>'}
+          ${t.work || t.leave ? `<span class="text-[11px] font-bold text-stone-600">근무 ${n1(t.work)}</span>${t.leave ? `<span class="text-[11px] font-bold text-rose-600">휴무 ${n1(t.leave)}</span>` : ''}${pw.actual > 0 && pw.heads > 0 ? `<span class="text-[11px] font-extrabold text-amber-800">1인 ${man(pw.actual / pw.heads)}</span>` : ''}` : (offW ? `<span class="text-[11px] font-extrabold text-rose-700 truncate">${esc(offW)}</span>` : '<span class="text-[11px] text-stone-300">휴무</span>')}
         </button>`;
       }).join('');
       if (!wWork && !wLeave && !wAc) return `<div class="grid gap-1.5" style="${GRID_STYLE}">${cells}<div class="flex flex-col gap-1.5 min-w-0">${wk}</div>
@@ -1441,7 +1453,7 @@
     retryProducts: () => { _liveCache = null; if (typeof window.reloadProductPriceDb === 'function' && !getProducts().length) { try { window.reloadProductPriceDb(); } catch (e) {} } render(); waitForProducts(); },
     setView: (v) => { view = v; render(); }, setMonth: (m) => { cursorMonth = m; lossPeriodKey = 'M'; render(); }, pull: () => pullCloud(true),
     openDay, closeDay, addLine, setLineProduct, setLineField, removeLine, refreshPrices, copyTargetsFrom,
-    addSemi, setSemiField, removeSemi, addProduct, addSemiByName, setPicker, setMemo: (v) => { if (draft) draft.memo = v; }, saveDay,
+    addSemi, setSemiField, removeSemi, addProduct, addSemiByName, setPicker, setMemo: (v) => { if (draft) draft.memo = v; }, setOff: (v) => { if (draft) { draft.off = !!v; renderEditor(); } }, setOffLabel: (v) => { if (draft) draft.offLabel = v; }, saveDay,
     openCrewDay, closeCrewDay, crewAdd, crewToggleW, crewRemove, crewAddLeave, crewLeaveField, crewRemoveLeave, crewCopyPrev, saveCrewDay,
     openCrewSettings, cfgField, cfgAdd, cfgRemove, saveCrewSettings, crewSetTabTo, crewToggleRetired, cfgPerCapita,
     setLossPeriod: (k) => { lossPeriodKey = k; render(); }, openLossSettings, saveLossSettings,
