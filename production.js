@@ -1,4 +1,4 @@
-// [VERSION: production.js v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
+// [VERSION: production.js v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
 //  - 품목 목록·단가: 제품단가 탭(barogaProductPriceBridge.getProductionProducts)
 //      파이 = PK로 입력 / 알생지·파베이크·제과 = 배합으로 입력 → '1배합 PK수'로 PK 환산 (실제 포장 PK를 직접 고칠 수 있음)
 //      금액 = PK × 엠즈 매입가(PK). 줄을 만들 때의 단가를 줄에 저장 → 나중에 단가가 바뀌어도 지난 기록 금액은 그대로
@@ -47,7 +47,7 @@
   let mounted = false;
 
   function blankDb() {
-    return { version: 1, days: {}, semiItems: DEFAULT_SEMI_ITEMS.map((x) => ({ ...x })), stockBase: null, stockAdjusts: [], loss: { cartKg: {}, pie: {} }, updatedAt: '' };
+    return { version: 1, days: {}, semiItems: DEFAULT_SEMI_ITEMS.map((x) => ({ ...x })), stockBase: null, stockAdjusts: [], loss: { cartKg: {}, pie: {} }, crew: {}, crewCfg: null, updatedAt: '' };
   }
   function normalizeDb(p) {
     const d = blankDb();
@@ -57,6 +57,8 @@
     d.stockBase = p.stockBase && p.stockBase.date ? p.stockBase : null;
     d.stockAdjusts = Array.isArray(p.stockAdjusts) ? p.stockAdjusts : [];
     d.loss = p.loss && typeof p.loss === 'object' ? p.loss : { cartKg: {}, pie: {} };
+    d.crew = p.crew && typeof p.crew === 'object' ? p.crew : {};
+    d.crewCfg = p.crewCfg && typeof p.crewCfg === 'object' ? p.crewCfg : null;
     d.updatedAt = p.updatedAt || '';
     return d;
   }
@@ -203,20 +205,20 @@
     el.innerHTML = `
       <div class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-4 flex flex-col gap-4">
         <div class="flex flex-wrap items-center justify-between gap-2">
-          <div class="flex items-center gap-2">${isStock ? '<h2 class="text-base font-extrabold text-stone-900">생산 재고 <span class="text-xs font-bold text-stone-500">냉동창고 생지 · 반제품</span></h2>' : `${tabBtn('CAL', '생산 달력')}${tabBtn('LOSS', '원재료 손실')}`}</div>
+          <div class="flex items-center gap-2">${isStock ? '<h2 class="text-base font-extrabold text-stone-900">생산 재고 <span class="text-xs font-bold text-stone-500">냉동창고 생지 · 반제품</span></h2>' : `${tabBtn('CAL', '생산 스케쥴')}${tabBtn('CREW', '작업 인원')}${tabBtn('LOSS', '원재료 손실')}`}</div>
           <div class="flex items-center gap-2 text-xs">
             <span id="prodStatus" class="px-2.5 py-1 rounded-lg bg-white border border-stone-200 font-bold text-stone-600">${esc(statusText || (url ? '' : '이 기기에만 저장됨 (DB 미연결)'))}</span>
             ${url ? `<button type="button" onclick="Prod.pull()" class="px-2.5 py-1 rounded-lg bg-white border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">불러오기</button>` : ''}
             <button type="button" onclick="Prod.openDbModal()" class="px-2.5 py-1 rounded-lg ${url ? 'bg-white border border-stone-200 text-stone-700' : 'bg-amber-600 text-white'} font-bold cursor-pointer">DB 연결</button>
           </div>
         </div>
-        ${isStock ? renderStock() : view === 'LOSS' ? renderLoss() : renderCalendar()}
+        ${isStock ? renderStock() : view === 'LOSS' ? renderLoss() : view === 'CREW' ? renderCrew() : renderCalendar()}
       </div>
       <div id="prodModal"></div>`;
     if (draft) renderEditor();
   }
 
-  // ----- 생산 달력 -----
+  // ----- 생산 스케쥴 (달력) -----
   function monthWeeks(ym) {
     const [y, m] = ym.split('-').map(Number);
     const first = new Date(y, m - 1, 1), last = new Date(y, m, 0);
@@ -286,7 +288,7 @@
         const items = { length: total };
         const isToday = c.date === tdy;
         return `<button type="button" onclick="Prod.openDay('${c.date}')" class="text-left min-h-[168px] rounded-xl border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : 'border-stone-200'} bg-white hover:border-amber-400 hover:shadow-xs p-2 flex flex-col gap-1 cursor-pointer min-w-0">
-          <div class="flex items-center justify-between gap-1"><span class="text-sm font-extrabold ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}</span>${dayBadge(c, t)}</div>
+          <div class="flex items-center justify-between gap-1"><span class="flex items-baseline gap-1.5 min-w-0"><span class="text-sm font-extrabold ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}</span>${crewBadge(c.date)}</span>${dayBadge(c, t)}</div>
           ${lines.length ? `<div class="grid grid-cols-[auto_1fr] gap-x-1 text-xs tabular-nums"><span class="font-semibold text-stone-500">목표</span><span class="text-right font-bold">${won(t.target)}</span><span class="font-semibold text-stone-500">실행</span><span class="text-right font-extrabold text-amber-900">${won(t.actual)}</span></div>` : ''}
           ${items.length ? `<div class="${lines.length ? 'border-t border-stone-100 pt-1 ' : ''}flex flex-col gap-1">${shown}</div>` : '<div class="text-xs text-stone-300 mt-1">클릭해서 목표 입력</div>'}
         </button>`;
@@ -333,7 +335,7 @@
         <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
           <div class="flex flex-wrap items-center gap-1.5">
             <button type="button" onclick="Prod.setMonth('${prevYm}')" title="이전 달" class="w-8 h-8 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">‹</button>
-            <h3 class="text-base font-extrabold text-stone-900 px-1">${y}년 ${m}월 생산일지</h3>
+            <h3 class="text-base font-extrabold text-stone-900 px-1">${y}년 ${m}월 생산 스케쥴</h3>
             <button type="button" onclick="Prod.setMonth('${nextYm}')" title="다음 달" class="w-8 h-8 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">›</button>
             <select onchange="Prod.setMonth(this.value + '-${pad(m)}')" class="ml-2 h-8 border border-stone-200 rounded-lg px-2 text-xs font-bold bg-white">${years.map((yy) => `<option value="${yy}" ${yy === y ? 'selected' : ''}>${yy}년</option>`).join('')}</select>
             <div class="flex flex-wrap items-center gap-1">${monthBtns}</div>
@@ -594,6 +596,280 @@
       </div></div>`;
     const body = document.getElementById('prodEditBody'); if (body) body.scrollTop = keepScroll;
     renderEditorTotals();
+  }
+
+  // ===================== 작업 인원 =====================
+  //  db.crewCfg = { staff:[{id,name,part,active}], teams:[{id,name,short,part}], leaveTypes:[{name,weight}] }
+  //  db.crew = { 'YYYY-MM-DD': { assign:{ teamId:[{sid,w}] }, leaves:[{id,sid,type,note}] } }
+  //  근무 인원 = 그날 배정된 사람 수 (한 사람은 최대 1명, 0.5 배정은 0.5명) / 휴무 인원 = 휴무 타입의 인원값 합 (반차 0.5)
+  const DEFAULT_TEAMS = [
+    ['론도', '론도', '시터(라미네이팅 기계)'], ['파이팀 작업대 / 바리오컷 포함', '파이 작업대', '파이/패스츄리 작업대'],
+    ['파이/반죽/해포개량 작업대 (반죽과 분할+크라 파지 생산)', '파이 보조', '파이팀 보조'], ['라미네이팅', '라미네이팅', '라미네이팅 전담'],
+    ['반죽 / 해포개량', '반죽·해포', '반죽·해포 전담'], ['알생지팀', '알생지', '생지 분할·성형'], ['파베이크팀', '파베이크', '파베이크 생산'],
+    ['제과팀', '제과', '케이크/제과'], ['포장출하팀', '포장출하', '포장/출하'],
+  ].map(([name, short, part], i) => ({ id: 't' + (i + 1), name, short, part }));
+  const DEFAULT_LEAVES = [['연차', 1], ['무급휴무', 1], ['휴무', 1], ['병가', 1], ['경조', 1], ['외근', 1], ['오전반차', 0.5], ['오후반차', 0.5], ['무급반차', 0.5], ['무급오전휴무', 0.5], ['무급오후반차', 0.5], ['조퇴', 0.5], ['조기퇴근', 0.5]].map(([name, weight]) => ({ name, weight }));
+  const STAFF_PARTS = ['생산총괄', '파이', '알파베', '제과', '출하', '지원', '품질관리', '사무'];
+  function crewCfg() {
+    const c = db.crewCfg && typeof db.crewCfg === 'object' ? db.crewCfg : (db.crewCfg = {});
+    if (!Array.isArray(c.staff)) c.staff = [];
+    if (!Array.isArray(c.teams) || !c.teams.length) c.teams = DEFAULT_TEAMS.map((t) => ({ ...t }));
+    if (!Array.isArray(c.leaveTypes) || !c.leaveTypes.length) c.leaveTypes = DEFAULT_LEAVES.map((t) => ({ ...t }));
+    return c;
+  }
+  function crewDays() { if (!db.crew || typeof db.crew !== 'object') db.crew = {}; return db.crew; }
+  function staffById(id) { return crewCfg().staff.find((s) => s.id === id) || null; }
+  function staffName(id) { const s = staffById(id); return s ? s.name : '(삭제된 인원)'; }
+  function leaveWeight(type) { const t = crewCfg().leaveTypes.find((x) => x.name === type); return t ? Number(t.weight) || 0 : 1; }
+  function crewTotals(day) {
+    const r = { work: 0, leave: 0, byTeam: {}, people: {} };
+    if (!day) return r;
+    Object.entries(day.assign || {}).forEach(([tid, arr]) => (arr || []).forEach((a) => {
+      const w = Number(a.w) || 1;
+      r.byTeam[tid] = (r.byTeam[tid] || 0) + w;
+      r.people[a.sid] = (r.people[a.sid] || 0) + w;
+    }));
+    r.work = Object.values(r.people).reduce((s, w) => s + Math.min(1, w), 0);
+    r.leave = (day.leaves || []).reduce((s, l) => s + (l.sid ? leaveWeight(l.type) : 0), 0);
+    return r;
+  }
+  const n1 = (v) => (Math.round(v * 10) / 10).toLocaleString('ko-KR', { maximumFractionDigits: 1 });
+  function crewBadge(date) {
+    const day = crewDays()[date];
+    if (!day) return '';
+    const t = crewTotals(day);
+    if (!t.work && !t.leave) return '';
+    return `<span class="text-[11px] font-bold text-stone-500 whitespace-nowrap">근무 <b class="text-stone-800">${n1(t.work)}</b> · 휴무 <b class="${t.leave ? 'text-rose-600' : 'text-stone-800'}">${n1(t.leave)}</b></span>`;
+  }
+
+  function renderCrew() {
+    const ym = cursorMonth, [y, m] = ym.split('-').map(Number);
+    const weeks = monthWeeks(ym), tdy = today(), cfg = crewCfg(), days = crewDays();
+    const prevYm = ymd(new Date(y, m - 2, 1)).slice(0, 7), nextYm = ymd(new Date(y, m, 1)).slice(0, 7);
+    // 월 집계 (팀별 월누적 인원·출근일수·평균)
+    const teamSum = {}; let workSum = 0, leaveSum = 0, workDays = 0;
+    Object.entries(days).forEach(([d, day]) => {
+      if (d.slice(0, 7) !== ym) return;
+      const t = crewTotals(day);
+      workSum += t.work; leaveSum += t.leave; if (t.work > 0) workDays++;
+      Object.entries(t.byTeam).forEach(([tid, w]) => { const s = teamSum[tid] || (teamSum[tid] = { sum: 0, days: 0 }); s.sum += w; if (w > 0) s.days++; });
+    });
+    const kpi = (label, value, sub) => `<div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">${label}</div><div class="mt-1 text-xl font-extrabold tabular-nums">${value}</div>${sub ? `<div class="text-xs text-stone-500 mt-0.5">${sub}</div>` : ''}</div>`;
+    const GRID_STYLE = 'grid-template-columns: repeat(5, minmax(0, 1fr)) 60px 132px';
+    const ROW = 'display:grid;grid-template-columns:62px minmax(0,1fr) 24px;column-gap:4px;align-items:center';
+    const dayCls = (c) => c.dow === 0 ? 'text-rose-600' : c.dow === 6 ? 'text-blue-600' : 'text-stone-900';
+    const weekRows = weeks.map((w, wi) => {
+      let wWork = 0, wLeave = 0, wDays = 0;
+      w.forEach((c) => { if (!c.inMonth) return; const t = crewTotals(days[c.date]); wWork += t.work; wLeave += t.leave; if (t.work > 0) wDays++; });
+      const cells = w.slice(0, 5).map((c) => {
+        if (!c.inMonth) return `<div class="min-h-[168px] rounded-xl bg-stone-50/60 border border-dashed border-stone-200 p-2 text-xs text-stone-300 font-bold">${c.day}</div>`;
+        const day = days[c.date], t = crewTotals(day), isToday = c.date === tdy;
+        const teamRows = cfg.teams.filter((tm) => ((day && day.assign && day.assign[tm.id]) || []).length).map((tm) => {
+          const arr = day.assign[tm.id];
+          const names = arr.map((a) => esc(staffName(a.sid)) + (Number(a.w) === 0.5 ? '<span class="text-stone-400">½</span>' : '')).join(' ');
+          return `<div class="text-xs leading-tight" style="${ROW}"><span class="truncate font-extrabold text-stone-600" title="${esc(tm.name)}">${esc(tm.short || tm.name)}</span><span class="truncate font-semibold text-stone-800" title="${esc(arr.map((a) => staffName(a.sid)).join(', '))}">${names}</span><b class="text-right tabular-nums text-stone-900">${n1(t.byTeam[tm.id] || 0)}</b></div>`;
+        }).join('');
+        const lv = ((day && day.leaves) || []).filter((l) => l.sid);
+        const leaveRow = lv.length ? `<div class="text-xs leading-tight border-t border-stone-100 pt-1 truncate text-rose-700 font-semibold" title="${esc(lv.map((l) => `${staffName(l.sid)} ${l.type}${l.note ? ' (' + l.note + ')' : ''}`).join(', '))}">휴무 ${lv.map((l) => `${esc(staffName(l.sid))}<span class="text-rose-400">·${esc(l.type)}</span>`).join(' ')}</div>` : '';
+        return `<button type="button" onclick="Prod.openCrewDay('${c.date}')" class="text-left min-h-[168px] rounded-xl border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : 'border-stone-200'} bg-white hover:border-amber-400 hover:shadow-xs p-2 flex flex-col gap-1 cursor-pointer min-w-0">
+          <div class="flex items-center justify-between gap-1"><span class="text-sm font-extrabold ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}</span>${crewBadge(c.date)}</div>
+          ${teamRows || leaveRow ? `<div class="flex flex-col gap-0.5">${teamRows}</div>${leaveRow}` : '<div class="text-xs text-stone-300 mt-1">클릭해서 인원 배정</div>'}
+        </button>`;
+      }).join('');
+      const wk = w.slice(5).map((c) => {
+        if (!c.inMonth) return `<div class="flex-1 rounded-lg border border-dashed border-stone-200 bg-stone-50/60 p-1.5 text-xs text-stone-300 font-bold">${c.day}</div>`;
+        const t = crewTotals(days[c.date]), isToday = c.date === tdy;
+        return `<button type="button" onclick="Prod.openCrewDay('${c.date}')" class="flex-1 text-left rounded-lg border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : 'border-stone-200'} ${t.work || t.leave ? 'bg-white' : 'bg-stone-50'} hover:border-amber-400 p-1.5 flex flex-col gap-0.5 cursor-pointer min-w-0">
+          <span class="text-xs font-extrabold ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}<span class="text-[10px] ml-0.5">${DOW[c.dow]}</span></span>
+          ${t.work || t.leave ? `<span class="text-[11px] font-bold text-stone-600">근무 ${n1(t.work)}</span>${t.leave ? `<span class="text-[11px] font-bold text-rose-600">휴무 ${n1(t.leave)}</span>` : ''}` : '<span class="text-[11px] text-stone-300">휴무</span>'}
+        </button>`;
+      }).join('');
+      return `<div class="grid gap-1.5" style="${GRID_STYLE}">${cells}<div class="min-h-[168px] flex flex-col gap-1.5 min-w-0">${wk}</div>
+        <div class="rounded-xl border border-sky-200 bg-sky-50/60 p-2.5 flex flex-col justify-center gap-1.5 text-xs tabular-nums">
+          <span class="self-start px-1.5 py-0.5 rounded-md bg-white border border-sky-200 text-sky-800 font-extrabold">${wi + 1}주</span>
+          <div><div class="font-semibold text-stone-500">평균 근무</div><div class="font-extrabold text-sky-900 text-sm">${wDays ? n1(wWork / wDays) + '명' : '-'}</div></div>
+          <div><div class="font-semibold text-stone-500">휴무 합계</div><div class="font-bold text-stone-800 text-sm">${n1(wLeave)}명</div></div>
+        </div></div>`;
+    }).join('');
+    const teamTrs = cfg.teams.map((tm, i) => { const s = teamSum[tm.id] || { sum: 0, days: 0 }; return `<tr class="border-b border-stone-100 whitespace-nowrap"><td class="py-1.5 px-2 text-stone-400">${i + 1}</td><td class="py-1.5 px-2 font-bold">${esc(tm.short || tm.name)}</td><td class="py-1.5 px-2 text-xs text-stone-500">${esc(tm.part || '')}</td><td class="py-1.5 px-2 text-right tabular-nums">${n1(s.sum)}</td><td class="py-1.5 px-2 text-right tabular-nums">${s.days}</td><td class="py-1.5 px-2 text-right tabular-nums font-extrabold">${s.days ? n1(s.sum / s.days) : '-'}</td></tr>`; }).join('');
+    const monthBtns = Array.from({ length: 12 }, (_, i) => { const mm = `${y}-${pad(i + 1)}`, on = mm === ym; return `<button type="button" onclick="Prod.setMonth('${mm}')" class="px-2.5 py-1 rounded-xl text-xs cursor-pointer ${on ? 'bg-amber-600 text-white font-extrabold shadow-xs' : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200 font-bold'}">${i + 1}월</button>`; }).join('');
+    const active = cfg.staff.filter((s) => s.active !== false).length;
+    return `${!cfg.staff.length ? `<div class="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-sm flex flex-wrap items-center gap-2"><b>등록된 팀원이 없습니다.</b> [인원 설정]에서 팀원을 추가해 주세요.<button type="button" onclick="Prod.openCrewSettings()" class="px-3 py-1 rounded-lg bg-stone-900 text-white text-xs font-bold cursor-pointer">인원 설정</button></div>` : ''}
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        ${kpi(`${m}월 누적 근무`, n1(workSum) + '명', '하루 인원을 모두 더한 값')}
+        ${kpi('출근 일수', workDays + '일', '근무 인원이 있는 날')}
+        ${kpi('하루 평균 인원', workDays ? n1(workSum / workDays) + '명' : '-', `재직 팀원 ${active}명`)}
+        ${kpi(`${m}월 휴무 합계`, n1(leaveSum) + '명', '반차 0.5명')}
+      </div>
+      <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4 flex flex-col gap-1.5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button type="button" onclick="Prod.setMonth('${prevYm}')" class="w-8 h-8 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">‹</button>
+            <h3 class="text-base font-extrabold text-stone-900 px-1">${y}년 ${m}월 작업 인원</h3>
+            <button type="button" onclick="Prod.setMonth('${nextYm}')" class="w-8 h-8 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">›</button>
+            <div class="flex flex-wrap items-center gap-1 ml-2">${monthBtns}</div>
+          </div>
+          <button type="button" onclick="Prod.openCrewSettings()" class="px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-bold cursor-pointer hover:bg-stone-50">인원 설정 (팀원·휴무 타입·작업 구분)</button>
+        </div>
+        <div class="grid gap-1.5 text-xs font-extrabold text-center" style="${GRID_STYLE}"><div class="text-stone-500">월</div><div class="text-stone-500">화</div><div class="text-stone-500">수</div><div class="text-stone-500">목</div><div class="text-stone-500">금</div><div><span class="text-blue-600">토</span>·<span class="text-rose-600">일</span></div><div class="text-stone-500">주 합계</div></div>
+        ${weekRows}
+      </div>
+      <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
+        <h3 class="text-sm font-extrabold text-stone-900 mb-2">${m}월 작업 구분별</h3>
+        <table class="w-full text-sm"><thead><tr class="text-xs text-stone-500 border-b border-stone-200"><th class="py-1 px-2 text-left">No</th><th class="py-1 px-2 text-left">작업 구분</th><th class="py-1 px-2 text-left">담당</th><th class="py-1 px-2 text-right">월누적 인원</th><th class="py-1 px-2 text-right">출근 일수</th><th class="py-1 px-2 text-right">평균 인원</th></tr></thead><tbody>${teamTrs}</tbody></table>
+      </div>`;
+  }
+
+  // ----- 하루 인원 배정 창 -----
+  let crewDraft = null;
+  function openCrewDay(date) {
+    const day = crewDays()[date] || {};
+    crewDraft = { date, assign: JSON.parse(JSON.stringify(day.assign || {})), leaves: JSON.parse(JSON.stringify(day.leaves || [])) };
+    renderCrewEditor();
+  }
+  function closeCrewDay() { crewDraft = null; closeModal(); }
+  function crewAdd(tid, sid) {
+    if (!crewDraft || !sid) return;
+    const arr = crewDraft.assign[tid] || (crewDraft.assign[tid] = []);
+    if (!arr.some((a) => a.sid === sid)) arr.push({ sid, w: 1 });
+    renderCrewEditor();
+  }
+  function crewToggleW(tid, sid) { const a = ((crewDraft && crewDraft.assign[tid]) || []).find((x) => x.sid === sid); if (a) { a.w = Number(a.w) === 0.5 ? 1 : 0.5; renderCrewEditor(); } }
+  function crewRemove(tid, sid) { if (!crewDraft) return; crewDraft.assign[tid] = (crewDraft.assign[tid] || []).filter((x) => x.sid !== sid); renderCrewEditor(); }
+  function crewAddLeave() { if (!crewDraft) return; crewDraft.leaves.push({ id: uid(), sid: '', type: crewCfg().leaveTypes[0].name, note: '' }); renderCrewEditor(); }
+  function crewLeaveField(id, f, v) { const l = crewDraft && crewDraft.leaves.find((x) => x.id === id); if (!l) return; l[f] = v; if (f !== 'note') renderCrewEditor(); }
+  function crewRemoveLeave(id) { if (!crewDraft) return; crewDraft.leaves = crewDraft.leaves.filter((x) => x.id !== id); renderCrewEditor(); }
+  function crewCopyPrev() {
+    if (!crewDraft) return;
+    const days = crewDays(); const prev = Object.keys(days).filter((d) => d < crewDraft.date && Object.values((days[d] || {}).assign || {}).some((a) => a.length)).sort().pop();
+    if (!prev) { toast('이전에 배정된 날이 없습니다.', 'info'); return; }
+    const onLeave = new Set(crewDraft.leaves.filter((l) => l.sid && leaveWeight(l.type) >= 1).map((l) => l.sid));
+    let n = 0;
+    Object.entries(days[prev].assign || {}).forEach(([tid, arr]) => arr.forEach((a) => {
+      const s = staffById(a.sid); if (!s || s.active === false || onLeave.has(a.sid)) return;
+      const cur = crewDraft.assign[tid] || (crewDraft.assign[tid] = []);
+      if (!cur.some((x) => x.sid === a.sid)) { cur.push({ sid: a.sid, w: a.w }); n++; }
+    }));
+    toast(`${prev}의 배정 ${n}건을 불러왔습니다 (퇴사자·오늘 휴무자 제외).`, 'info');
+    renderCrewEditor();
+  }
+  function saveCrewDay() {
+    if (!crewDraft) return;
+    const leaves = crewDraft.leaves.filter((l) => l.sid);
+    const assign = {}; Object.entries(crewDraft.assign).forEach(([tid, arr]) => { if ((arr || []).length) assign[tid] = arr; });
+    const days = crewDays();
+    if (!Object.keys(assign).length && !leaves.length) delete days[crewDraft.date];
+    else days[crewDraft.date] = { assign, leaves, updatedAt: new Date().toISOString() };
+    const d = crewDraft.date; crewDraft = null; closeModal(); markChanged(); render();
+    toast(`${d} 작업 인원을 적용했습니다.`, 'success');
+  }
+  function staffOptions(excludeSet, selected) {
+    const cfg = crewCfg();
+    return STAFF_PARTS.concat(cfg.staff.map((s) => s.part).filter((p) => p && !STAFF_PARTS.includes(p)).filter((p, i, a) => a.indexOf(p) === i)).map((part) => {
+      const ss = cfg.staff.filter((s) => (s.part || '') === part && (s.active !== false || s.id === selected) && !(excludeSet && excludeSet.has(s.id)));
+      return ss.length ? `<optgroup label="${esc(part)}">${ss.map((s) => `<option value="${esc(s.id)}" ${s.id === selected ? 'selected' : ''}>${esc(s.name)}${s.active === false ? ' (퇴사)' : ''}</option>`).join('')}</optgroup>` : '';
+    }).join('');
+  }
+  function renderCrewEditor() {
+    if (!crewDraft) return;
+    const cfg = crewCfg(), t = crewTotals(crewDraft), d = parseYmd(crewDraft.date);
+    const leaveMap = {}; crewDraft.leaves.forEach((l) => { if (l.sid) leaveMap[l.sid] = l.type; });
+    const assigned = new Set(Object.values(crewDraft.assign).flat().map((a) => a.sid));
+    const unassigned = cfg.staff.filter((s) => s.active !== false && !assigned.has(s.id) && !(leaveMap[s.id] && leaveWeight(leaveMap[s.id]) >= 1));
+    const teamCards = cfg.teams.map((tm) => {
+      const arr = crewDraft.assign[tm.id] || [];
+      const chips = arr.map((a) => `<span class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-lg border ${leaveMap[a.sid] ? 'border-rose-300 bg-rose-50' : 'border-stone-300 bg-white'} text-sm font-bold">${esc(staffName(a.sid))}<button type="button" onclick="Prod.crewToggleW('${tm.id}','${a.sid}')" title="하루(1) / 반나절(0.5) 바꾸기" class="px-1 rounded text-xs font-extrabold cursor-pointer ${Number(a.w) === 0.5 ? 'bg-amber-100 text-amber-800' : 'bg-stone-100 text-stone-500'}">${Number(a.w) === 0.5 ? '0.5' : '1'}</button><button type="button" onclick="Prod.crewRemove('${tm.id}','${a.sid}')" class="w-5 h-5 rounded text-stone-400 hover:text-rose-700 cursor-pointer">×</button></span>`).join('');
+      return `<div class="rounded-xl border border-stone-200 p-2.5 flex flex-col gap-1.5">
+        <div class="flex items-center justify-between gap-2"><div class="min-w-0"><span class="font-extrabold text-stone-900">${esc(tm.short || tm.name)}</span><span class="ml-1.5 text-xs text-stone-500">${esc(tm.part || '')}</span></div><b class="text-sm tabular-nums text-sky-800">${n1(t.byTeam[tm.id] || 0)}명</b></div>
+        <div class="flex flex-wrap gap-1">${chips || '<span class="text-xs text-stone-300">배정 없음</span>'}</div>
+        <select onchange="Prod.crewAdd('${tm.id}', this.value)" class="border border-stone-300 rounded-lg px-2 py-1 text-sm"><option value="">+ 인원 추가</option>${staffOptions(new Set(arr.map((a) => a.sid)))}</select>
+      </div>`;
+    }).join('');
+    const leaveRows = crewDraft.leaves.map((l) => `<div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)_28px] gap-1.5 items-center">
+        <select onchange="Prod.crewLeaveField('${l.id}','sid',this.value)" class="border border-stone-300 rounded-lg px-2 py-1 text-sm"><option value="">이름 선택</option>${staffOptions(null, l.sid)}</select>
+        <select onchange="Prod.crewLeaveField('${l.id}','type',this.value)" class="border border-stone-300 rounded-lg px-2 py-1 text-sm">${cfg.leaveTypes.map((x) => `<option ${x.name === l.type ? 'selected' : ''} value="${esc(x.name)}">${esc(x.name)} (${n1(x.weight)}명)</option>`).join('')}</select>
+        <input type="text" value="${esc(l.note || '')}" oninput="Prod.crewLeaveField('${l.id}','note',this.value)" placeholder="비고" class="border border-stone-300 rounded-lg px-2 py-1 text-sm">
+        <button type="button" onclick="Prod.crewRemoveLeave('${l.id}')" class="w-7 h-7 rounded-lg text-stone-400 hover:text-rose-700 hover:bg-rose-50 cursor-pointer">×</button>
+      </div>`).join('');
+    const host = document.getElementById('prodModal'); if (!host) return;
+    const keep = (document.getElementById('crewEditBody') || {}).scrollTop || 0;
+    host.innerHTML = `<div class="fixed inset-0 z-50 bg-stone-900/50 flex items-center justify-center p-3 sm:p-6" onclick="if(event.target===this)Prod.closeCrewDay()">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[1180px] max-h-[92vh] flex flex-col overflow-hidden">
+        <div class="px-6 py-4 border-b border-stone-200 flex flex-wrap items-center justify-between gap-3">
+          <div><h3 class="text-lg font-extrabold text-stone-900">${d.getMonth() + 1}월 ${d.getDate()}일 (${DOW[d.getDay()]}) 작업 인원</h3>
+            <div class="text-sm text-stone-600 mt-0.5">근무 <b class="text-stone-900">${n1(t.work)}명</b> · 휴무 <b class="text-rose-700">${n1(t.leave)}명</b> · 미배정 <b>${unassigned.length}명</b></div></div>
+          <div class="flex items-center gap-1.5 text-xs">
+            <button type="button" onclick="Prod.crewCopyPrev()" class="px-3 py-1.5 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">이전 근무일 배정 불러오기</button>
+            <button type="button" onclick="Prod.closeCrewDay()" class="ml-1 w-8 h-8 rounded-lg text-stone-500 hover:bg-stone-100 cursor-pointer text-xl leading-none">×</button>
+          </div>
+        </div>
+        <div id="crewEditBody" class="flex-1 overflow-y-auto px-6 py-4 grid grid-cols-1 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] gap-5">
+          <section><h4 class="text-sm font-extrabold text-stone-800 mb-2">작업 구분별 배정 <span class="text-xs font-semibold text-stone-500">숫자를 누르면 1 ↔ 0.5(반나절)</span></h4><div class="grid grid-cols-1 md:grid-cols-2 gap-2">${teamCards}</div></section>
+          <section class="flex flex-col gap-4">
+            <div><div class="flex items-center justify-between mb-2"><h4 class="text-sm font-extrabold text-stone-800">휴무</h4><button type="button" onclick="Prod.crewAddLeave()" class="px-2.5 py-1 rounded-lg bg-stone-900 text-white text-xs font-bold cursor-pointer">+ 휴무 추가</button></div>
+              <div class="flex flex-col gap-1.5">${leaveRows || '<div class="text-xs text-stone-400">휴무 없음</div>'}</div></div>
+            <div><h4 class="text-sm font-extrabold text-stone-800 mb-1">미배정 팀원 (${unassigned.length}명)</h4><div class="flex flex-wrap gap-1">${unassigned.map((s) => `<span class="px-2 py-0.5 rounded-lg bg-stone-100 text-xs font-bold text-stone-600">${esc(s.name)}</span>`).join('') || '<span class="text-xs text-stone-400">없음</span>'}</div></div>
+          </section>
+        </div>
+        <div class="px-6 py-3 border-t border-stone-200 bg-stone-50 flex justify-end gap-2">
+          <button type="button" onclick="Prod.closeCrewDay()" class="px-5 py-2 rounded-xl border border-stone-300 bg-white text-sm font-bold cursor-pointer">취소</button>
+          <button type="button" onclick="Prod.saveCrewDay()" class="px-6 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">적용</button>
+        </div>
+      </div></div>`;
+    const b = document.getElementById('crewEditBody'); if (b) b.scrollTop = keep;
+  }
+
+  // ----- 인원 설정 (팀원 입퇴사·휴무 타입·작업 구분) -----
+  let crewCfgDraft = null;
+  function openCrewSettings() { crewCfgDraft = JSON.parse(JSON.stringify(crewCfg())); renderCrewSettings(); }
+  function crewUsedIds() { const u = new Set(); Object.values(crewDays()).forEach((d) => { Object.values(d.assign || {}).forEach((a) => a.forEach((x) => u.add(x.sid))); (d.leaves || []).forEach((l) => u.add(l.sid)); }); return u; }
+  function cfgField(kind, idx, f, v) { const arr = crewCfgDraft[kind]; if (!arr || !arr[idx]) return; arr[idx][f] = f === 'weight' ? Number(v) : f === 'active' ? v === 'true' : v; }
+  function cfgAdd(kind) { if (kind === 'staff') crewCfgDraft.staff.push({ id: 's' + uid(), name: '', part: '지원', active: true }); if (kind === 'leaveTypes') crewCfgDraft.leaveTypes.push({ name: '', weight: 1 }); renderCrewSettings(); }
+  function cfgRemove(kind, idx) {
+    const arr = crewCfgDraft[kind]; if (!arr || !arr[idx]) return;
+    if (kind === 'staff') {
+      const s = arr[idx];
+      if (crewUsedIds().has(s.id)) { s.active = false; toast(`${s.name}은(는) 배정·휴무 기록이 있어 삭제 대신 '퇴사'로 바꿨습니다 (지난 기록 이름 유지).`, 'info'); renderCrewSettings(); return; }
+    }
+    arr.splice(idx, 1); renderCrewSettings();
+  }
+  function renderCrewSettings() {
+    const c = crewCfgDraft; if (!c) return;
+    const inp = 'border border-stone-300 rounded-lg px-2 py-1 text-sm';
+    const staffRows = c.staff.map((s, i) => `<tr class="border-b border-stone-100 ${s.active === false ? 'bg-stone-50 text-stone-400' : ''}"><td class="py-1 px-1 text-xs text-stone-400">${i + 1}</td>
+      <td class="py-1 px-1"><input type="text" value="${esc(s.name)}" oninput="Prod.cfgField('staff',${i},'name',this.value)" class="${inp} w-32"></td>
+      <td class="py-1 px-1"><select onchange="Prod.cfgField('staff',${i},'part',this.value)" class="${inp}">${STAFF_PARTS.concat(STAFF_PARTS.includes(s.part) ? [] : [s.part]).map((p) => `<option ${p === s.part ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></td>
+      <td class="py-1 px-1"><select onchange="Prod.cfgField('staff',${i},'active',this.value)" class="${inp}"><option value="true" ${s.active !== false ? 'selected' : ''}>재직</option><option value="false" ${s.active === false ? 'selected' : ''}>퇴사</option></select></td>
+      <td class="py-1 px-1 text-center"><button type="button" onclick="Prod.cfgRemove('staff',${i})" class="text-xs font-bold text-rose-700 cursor-pointer">삭제</button></td></tr>`).join('');
+    const leaveRows = c.leaveTypes.map((t, i) => `<tr class="border-b border-stone-100"><td class="py-1 px-1"><input type="text" value="${esc(t.name)}" oninput="Prod.cfgField('leaveTypes',${i},'name',this.value)" class="${inp} w-32"></td>
+      <td class="py-1 px-1"><select onchange="Prod.cfgField('leaveTypes',${i},'weight',this.value)" class="${inp}"><option value="1" ${Number(t.weight) === 1 ? 'selected' : ''}>휴무 1명</option><option value="0.5" ${Number(t.weight) === 0.5 ? 'selected' : ''}>휴무 0.5명</option></select></td>
+      <td class="py-1 px-1 text-center"><button type="button" onclick="Prod.cfgRemove('leaveTypes',${i})" class="text-xs font-bold text-rose-700 cursor-pointer">삭제</button></td></tr>`).join('');
+    const teamRows = c.teams.map((t, i) => `<tr class="border-b border-stone-100"><td class="py-1 px-1 text-xs text-stone-400">${i + 1}</td><td class="py-1 px-1"><input type="text" value="${esc(t.short || '')}" oninput="Prod.cfgField('teams',${i},'short',this.value)" class="${inp} w-28" title="달력에 보이는 짧은 이름"></td><td class="py-1 px-1"><input type="text" value="${esc(t.name)}" oninput="Prod.cfgField('teams',${i},'name',this.value)" class="${inp} w-full"></td><td class="py-1 px-1"><input type="text" value="${esc(t.part || '')}" oninput="Prod.cfgField('teams',${i},'part',this.value)" class="${inp} w-36"></td></tr>`).join('');
+    const host = document.getElementById('prodModal'); if (!host) return;
+    host.innerHTML = `<div class="fixed inset-0 z-50 bg-stone-900/50 flex items-center justify-center p-3 sm:p-6" onclick="if(event.target===this)Prod.closeModal()">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[1100px] max-h-[92vh] flex flex-col overflow-hidden">
+        <div class="px-6 py-4 border-b border-stone-200"><h3 class="text-lg font-extrabold">인원 설정</h3><div class="text-xs text-stone-500 mt-0.5">입사자는 [+ 팀원 추가], 퇴사자는 상태를 '퇴사'로 바꾸세요. 기록이 있는 팀원은 삭제해도 '퇴사'로 남아 지난 기록 이름이 유지됩니다.</div></div>
+        <div class="flex-1 overflow-y-auto px-6 py-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <section><div class="flex items-center justify-between mb-2"><h4 class="text-sm font-extrabold">팀원 (${c.staff.filter((s) => s.active !== false).length}명 재직)</h4><button type="button" onclick="Prod.cfgAdd('staff')" class="px-2.5 py-1 rounded-lg bg-stone-900 text-white text-xs font-bold cursor-pointer">+ 팀원 추가</button></div>
+            <table class="w-full"><thead><tr class="text-xs text-stone-500 border-b"><th class="py-1 px-1 text-left">No</th><th class="py-1 px-1 text-left">성명</th><th class="py-1 px-1 text-left">파트</th><th class="py-1 px-1 text-left">상태</th><th></th></tr></thead><tbody>${staffRows || '<tr><td colspan="5" class="py-4 text-center text-xs text-stone-400">팀원이 없습니다.</td></tr>'}</tbody></table></section>
+          <section class="flex flex-col gap-5">
+            <div><div class="flex items-center justify-between mb-2"><h4 class="text-sm font-extrabold">휴무 타입</h4><button type="button" onclick="Prod.cfgAdd('leaveTypes')" class="px-2.5 py-1 rounded-lg border border-stone-300 text-xs font-bold cursor-pointer">+ 타입 추가</button></div>
+              <table class="w-full"><tbody>${leaveRows}</tbody></table></div>
+            <div><h4 class="text-sm font-extrabold mb-2">작업 구분 (9종)</h4><table class="w-full"><thead><tr class="text-xs text-stone-500 border-b"><th class="py-1 px-1 text-left">No</th><th class="py-1 px-1 text-left">짧은 이름</th><th class="py-1 px-1 text-left">이름</th><th class="py-1 px-1 text-left">담당</th></tr></thead><tbody>${teamRows}</tbody></table></div>
+          </section>
+        </div>
+        <div class="px-6 py-3 border-t border-stone-200 bg-stone-50 flex justify-end gap-2"><button type="button" onclick="Prod.closeModal()" class="px-5 py-2 rounded-xl border border-stone-300 bg-white text-sm font-bold cursor-pointer">취소</button><button type="button" onclick="Prod.saveCrewSettings()" class="px-6 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">저장</button></div>
+      </div></div>`;
+  }
+  function saveCrewSettings() {
+    const c = crewCfgDraft; if (!c) return;
+    c.staff.forEach((s) => { s.name = String(s.name || '').trim(); });
+    if (c.staff.some((s) => !s.name)) { toast('이름이 빈 팀원이 있습니다.', 'error'); return; }
+    const names = c.staff.filter((s) => s.active !== false).map((s) => s.name); const dup = names.find((n, i) => names.indexOf(n) !== i);
+    if (dup) { toast(`재직 팀원 이름이 겹칩니다: ${dup}`, 'error'); return; }
+    c.leaveTypes = c.leaveTypes.filter((t) => String(t.name || '').trim()).map((t) => ({ name: String(t.name).trim(), weight: Number(t.weight) === 0.5 ? 0.5 : 1 }));
+    db.crewCfg = c; crewCfgDraft = null; closeModal(); markChanged(); render();
+    toast('인원 설정을 저장했습니다.', 'success');
   }
 
   // ----- 원재료 손실 (수율) 분석 -----
@@ -1012,6 +1288,8 @@
     setView: (v) => { view = v; render(); }, setMonth: (m) => { cursorMonth = m; lossPeriodKey = 'M'; render(); }, pull: () => pullCloud(true),
     openDay, closeDay, addLine, setLineProduct, setLineField, removeLine, refreshPrices, copyTargetsFrom,
     addSemi, setSemiField, removeSemi, addProduct, addSemiByName, setPicker, setMemo: (v) => { if (draft) draft.memo = v; }, saveDay,
+    openCrewDay, closeCrewDay, crewAdd, crewToggleW, crewRemove, crewAddLeave, crewLeaveField, crewRemoveLeave, crewCopyPrev, saveCrewDay,
+    openCrewSettings, cfgField, cfgAdd, cfgRemove, saveCrewSettings,
     setLossPeriod: (k) => { lossPeriodKey = k; render(); }, openLossSettings, saveLossSettings,
     openCountModal, saveCount, openAdjustModal, saveAdjust, removeAdjust, closeModal, loadMs, openDbModal, saveDbUrl,
     _debug: () => ({ db, dbRevision, cloudLoaded, products: getProducts() }),
