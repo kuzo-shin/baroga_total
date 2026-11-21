@@ -77,7 +77,7 @@
           delete ig.itemCode;
         } });
       });
-      (r.packaging || []).forEach(pk => {
+      (r.packagingList || []).forEach(pk => {
         const oldName = String((pk.rawKey || '').split('||')[0] || pk.name || '').trim();
         const t = keyMap[oldName] || keyMap[String(pk.name || '').trim()]; if (!t) return;
         const newKey = `${t.name}||${t.spec}`; if (pk.rawKey === newKey && pk.name === t.name) return;
