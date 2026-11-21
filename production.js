@@ -287,7 +287,7 @@
       const wr = rateOf(wA, wT);
       return `<div class="grid gap-1.5" style="${GRID_STYLE}">${cells}${weekendCell}
         <div class="rounded-xl border border-amber-200 bg-amber-50/60 p-2.5 flex flex-col justify-center gap-1.5 text-xs tabular-nums">
-          <div class="flex items-center justify-between"><span class="px-1.5 py-0.5 rounded-md bg-white border border-amber-200 text-amber-800 font-extrabold">${wi + 1}주</span>${wr === null ? '' : rateBadge(wr, wA > 0)}</div>
+          <div class="flex items-center justify-between"><span class="px-1.5 py-0.5 rounded-md bg-white border border-amber-200 text-amber-800 font-extrabold">${wi + 1}주</span>${wr === null ? '' : (!(wA > 0) && w.filter((c) => c.inMonth).every((c) => c.date > tdy) ? '<span class="text-[11px] font-bold text-stone-400">예정</span>' : rateBadge(wr, wA > 0))}</div>
           <div><div class="font-semibold text-stone-500">목표</div><div class="font-bold text-stone-800 text-sm">${won(wT)}</div></div>
           <div><div class="font-semibold text-stone-500">실행</div><div class="font-extrabold text-amber-900 text-sm">${won(wA)}</div></div>
           <div class="h-1.5 rounded-full bg-white border border-amber-100 overflow-hidden"><div class="h-full rounded-full ${wr !== null && wr >= 100 ? 'bg-emerald-500' : 'bg-amber-500'}" style="width:${wr === null ? 0 : Math.min(100, wr)}%"></div></div>
