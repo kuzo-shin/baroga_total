@@ -1,4 +1,4 @@
-// [VERSION: production.js v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
+// [VERSION: production.js v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
 //  - 품목 목록·단가: 제품단가 탭(barogaProductPriceBridge.getProductionProducts)
 //      파이 = PK로 입력 / 알생지·파베이크·제과 = 배합으로 입력 → '1배합 PK수'로 PK 환산 (실제 포장 PK를 직접 고칠 수 있음)
 //      금액 = PK × 엠즈 매입가(PK). 줄을 만들 때의 단가를 줄에 저장 → 나중에 단가가 바뀌어도 지난 기록 금액은 그대로
@@ -12,6 +12,9 @@
   const URL_KEY = 'baroga_production_gas_url_v1';
   const CAT_LABEL = { PIE: '파이', DOUGH: '알생지', PARBAKE: '파베이크', BAKERY: '제과' };
   const CAT_ORDER = ['PIE', 'DOUGH', 'PARBAKE', 'BAKERY'];
+  // 재고·엠즈 거래 단위가 PK가 아닌 품목 (생산 입력은 PK/배합 그대로, 재고·금액은 이 단위)
+  //  쇼숑오뽐므: 파손 방지로 엠즈 입고·가맹점 판매가 BOX 단위 → 1BOX = 4PK, 엠즈 매입가도 BOX당
+  const STOCK_UNIT_RULES = { '1006': { stockUnit: 'BOX', pkPerStock: 4 } };
   const DEFAULT_SEMI_ITEMS = [
     ['패스츄리 반죽 믹싱', '배합'], ['쇼숑 반죽 믹싱', '배합'], ['몽마르트 반죽 믹싱', '배합'], ['셰브런 토스트 반죽 믹싱', '배합'], ['정사각퍼프도우 반죽 믹싱', '배합'],
     ['패스츄리 반죽 라미네이팅', '카트'], ['쇼숑 반죽 라미네이팅', '카트'], ['몽마르트 반죽 라미네이팅', '카트'], ['셰브런 토스트 반죽 라미네이팅', '카트'], ['정사각퍼프도우 반죽 라미네이팅', '카트'],
@@ -65,20 +68,31 @@
       .filter((p) => p && p.productName)
       .map((p) => {
         const cat = CAT_LABEL[p.catKey] ? p.catKey : (/파이/.test(p.section) ? 'PIE' : /파베/.test(p.section) ? 'PARBAKE' : /제과/.test(p.section) ? 'BAKERY' : 'DOUGH');
-        return { ...p, cat, unit: cat === 'PIE' ? 'PK' : '배합' };
+        const rule = STOCK_UNIT_RULES[String(p.productCode)] || { stockUnit: 'PK', pkPerStock: 1 };
+        return { ...p, cat, unit: cat === 'PIE' ? 'PK' : '배합', stockUnit: rule.stockUnit, pkPerStock: rule.pkPerStock };
       })
       .sort((a, b) => CAT_ORDER.indexOf(a.cat) - CAT_ORDER.indexOf(b.cat) || String(a.productCode).localeCompare(String(b.productCode)));
   }
   function productByCode(code, products) { return (products || getProducts()).find((p) => String(p.productCode) === String(code)) || null; }
 
   // ---------- 줄 계산 ----------
-  function lineTargetPk(l) { return l.unit === 'PK' ? (Number(l.target) || 0) : r1((Number(l.target) || 0) * (Number(l.pkPerBatch) || 0)); }
-  function lineAutoActualPk(l) { return l.unit === 'PK' ? (Number(l.actual) || 0) : r1((Number(l.actual) || 0) * (Number(l.pkPerBatch) || 0)); }
+  // 줄 단가·1배합 PK수: 줄에 저장된 값(>0)을 쓰고, 0이면(단종·미출시로 아직 0원) 제품단가 탭의 현재 값을 따라감 → 나중에 금액을 넣으면 자동 반영
+  let _liveCache = null, _liveAt = 0;
+  function liveProduct(code) { if (!_liveCache || Date.now() - _liveAt > 2000) { _liveCache = getProducts(); _liveAt = Date.now(); } return productByCode(code, _liveCache); }
+  function linePrice(l) { if (Number(l.pricePk) > 0) return Number(l.pricePk); const p = liveProduct(l.code); return p ? Number(p.msBuyPricePk) || 0 : 0; }
+  function linePkPerBatch(l) { if (Number(l.pkPerBatch) > 0) return Number(l.pkPerBatch); const p = liveProduct(l.code); return p ? Number(p.batchOutputPk) || 0 : 0; }
+  function linePerStock(l) { return Number(l.pkPerStock) > 0 ? Number(l.pkPerStock) : 1; }
+  function lineStockUnit(l) { return l.stockUnit || 'PK'; }
+  // 입력(PK 또는 배합) → 재고 단위(PK, 쇼숑은 BOX)
+  function toStock(l, q) { const pk = l.unit === 'PK' ? (Number(q) || 0) : (Number(q) || 0) * linePkPerBatch(l); return r1(pk / linePerStock(l)); }
+  function lineTargetPk(l) { return toStock(l, l.target); }
+  function lineAutoActualPk(l) { return toStock(l, l.actual); }
   function lineActualPk(l) { return l.pkManual ? (Number(l.actualPk) || 0) : lineAutoActualPk(l); }
   function dayTotals(day) {
     const t = { target: 0, actual: 0, byCat: {} };
     ((day && day.lines) || []).forEach((l) => {
-      const ta = lineTargetPk(l) * (Number(l.pricePk) || 0), aa = lineActualPk(l) * (Number(l.pricePk) || 0);
+      const pr = linePrice(l);
+      const ta = lineTargetPk(l) * pr, aa = lineActualPk(l) * pr;
       t.target += ta; t.actual += aa;
       const c = t.byCat[l.cat] || (t.byCat[l.cat] = { target: 0, actual: 0 });
       c.target += ta; c.actual += aa;
@@ -281,7 +295,8 @@
             <h3 class="text-sm font-extrabold text-stone-900 mb-1">입력 기준</h3>
             <div>· 파이는 <b>PK</b>, 알생지·파베이크·제과는 <b>배합</b>으로 입력합니다.</div>
             <div>· 배합은 제품단가 탭의 '1배합 PK수'로 PK를 계산합니다. 실제 포장한 PK가 다르면 <b>실행 PK</b> 칸을 고쳐 주세요. 재고는 이 PK로 잡힙니다.</div>
-            <div>· 금액 = PK × 엠즈 매입가(PK). 줄을 만든 날의 단가로 고정됩니다.</div>
+            <div>· 금액 = 재고수량 × 엠즈 매입가. 줄을 만든 날의 단가로 고정됩니다. 단가가 0원인 품목은 제품단가 탭에 금액이 들어가면 자동으로 따라갑니다.</div>
+            <div>· 쇼숑오뽐므는 PK로 입력하면 4PK = 1BOX로 바꿔 재고·금액을 BOX로 잡습니다.</div>
             <div>· 반제품은 수량만 기록하고 금액·재고에는 넣지 않습니다.</div>
           </div>
         </div>
@@ -296,7 +311,7 @@
   }
   function closeDay() { draft = null; const m = document.getElementById('prodModal'); if (m) m.innerHTML = ''; }
   function newLineFor(p) {
-    return { id: uid(), code: String(p.productCode || ''), name: p.productName, cat: p.cat, unit: p.unit, pkPerBatch: Number(p.batchOutputPk) || 0, pricePk: Number(p.msBuyPricePk) || 0, target: 0, actual: 0, actualPk: 0, pkManual: false, note: '' };
+    return { id: uid(), code: String(p.productCode || ''), name: p.productName, cat: p.cat, unit: p.unit, stockUnit: p.stockUnit || 'PK', pkPerStock: p.pkPerStock || 1, pkPerBatch: Number(p.batchOutputPk) || 0, pricePk: Number(p.msBuyPricePk) || 0, target: 0, actual: 0, actualPk: 0, pkManual: false, note: '' };
   }
   function addLine() {
     if (!draft) return;
@@ -327,7 +342,7 @@
   function refreshPrices() {
     if (!draft) return;
     const products = getProducts(); let n = 0;
-    draft.lines.forEach((l) => { const p = productByCode(l.code, products); if (p) { if (l.pricePk !== p.msBuyPricePk || l.pkPerBatch !== p.batchOutputPk) n++; l.pricePk = Number(p.msBuyPricePk) || 0; l.pkPerBatch = Number(p.batchOutputPk) || 0; } });
+    draft.lines.forEach((l) => { const p = productByCode(l.code, products); if (p) { if (l.pricePk !== p.msBuyPricePk || l.pkPerBatch !== p.batchOutputPk) n++; l.pricePk = Number(p.msBuyPricePk) || 0; l.pkPerBatch = Number(p.batchOutputPk) || 0; l.stockUnit = p.stockUnit; l.pkPerStock = p.pkPerStock; } });
     toast(n ? `${n}개 줄을 현재 제품단가로 다시 계산했습니다.` : '모든 줄이 이미 현재 단가입니다.', 'info');
     renderEditor();
   }
@@ -359,7 +374,7 @@
     draft.lines.forEach((l) => { if (dup[l.code]) dupName = l.name; dup[l.code] = true; });
     if (dupName) { toast(`'${dupName}'이(가) 두 줄 있습니다. 한 줄로 합쳐 주세요.`, 'error'); return; }
     const lines = draft.lines.filter((l) => (Number(l.target) || 0) > 0 || (Number(l.actual) || 0) > 0 || (l.pkManual && Number(l.actualPk) > 0));
-    lines.forEach((l) => { if (!l.pkManual) l.actualPk = lineAutoActualPk(l); l.targetPk = lineTargetPk(l); });
+    lines.forEach((l) => { if (!l.pkManual) l.actualPk = lineAutoActualPk(l); l.targetPk = lineTargetPk(l); });  // 단가 0이면 0 그대로 저장 → 계속 현재 단가를 따라감
     const semi = draft.semi.filter((l) => l.name && ((Number(l.target) || 0) > 0 || (Number(l.actual) || 0) > 0));
     if (!lines.length && !semi.length && !draft.memo) delete db.days[draft.date];
     else db.days[draft.date] = { lines, semi, memo: draft.memo, updatedAt: new Date().toISOString() };
@@ -375,10 +390,10 @@
     draft.lines.forEach((l) => {
       const row = document.querySelector(`[data-line="${l.id}"]`); if (!row) return;
       const tp = lineTargetPk(l), ap = lineActualPk(l);
-      row.querySelector('[data-k="tpk"]').textContent = num(tp);
+      row.querySelector('[data-k="tpk"]').textContent = num(tp) + ' ' + lineStockUnit(l);
       const pkIn = row.querySelector('[data-k="apk"]'); if (pkIn && !l.pkManual) pkIn.placeholder = num(lineAutoActualPk(l));
-      row.querySelector('[data-k="tamt"]').textContent = won(tp * l.pricePk);
-      row.querySelector('[data-k="aamt"]').textContent = won(ap * l.pricePk);
+      row.querySelector('[data-k="tamt"]').textContent = won(tp * linePrice(l));
+      row.querySelector('[data-k="aamt"]').textContent = won(ap * linePrice(l));
     });
     const box = document.getElementById('prodEditTotals');
     if (box) box.innerHTML = `목표 <b class="tabular-nums">${won(t.target)}</b> · 실행 <b class="tabular-nums text-amber-900">${won(t.actual)}</b> · ${rateBadge(rateOf(t.actual, t.target), t.actual > 0) || '<span class="text-stone-400">-</span>'}`;
@@ -393,17 +408,18 @@
     const inCls = 'no-spinner w-20 text-right border border-stone-300 rounded-lg px-2 py-1 font-bold tabular-nums';
     const rows = draft.lines.map((l) => {
       const known = productByCode(l.code, products);
-      const cur = known && (known.msBuyPricePk !== l.pricePk || known.batchOutputPk !== l.pkPerBatch);
+      const cur = known && ((Number(l.pricePk) > 0 && known.msBuyPricePk !== l.pricePk) || (Number(l.pkPerBatch) > 0 && known.batchOutputPk !== l.pkPerBatch));
+      const su = lineStockUnit(l), pr = linePrice(l), following = !(Number(l.pricePk) > 0);
       return `<tr data-line="${l.id}" class="border-b border-stone-100">
         <td class="py-1.5 px-1.5"><select onchange="Prod.setLineProduct('${l.id}', this.value)" class="w-full max-w-[260px] border border-stone-300 rounded-lg px-2 py-1 text-xs font-bold">${known ? '' : `<option selected>${esc(l.code)} ${esc(l.name)} (목록에 없음)</option>`}${optHtml(l.code)}</select></td>
-        <td class="py-1.5 px-1.5 text-center text-xs font-bold ${l.unit === 'PK' ? 'text-blue-700' : 'text-emerald-700'}">${l.unit}${l.unit === '배합' ? `<div class="text-[11px] font-semibold text-stone-400">1배합 ${num(l.pkPerBatch)}PK</div>` : ''}</td>
+        <td class="py-1.5 px-1.5 text-center text-xs font-bold ${l.unit === 'PK' ? 'text-blue-700' : 'text-emerald-700'}">${l.unit}${l.unit === '배합' ? `<div class="text-[11px] font-semibold text-stone-400">1배합 ${num(linePkPerBatch(l))}PK</div>` : ''}${su !== 'PK' ? `<div class="text-[11px] font-semibold text-stone-400">재고 ${su} (${linePerStock(l)}PK)</div>` : ''}</td>
         <td class="py-1.5 px-1.5 text-right"><input type="number" min="0" step="any" value="${l.target || ''}" placeholder="0" oninput="Prod.setLineField('${l.id}','target',this.value)" class="${inCls}"></td>
         <td class="py-1.5 px-1.5 text-right"><input type="number" min="0" step="any" value="${l.actual || ''}" placeholder="0" oninput="Prod.setLineField('${l.id}','actual',this.value)" class="${inCls} bg-amber-50/60"></td>
-        <td class="py-1.5 px-1.5 text-right text-xs text-stone-500 tabular-nums" data-k="tpk">${num(lineTargetPk(l))}</td>
-        <td class="py-1.5 px-1.5 text-right"><input type="number" min="0" step="any" data-k="apk" value="${l.pkManual ? l.actualPk : ''}" placeholder="${num(lineAutoActualPk(l))}" oninput="Prod.setLineField('${l.id}','actualPk',this.value)" title="비워 두면 자동 계산값(회색)을 씁니다. 실제 포장 PK가 다르면 입력" class="${inCls} w-20"></td>
-        <td class="py-1.5 px-1.5 text-right text-xs tabular-nums ${cur ? 'text-rose-600' : 'text-stone-600'}" title="${cur ? '현재 제품단가와 다름 — [현재 단가로 다시 계산]으로 바꿀 수 있음' : ''}">${won(l.pricePk)}</td>
-        <td class="py-1.5 px-1.5 text-right text-xs tabular-nums" data-k="tamt">${won(lineTargetPk(l) * l.pricePk)}</td>
-        <td class="py-1.5 px-1.5 text-right text-xs font-extrabold tabular-nums text-amber-900" data-k="aamt">${won(lineActualPk(l) * l.pricePk)}</td>
+        <td class="py-1.5 px-1.5 text-right text-xs text-stone-500 tabular-nums" data-k="tpk">${num(lineTargetPk(l))} ${su}</td>
+        <td class="py-1.5 px-1.5 text-right"><input type="number" min="0" step="any" data-k="apk" value="${l.pkManual ? l.actualPk : ''}" placeholder="${num(lineAutoActualPk(l))}" oninput="Prod.setLineField('${l.id}','actualPk',this.value)" title="비워 두면 자동 계산값(회색)을 씁니다. 실제 포장 수량이 다르면 입력 (${su})" class="${inCls} w-20"> <span class="text-[11px] text-stone-400">${su}</span></td>
+        <td class="py-1.5 px-1.5 text-right text-xs tabular-nums ${cur ? 'text-rose-600' : 'text-stone-600'}" title="${cur ? '현재 제품단가와 다름 — [현재 단가로 다시 계산]으로 바꿀 수 있음' : following ? '단가 0원 → 제품단가 탭에 금액이 들어가면 자동 반영' : ''}">${won(pr)}${su !== 'PK' ? `<span class="text-stone-400">/${su}</span>` : ''}${following ? '<div class="text-[11px] text-stone-400">현재 단가 따름</div>' : ''}</td>
+        <td class="py-1.5 px-1.5 text-right text-xs tabular-nums" data-k="tamt">${won(lineTargetPk(l) * pr)}</td>
+        <td class="py-1.5 px-1.5 text-right text-xs font-extrabold tabular-nums text-amber-900" data-k="aamt">${won(lineActualPk(l) * pr)}</td>
         <td class="py-1.5 px-1.5"><input type="text" value="${esc(l.note || '')}" oninput="Prod.setLineField('${l.id}','note',this.value)" placeholder="메모" class="w-28 border border-stone-300 rounded-lg px-2 py-1 text-xs"></td>
         <td class="py-1.5 px-1.5 text-center"><button type="button" onclick="Prod.removeLine('${l.id}')" class="px-2 py-1 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 cursor-pointer">삭제</button></td>
       </tr>`;
@@ -433,7 +449,7 @@
         </div>
         <div class="p-4 overflow-x-auto">
           <table class="w-full text-left border-collapse text-sm min-w-[1000px]">
-            <thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600"><th class="py-2 px-1.5">품목 (제품단가 탭)</th><th class="py-2 px-1.5 text-center">단위</th><th class="py-2 px-1.5 text-right">목표</th><th class="py-2 px-1.5 text-right">실행</th><th class="py-2 px-1.5 text-right">목표 PK</th><th class="py-2 px-1.5 text-right">실행 PK</th><th class="py-2 px-1.5 text-right">단가(PK)</th><th class="py-2 px-1.5 text-right">목표 금액</th><th class="py-2 px-1.5 text-right">실행 금액</th><th class="py-2 px-1.5">메모</th><th></th></tr></thead>
+            <thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600"><th class="py-2 px-1.5">품목 (제품단가 탭)</th><th class="py-2 px-1.5 text-center">단위</th><th class="py-2 px-1.5 text-right">목표</th><th class="py-2 px-1.5 text-right">실행</th><th class="py-2 px-1.5 text-right">목표 재고수량</th><th class="py-2 px-1.5 text-right">실행 재고수량</th><th class="py-2 px-1.5 text-right">단가</th><th class="py-2 px-1.5 text-right">목표 금액</th><th class="py-2 px-1.5 text-right">실행 금액</th><th class="py-2 px-1.5">메모</th><th></th></tr></thead>
             <tbody>${rows || '<tr><td colspan="11" class="py-6 text-center text-xs text-stone-400">아직 품목이 없습니다. [+ 품목 추가]를 눌러 주세요.</td></tr>'}</tbody>
           </table>
           <button type="button" onclick="Prod.addLine()" class="mt-2 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold cursor-pointer">+ 품목 추가</button>
@@ -467,7 +483,8 @@
       if (!after(r.date)) return;
       (r.items || []).forEach((it) => {
         const code = String((it.code && feed.links[it.code]) || (it.name && feed.links[it.name]) || '').trim();
-        const pk = Number(it.pk) || 0;
+        const prod = code ? productByCode(code, products) : null;
+        const pk = prod && prod.stockUnit === 'BOX' ? (Number(it.box) || 0) : (Number(it.pk) || 0); // BOX 운영 품목은 엠즈 BOX 수량
         if (code && map[code]) map[code].shipped += pk;
         else { const k = it.code + ' ' + it.name; unmapped[k] = (unmapped[k] || 0) + pk; }
       });
@@ -476,8 +493,9 @@
     const rows = Object.values(map).map((x) => {
       const p = productByCode(x.code, products);
       const cur = r1(x.base + x.produced - x.shipped + x.adjust);
-      const cost = p && p.pkTotalCost != null ? p.pkTotalCost : null, buy = p ? p.msBuyPricePk : 0;
-      return { ...x, cat: p ? p.cat : '', cur, cost, buy, costAmt: cost == null ? null : cur * cost, buyAmt: cur * buy };
+      const per = p ? p.pkPerStock || 1 : 1;
+      const cost = p && p.pkTotalCost != null ? p.pkTotalCost * per : null, buy = p ? p.msBuyPricePk : 0; // 원가는 PK당 → 재고 단위(BOX)로 환산
+      return { ...x, cat: p ? p.cat : '', unit: p ? p.stockUnit : 'PK', cur, cost, buy, costAmt: cost == null ? null : cur * cost, buyAmt: cur * buy };
     }).sort((a, b) => CAT_ORDER.indexOf(a.cat) - CAT_ORDER.indexOf(b.cat) || a.code.localeCompare(b.code));
     return { rows, unmapped, feed, base };
   }
@@ -496,13 +514,13 @@
         <td class="py-1.5 px-2 text-right tabular-nums text-emerald-700">${r.produced ? '+' + num(r.produced) : '-'}</td>
         <td class="py-1.5 px-2 text-right tabular-nums text-rose-700">${r.shipped ? '-' + num(r.shipped) : '-'}</td>
         <td class="py-1.5 px-2 text-right tabular-nums">${r.adjust ? (r.adjust > 0 ? '+' : '') + num(r.adjust) : '-'}</td>
-        <td class="py-1.5 px-2 text-right tabular-nums font-extrabold ${r.cur < 0 ? 'text-rose-700' : 'text-stone-900'}">${num(r.cur)}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums font-extrabold ${r.cur < 0 ? 'text-rose-700' : 'text-stone-900'}">${num(r.cur)}${r.unit !== 'PK' ? ` <span class="text-xs font-bold text-stone-500">${r.unit}</span>` : ''}</td>
         <td class="py-1.5 px-2 text-right tabular-nums text-stone-600">${r.cost == null ? '<span class="text-rose-600" title="제품단가 탭에서 PK 총생산원가가 계산되지 않음">미산출</span>' : won(r.cost)}</td>
         <td class="py-1.5 px-2 text-right tabular-nums font-bold">${r.costAmt == null ? '-' : won(r.costAmt)}</td>
         <td class="py-1.5 px-2 text-right tabular-nums text-stone-600">${won(r.buy)}</td>
         <td class="py-1.5 px-2 text-right tabular-nums font-bold text-amber-900">${won(r.buyAmt)}</td>
       </tr>`).join('');
-    const adjRows = db.stockAdjusts.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map((a) => `<tr class="border-b border-stone-100"><td class="py-1 px-2">${esc(a.date)}</td><td class="py-1 px-2">${esc(a.name)}</td><td class="py-1 px-2 text-right tabular-nums font-bold ${a.deltaPk < 0 ? 'text-rose-700' : 'text-emerald-700'}">${a.deltaPk > 0 ? '+' : ''}${num(a.deltaPk)} PK</td><td class="py-1 px-2">${esc(a.reason)}</td><td class="py-1 px-2 text-center"><button type="button" onclick="Prod.removeAdjust('${a.id}')" class="text-xs text-rose-700 font-bold cursor-pointer">삭제</button></td></tr>`).join('');
+    const adjRows = db.stockAdjusts.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map((a) => `<tr class="border-b border-stone-100"><td class="py-1 px-2">${esc(a.date)}</td><td class="py-1 px-2">${esc(a.name)}</td><td class="py-1 px-2 text-right tabular-nums font-bold ${a.deltaPk < 0 ? 'text-rose-700' : 'text-emerald-700'}">${a.deltaPk > 0 ? '+' : ''}${num(a.deltaPk)} ${esc((productByCode(a.code) || {}).stockUnit || 'PK')}</td><td class="py-1 px-2">${esc(a.reason)}</td><td class="py-1 px-2 text-center"><button type="button" onclick="Prod.removeAdjust('${a.id}')" class="text-xs text-rose-700 font-bold cursor-pointer">삭제</button></td></tr>`).join('');
     return `
       ${!base ? `<div class="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-sm"><b>재고 실사 수량이 아직 없습니다.</b> 냉동창고 재고를 세어 [재고 실사 입력]에 넣으면, 그 날 이후의 생산(실행 PK)과 엠즈 입고(출고)로 재고가 자동 계산됩니다.</div>` : ''}
       ${!feed.loaded ? `<div class="p-3 rounded-xl bg-stone-100 border border-stone-200 text-stone-700 text-xs flex flex-wrap items-center gap-2"><span>엠즈 입고 기록을 이 기기에 저장된 사본으로 계산 중입니다. 최신 출고를 반영하려면</span><button type="button" onclick="Prod.loadMs()" class="px-2.5 py-1 rounded-lg bg-stone-900 text-white font-bold cursor-pointer">엠즈 입고 불러오기</button></div>` : ''}
@@ -514,14 +532,14 @@
       </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
         <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-          <h3 class="text-sm font-extrabold text-stone-900">냉동창고 생지 재고 (PK)</h3>
+          <h3 class="text-sm font-extrabold text-stone-900">냉동창고 생지 재고 <span class="text-xs font-bold text-stone-500">(PK · 쇼숑오뽐므는 BOX=4PK)</span></h3>
           <div class="flex gap-1.5 text-xs">
             <button type="button" onclick="Prod.openCountModal()" class="px-3 py-1.5 rounded-lg bg-stone-900 text-white font-extrabold cursor-pointer">재고 실사 입력</button>
             <button type="button" onclick="Prod.openAdjustModal()" class="px-3 py-1.5 rounded-lg border border-stone-300 font-bold cursor-pointer hover:bg-stone-50">재고 조정 (폐기·회송 등)</button>
           </div>
         </div>
         <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm min-w-[1100px]">
-          <thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600"><th class="py-2 px-2">파트</th><th class="py-2 px-2">코드</th><th class="py-2 px-2">품목</th><th class="py-2 px-2 text-right">실사</th><th class="py-2 px-2 text-right">+생산</th><th class="py-2 px-2 text-right">−엠즈 출고</th><th class="py-2 px-2 text-right">±조정</th><th class="py-2 px-2 text-right">현재고 PK</th><th class="py-2 px-2 text-right">원가/PK</th><th class="py-2 px-2 text-right">원가 금액</th><th class="py-2 px-2 text-right">매입가/PK</th><th class="py-2 px-2 text-right">매입가 금액</th></tr></thead>
+          <thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600"><th class="py-2 px-2">파트</th><th class="py-2 px-2">코드</th><th class="py-2 px-2">품목</th><th class="py-2 px-2 text-right">실사</th><th class="py-2 px-2 text-right">+생산</th><th class="py-2 px-2 text-right">−엠즈 출고</th><th class="py-2 px-2 text-right">±조정</th><th class="py-2 px-2 text-right">현재고</th><th class="py-2 px-2 text-right">원가/단위</th><th class="py-2 px-2 text-right">원가 금액</th><th class="py-2 px-2 text-right">매입가/단위</th><th class="py-2 px-2 text-right">매입가 금액</th></tr></thead>
           <tbody>${trs || '<tr><td colspan="12" class="py-6 text-center text-xs text-stone-400">제품단가 탭 품목이 없습니다.</td></tr>'}</tbody>
         </table></div>
       </div>
@@ -537,7 +555,7 @@
     const { rows } = computeStock();
     modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold">재고 실사 입력</h3><div class="text-xs text-stone-500 mt-0.5">기준일 <b>마감 후</b> 냉동창고에 있는 PK 수량입니다. 칸에는 지금 계산된 재고가 미리 들어 있으니, 센 수량으로 고쳐 주세요.</div></div>
       <div class="p-4 max-h-[60vh] overflow-y-auto"><div class="mb-3"><label class="text-xs font-bold">기준일</label> <input id="prodCountDate" type="date" value="${today()}" class="ml-2 border border-stone-300 rounded-lg px-2 py-1 text-sm"></div>
-      <table class="w-full text-sm">${rows.map((r) => `<tr class="border-b border-stone-100"><td class="py-1 px-2 text-xs text-stone-500">${CAT_LABEL[r.cat] || ''}</td><td class="py-1 px-2 font-bold">${esc(r.name)}</td><td class="py-1 px-2 text-right"><input type="number" min="0" step="any" data-count-code="${esc(r.code)}" value="${r.cur > 0 ? r.cur : 0}" class="no-spinner w-24 text-right border border-stone-300 rounded-lg px-2 py-1 font-bold tabular-nums"> PK</td></tr>`).join('')}</table></div>
+      <table class="w-full text-sm">${rows.map((r) => `<tr class="border-b border-stone-100"><td class="py-1 px-2 text-xs text-stone-500">${CAT_LABEL[r.cat] || ''}</td><td class="py-1 px-2 font-bold">${esc(r.name)}</td><td class="py-1 px-2 text-right"><input type="number" min="0" step="any" data-count-code="${esc(r.code)}" value="${r.cur > 0 ? r.cur : 0}" class="no-spinner w-24 text-right border border-stone-300 rounded-lg px-2 py-1 font-bold tabular-nums"> ${esc(r.unit || 'PK')}</td></tr>`).join('')}</table></div>
       <div class="px-5 py-3 border-t border-stone-200 flex justify-end gap-2"><button type="button" onclick="Prod.closeModal()" class="px-4 py-2 rounded-xl border border-stone-300 text-sm font-bold cursor-pointer">취소</button><button type="button" onclick="Prod.saveCount()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">실사 수량 확정</button></div>`);
   }
   function saveCount() {
@@ -556,7 +574,7 @@
       <div class="p-4 grid grid-cols-2 gap-3 text-sm">
         <label class="flex flex-col gap-1 text-xs font-bold">날짜<input id="prodAdjDate" type="date" value="${today()}" class="border border-stone-300 rounded-lg px-2 py-1 text-sm font-normal"></label>
         <label class="flex flex-col gap-1 text-xs font-bold">품목<select id="prodAdjCode" class="border border-stone-300 rounded-lg px-2 py-1 text-sm font-normal">${products.map((p) => `<option value="${esc(p.productCode)}">${esc(p.productCode)} ${esc(p.productName)}</option>`).join('')}</select></label>
-        <label class="flex flex-col gap-1 text-xs font-bold">증감 (PK)<input id="prodAdjPk" type="number" step="any" placeholder="예: -12" class="border border-stone-300 rounded-lg px-2 py-1 text-sm font-normal"></label>
+        <label class="flex flex-col gap-1 text-xs font-bold">증감 (PK, 쇼숑은 BOX)<input id="prodAdjPk" type="number" step="any" placeholder="예: -12" class="border border-stone-300 rounded-lg px-2 py-1 text-sm font-normal"></label>
         <label class="flex flex-col gap-1 text-xs font-bold">사유<input id="prodAdjReason" type="text" placeholder="예: 유통기한 폐기" class="border border-stone-300 rounded-lg px-2 py-1 text-sm font-normal"></label>
       </div>
       <div class="px-5 py-3 border-t border-stone-200 flex justify-end gap-2"><button type="button" onclick="Prod.closeModal()" class="px-4 py-2 rounded-xl border border-stone-300 text-sm font-bold cursor-pointer">취소</button><button type="button" onclick="Prod.saveAdjust()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">조정 기록</button></div>`);

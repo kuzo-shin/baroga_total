@@ -129,7 +129,7 @@ function syncReadableSheets(ss, payload, nowStr) {
   let sh = ss.getSheetByName('일별_생산기록');
   if (!sh) sh = ss.insertSheet('일별_생산기록');
   sh.clear();
-  const rows = [['날짜', '구분', '품목코드', '품목명', '입력단위', '목표', '실행', '목표 PK', '실행 PK', 'PK 단가(엠즈 매입가)', '목표 금액', '실행 금액', '비고']];
+  const rows = [['날짜', '구분', '품목코드', '품목명', '입력단위', '목표', '실행', '목표 재고수량', '실행 재고수량', '단가(저장 시, 0=미정)', '목표 금액', '실행 금액', '비고']];
   Object.keys(payload.days || {}).sort().forEach(function (d) {
     const day = payload.days[d] || {};
     (day.lines || []).forEach(function (l) {
