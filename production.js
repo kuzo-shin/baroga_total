@@ -260,7 +260,7 @@
         return `<button type="button" onclick="Prod.openDay('${c.date}')" class="text-left min-h-[150px] rounded-xl border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : 'border-stone-200'} ${weekend && !items.length ? 'bg-stone-50' : 'bg-white'} hover:border-amber-400 hover:shadow-xs p-2 flex flex-col gap-1 cursor-pointer min-w-0">
           <div class="flex items-center justify-between gap-1"><span class="text-sm font-extrabold ${isToday ? 'text-amber-700' : dayCls}">${c.day}</span>${rateBadge(rateOf(t.actual, t.target), t.actual > 0)}</div>
           ${lines.length ? `<div class="grid grid-cols-[auto_1fr] gap-x-1 text-xs tabular-nums"><span class="text-stone-500">목표</span><span class="text-right font-bold">${won(t.target)}</span><span class="text-stone-500">실행</span><span class="text-right font-extrabold text-amber-900">${won(t.actual)}</span></div>` : ''}
-          ${items.length ? `<div class="${lines.length ? 'border-t border-stone-100 pt-1 ' : ''}flex flex-col gap-0.5">${shown}</div>` : `<div class="text-xs text-stone-300 mt-1">${weekend ? '휴무' : '클릭해서 목표 입력'}</div>`}
+          ${items.length ? `<div class="${lines.length ? 'border-t border-stone-100 pt-1 ' : ''}flex flex-col gap-0.5">${shown}</div>` : `<div class="text-xs text-stone-300 mt-1">${weekend ? '주말' : '클릭해서 목표 입력'}</div>`}
         </button>`;
       }).join('');
       const wr = rateOf(wA, wT);
