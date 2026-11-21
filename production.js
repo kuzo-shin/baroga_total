@@ -1,4 +1,4 @@
-// [VERSION: production.js v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
+// [VERSION: production.js v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
 //  - 품목 목록·단가: 제품단가 탭(barogaProductPriceBridge.getProductionProducts)
 //      파이 = PK로 입력 / 알생지·파베이크·제과 = 배합으로 입력 → '1배합 PK수'로 PK 환산 (실제 포장 PK를 직접 고칠 수 있음)
 //      금액 = PK × 엠즈 매입가(PK). 줄을 만들 때의 단가를 줄에 저장 → 나중에 단가가 바뀌어도 지난 기록 금액은 그대로
@@ -254,6 +254,13 @@
     const unitBadge = (u) => `<span class="block w-full text-center rounded text-[10px] leading-4 font-extrabold tracking-tighter ${u === 'PK' ? 'bg-blue-50 text-blue-700' : u === '배합' ? 'bg-emerald-50 text-emerald-700' : u === 'BOX' ? 'bg-violet-50 text-violet-700' : 'bg-stone-100 text-stone-500'}">${esc(u)}</span>`;
     const itemRow = (name, title, cls, unit, tq, aq, actCls) => `<div class="text-xs leading-tight" style="${ROW_STYLE}"><span class="truncate font-semibold ${cls}" title="${esc(title)}">${name}</span>${unitBadge(unit)}<span class="text-right font-semibold text-stone-500 tabular-nums">${num(tq)}</span><span class="text-center text-stone-300 text-[10px]">→</span><b class="text-right font-extrabold tabular-nums ${actCls}">${num(aq)}</b></div>`;
     const dayBadge = (c, t) => (c.date > tdy && !(t.actual > 0)) ? (t.target > 0 ? '<span class="text-[11px] font-bold text-stone-400">예정</span>' : '') : rateBadge(rateOf(t.actual, t.target), t.actual > 0);
+    const PART_STYLE = {
+      PIE: { bar: 'border-amber-400', text: 'text-amber-700' },
+      DOUGH: { bar: 'border-emerald-500', text: 'text-emerald-700' },
+      PARBAKE: { bar: 'border-orange-500', text: 'text-orange-700' },
+      BAKERY: { bar: 'border-violet-400', text: 'text-violet-700' },
+      SEMI: { bar: 'border-stone-300', text: 'text-stone-500' },
+    };
     const dayCls = (c) => c.dow === 0 ? 'text-rose-600' : c.dow === 6 ? 'text-blue-600' : 'text-stone-900';
 
     const weekRows = weeks.map((w, wi) => {
@@ -265,16 +272,23 @@
         if (!c.inMonth) return `<div class="min-h-[168px] rounded-xl bg-stone-50/60 border border-dashed border-stone-200 p-2 text-xs text-stone-300 font-bold">${c.day}</div>`;
         const lines = (day && day.lines) || [], semi = (day && day.semi) || [];
         const MAX = 12; // 하루 품목(반제품 포함) 최대 12종까지 칸이 늘어남(그 뒤는 '외 n개'), 기본 높이는 5종
-        const items = [
-          ...lines.map((l) => { const tq = Number(l.target) || 0, aq = Number(l.actual) || 0, added = tq === 0 && aq > 0; return itemRow(`${added ? '＋' : ''}${esc(l.name)}`, l.name, added ? 'text-blue-700' : 'text-stone-800', l.unit, tq, aq, 'text-stone-900'); }),
-          ...semi.map((l) => itemRow(`<span class="px-1 mr-0.5 rounded bg-stone-100 text-stone-500 text-[10px] font-extrabold">반</span>${esc(l.name)}`, '반제품 · ' + l.name, 'text-stone-500', l.unit || '', Number(l.target) || 0, Number(l.actual) || 0, 'text-stone-700')),
-        ];
-        const shown = items.slice(0, MAX).join('') + (items.length > MAX ? `<div class="text-xs text-stone-400">외 ${items.length - MAX}개</div>` : '');
+        // 파트별로 묶고 왼쪽 색 띠로 구분 (파이 · 알생지 · 파베이크 · 제과 · 반제품). 품목은 최대 MAX줄(묶음 제목 제외), 넘치면 '외 n개'
+        const groups = [...CAT_ORDER.map((cat) => ({ key: cat, label: CAT_LABEL[cat], rows: lines.filter((l) => l.cat === cat).map((l) => { const tq = Number(l.target) || 0, aq = Number(l.actual) || 0, added = tq === 0 && aq > 0; return itemRow(`${added ? '＋' : ''}${esc(l.name)}`, l.name, added ? 'text-blue-700' : 'text-stone-800', l.unit, tq, aq, 'text-stone-900'); }) })),
+          { key: 'SEMI', label: '반제품', rows: semi.map((l) => itemRow(esc(l.name), '반제품 · ' + l.name, 'text-stone-500', l.unit || '', Number(l.target) || 0, Number(l.actual) || 0, 'text-stone-700')) }];
+        const total = groups.reduce((n, g) => n + g.rows.length, 0);
+        let left = MAX;
+        const shown = groups.filter((g) => g.rows.length).map((g) => {
+          if (left <= 0) return '';
+          const rows = g.rows.slice(0, left); left -= rows.length;
+          const st = PART_STYLE[g.key];
+          return `<div class="border-l-[3px] ${st.bar} pl-1.5 flex flex-col gap-0.5"><div class="text-[10px] leading-3 font-extrabold ${st.text}">${g.label}</div>${rows.join('')}</div>`;
+        }).join('') + (total > MAX ? `<div class="text-xs text-stone-400 font-semibold">외 ${total - MAX}개</div>` : '');
+        const items = { length: total };
         const isToday = c.date === tdy;
         return `<button type="button" onclick="Prod.openDay('${c.date}')" class="text-left min-h-[168px] rounded-xl border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : 'border-stone-200'} bg-white hover:border-amber-400 hover:shadow-xs p-2 flex flex-col gap-1 cursor-pointer min-w-0">
           <div class="flex items-center justify-between gap-1"><span class="text-sm font-extrabold ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}</span>${dayBadge(c, t)}</div>
           ${lines.length ? `<div class="grid grid-cols-[auto_1fr] gap-x-1 text-xs tabular-nums"><span class="font-semibold text-stone-500">목표</span><span class="text-right font-bold">${won(t.target)}</span><span class="font-semibold text-stone-500">실행</span><span class="text-right font-extrabold text-amber-900">${won(t.actual)}</span></div>` : ''}
-          ${items.length ? `<div class="${lines.length ? 'border-t border-stone-100 pt-1 ' : ''}flex flex-col gap-0.5">${shown}</div>` : '<div class="text-xs text-stone-300 mt-1">클릭해서 목표 입력</div>'}
+          ${items.length ? `<div class="${lines.length ? 'border-t border-stone-100 pt-1 ' : ''}flex flex-col gap-1">${shown}</div>` : '<div class="text-xs text-stone-300 mt-1">클릭해서 목표 입력</div>'}
         </button>`;
       }).join('');
       // 주말(토·일) 한 칸: 날짜별 작은 칸 2개(요약만), 눌러서 입력
