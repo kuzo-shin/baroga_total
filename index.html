@@ -1,4 +1,4 @@
-<!-- [VERSION: index.html v2.13 - 2026-11-20 버튼·입력칸 모서리/포커스 통일, 원재료 표 머리글 고정, Ctrl+S 저장, 표 숫자칸 Enter 이동 / v2.12 - 2026-11-20 디자인 통일: 회색 stone 통일·남색→파랑·최소 글자 12px·굵기 한 단계 낮춤·표 숫자 자릿수 정렬·포커스 표시·알림 1종 / v2.11 - 2026-11-20 저장 안전: 4개 탭 저장 상태 문구 통일(저장됨 HH:MM), 미저장 변경 시 창 닫기 경고, 공통 입력창(openFormModal) / v2.10 - 2026-11-20 모바일 UI: 일일 사용 보고 카드형 입력·하단 확정 바, 상단 탭 한 줄 가로 스크롤, 헤더 고정 해제, KPI 2열 / v2.9 - 2026-11-20 원재료 업로드 양식(매입처·과세구분) 인식, 과세구분 열 그대로 사용, 수량 없는 양식 등록 차단 / v2.8 - 2026-11-20 3~5단계 정확성 (발주서 동일 줄·업로드 오류 표시·로트별 소진금액·월말 기준 재고 역산·제조원 추정 표시·재고 변동 이력·부가세 줄별 통일·CSV 안전 처리) / v2.7 2단계 보안 (DB 접속 코드 인증 · SRM 계정정보 삭제 · 급여/고정비 기본값 제거 · 화면 출력 이스케이프) / v2.6.1 DB 주소 4종 새 배포로 교체 · 각 기기 저장 주소 일괄 초기화 / v2.6 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 스냅샷 분할 저장 · 샘플 레시피 제거)] -->
+<!-- [VERSION: index.html v2.14 - 2026-11-21 옛 프로그램 입고내역 엑셀 업로드 지원(품목번호·과세구분 변환), 발주에 품목번호(CODE) 저장 / v2.13 - 2026-11-20 버튼·입력칸 모서리/포커스 통일, 원재료 표 머리글 고정, Ctrl+S 저장, 표 숫자칸 Enter 이동 / v2.12 - 2026-11-20 디자인 통일: 회색 stone 통일·남색→파랑·최소 글자 12px·굵기 한 단계 낮춤·표 숫자 자릿수 정렬·포커스 표시·알림 1종 / v2.11 - 2026-11-20 저장 안전: 4개 탭 저장 상태 문구 통일(저장됨 HH:MM), 미저장 변경 시 창 닫기 경고, 공통 입력창(openFormModal) / v2.10 - 2026-11-20 모바일 UI: 일일 사용 보고 카드형 입력·하단 확정 바, 상단 탭 한 줄 가로 스크롤, 헤더 고정 해제, KPI 2열 / v2.9 - 2026-11-20 원재료 업로드 양식(매입처·과세구분) 인식, 과세구분 열 그대로 사용, 수량 없는 양식 등록 차단 / v2.8 - 2026-11-20 3~5단계 정확성 (발주서 동일 줄·업로드 오류 표시·로트별 소진금액·월말 기준 재고 역산·제조원 추정 표시·재고 변동 이력·부가세 줄별 통일·CSV 안전 처리) / v2.7 2단계 보안 (DB 접속 코드 인증 · SRM 계정정보 삭제 · 급여/고정비 기본값 제거 · 화면 출력 이스케이프) / v2.6.1 DB 주소 4종 새 배포로 교체 · 각 기기 저장 주소 일괄 초기화 / v2.6 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 스냅샷 분할 저장 · 샘플 레시피 제거)] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -80,7 +80,7 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-base sm:text-lg font-extrabold tracking-tight text-stone-900">바로가 공장 통합 관리 시스템</h1>
-                        <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.13.0</span>
+                        <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">v2.14.0</span>
                     </div>
                     <p class="text-xs text-stone-500 hidden sm:block">원재료 발주/재고 · 엠즈 입고/회송 · 레시피 배합비 · 제품단가 출고마진 통합 관리</p>
                 </div>
@@ -642,9 +642,9 @@
             const str = String(rawId || '');
             if (str && _metaCache.has(str)) return _metaCache.get(str);
             const idx = str.indexOf('__META__');
-            if (idx === -1) return { baseId: str || ('id_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)), exp: '', rem: null, tax: '', mfg: '', rawMfg: null };
+            if (idx === -1) return { baseId: str || ('id_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)), exp: '', rem: null, tax: '', mfg: '', rawMfg: null, code: '' };
             const baseId = str.slice(0, idx);
-            let exp = '', rem = null, tax = '', mfg = '', rawMfg = null;
+            let exp = '', rem = null, tax = '', mfg = '', rawMfg = null, code = '';
             str.slice(idx + 8).split('|').forEach(pair => {
                 const cIdx = pair.indexOf(':');
                 if (cIdx === -1) return;
@@ -654,8 +654,9 @@
                 if (k === 'TAX' && (v === '과세' || v === '면세')) tax = v;
                 if (k === 'MFG' && v !== undefined) { try { mfg = decodeURIComponent(v); } catch (e) { mfg = v; } }
                 if (k === 'RAW_MFG' && v !== undefined) { try { rawMfg = decodeURIComponent(v); } catch (e) { rawMfg = v; } }
+                if (k === 'CODE' && v) code = v; // [v2.14] 품목번호 (옛 프로그램 품목 마스터 번호)
             });
-            const res = { baseId, exp, rem, tax, mfg, rawMfg };
+            const res = { baseId, exp, rem, tax, mfg, rawMfg, code };
             if (_metaCache.size > 10000) _metaCache.clear();
             _metaCache.set(str, res);
             return res;
@@ -680,8 +681,10 @@
             const mfg = order.manufacturer !== undefined ? String(order.manufacturer || '').trim() : (parsed.mfg || '');
             const rawMfg = order.rawManufacturer !== undefined ? String(order.rawManufacturer || '').trim() : (parsed.rawMfg !== null ? parsed.rawMfg : mfg);
             const encMeta = (v) => encodeURIComponent(v).replace(/'/g, '%27'); // 작은따옴표가 버튼(onclick) 코드를 깨뜨리지 않도록
-            return `${baseId}__META__EXP:${exp}|REM:${rem}|TAX:${tax}|MFG:${encMeta(mfg)}|RAW_MFG:${encMeta(rawMfg)}`;
+            const code = order.itemCode !== undefined ? String(order.itemCode || '').trim() : (parsed.code || '');
+            return `${baseId}__META__EXP:${exp}|REM:${rem}|TAX:${tax}|MFG:${encMeta(mfg)}|RAW_MFG:${encMeta(rawMfg)}` + (code ? `|CODE:${encMeta(code)}` : '');
         }
+        function getOrderItemCode(o) { return (o.itemCode !== undefined && o.itemCode !== null) ? String(o.itemCode) : (parseMetaFromId(o.id).code || ''); }
         function getOrderExpiryDate(o) { return (o.expiryDate !== undefined && o.expiryDate !== '') ? o.expiryDate : (parseMetaFromId(o.id).exp || ''); }
         function getOrderManufacturer(o) {
             if (o.manufacturer !== undefined && o.manufacturer !== null) return String(o.manufacturer).trim();
@@ -1991,8 +1994,89 @@
             }
             return rows;
         }
+        // [v2.14] 옛 프로그램(바로가 자재) 입고내역 엑셀 변환
+        //  제목줄: 사업단위·발주일·입고일·입고번호·거래처(입고처)·품목번호·품목명·규격·단위·입고수량·단가·공급가·부가세·금액·과세구분·발주수량·유통기한·제조사·비고
+        //  과세구분: 면세 / 별도(단가가 공급가) / 포함(단가에 부가세 포함) → 이 시스템은 과세·면세 + 공급단가로 저장
+        //  품목 기준: 이름은 옛 프로그램 품목명, 품목번호는 CODE로 저장. 아래 표는 사용자 확인(2026-11-20~21) 사항
+        const LEGACY_ITEM_RULES = {
+            500091: { spec: '7500G/EA' },            // 서울밤다이스: 사이트 7.5kg으로 통일 (사용자 확인 11-21)
+            500092: { spec: '3000G/EA' },            // 사과다이스: 3kg
+            500090: { spec: '3000G/CAN', tax: '과세' }, // 리치스 올리브: 3kg, 과세 (11-20·21)
+            500132: { spec: '750G/병' },             // 코인트로: 750ml
+            500152: { tax: '면세' },                 // 하얀설탕(백설) 면세 (11-20)
+            500139: { tax: '면세' },                 // 사양벌꿀 면세 (11-20)
+            500126: { tax: '면세' },                 // 오징어먹물색소 면세 (11-21 과세구분 점검)
+            500175: { tax: '면세' },                 // 건조무화과다이스 면세 (11-21 과세구분 점검)
+            500176: { tax: '면세' },                 // 백설꽃소금 면세 (업로드 양식)
+            500200: { tax: '면세' }, 500203: { tax: '면세' }, // 호박씨·해바라기씨 면세 (11-21)
+        };
+        function legacyCell(row, idx) { return idx >= 0 ? row[idx] : ''; }
+        function convertLegacyReceiptRows(rows2D) {
+            let h = -1, col = {};
+            for (let r = 0; r < Math.min(rows2D.length, 10); r++) {
+                const row = (rows2D[r] || []).map(c => String(c ?? '').replace(/\s+/g, ''));
+                if (row.includes('품목번호') && row.includes('입고수량') && row.includes('과세구분')) {
+                    h = r; row.forEach((name, i) => { if (name && col[name] === undefined) col[name] = i; }); break;
+                }
+            }
+            if (h < 0) return null;
+            const C = (n) => (col[n] !== undefined ? col[n] : -1);
+            const iDate = C('입고일') >= 0 ? C('입고일') : C('발주일');
+            const out = [], warnings = [];
+            // 품목별 다수 과세구분 (면세 vs 별도·포함) → 규칙에 없으면 다수결
+            const taxVotes = {};
+            for (let r = h + 1; r < rows2D.length; r++) {
+                const row = rows2D[r] || []; const code = String(legacyCell(row, C('품목번호')) ?? '').trim(); if (!code) continue;
+                const t = String(legacyCell(row, C('과세구분')) ?? '').trim();
+                taxVotes[code] = taxVotes[code] || { 면세: 0, 과세: 0 };
+                taxVotes[code][t === '면세' ? '면세' : '과세']++;
+            }
+            const toDate = (v) => {
+                if (v instanceof Date && !isNaN(v)) return v.getFullYear() + '-' + String(v.getMonth() + 1).padStart(2, '0') + '-' + String(v.getDate()).padStart(2, '0');
+                const str = String(v ?? '').trim();
+                let m = str.match(/^(20\d{2})[-./](\d{1,2})[-./](\d{1,2})/); if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+                m = str.match(/^(20\d{2})(\d{2})(\d{2})$/); if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+                m = str.match(/^(\d{2})(\d{2})(\d{2})$/); if (m) return `20${m[1]}-${m[2]}-${m[3]}`;
+                if (/^\d{5}$/.test(str)) { const d = new Date(Math.round((Number(str) - 25569) * 86400000)); return d.toISOString().slice(0, 10); }
+                return '';
+            };
+            for (let r = h + 1; r < rows2D.length; r++) {
+                const row = rows2D[r] || [];
+                const code = String(legacyCell(row, C('품목번호')) ?? '').trim();
+                const name = String(legacyCell(row, C('품목명')) ?? '').trim();
+                if (!code || !name) continue; // 합계 줄 등
+                const rule = LEGACY_ITEM_RULES[code] || {};
+                const qty = parseNumericCell(legacyCell(row, C('입고수량')));
+                const price = parseNumericCell(legacyCell(row, C('단가')));
+                const supplyTotal = parseNumericCell(legacyCell(row, C('공급가')));
+                const lt = String(legacyCell(row, C('과세구분')) ?? '').trim(); // 면세·별도·포함
+                const v = taxVotes[code] || { 면세: 0, 과세: 0 };
+                const tax = rule.tax || (v.면세 > v.과세 ? '면세' : '과세');
+                let unit;
+                if (tax === '과세') unit = lt === '면세' ? Math.round(price / 1.1) : (lt === '포함' ? (qty ? Math.round(supplyTotal / qty) : Math.round(price / 1.1)) : price);
+                else unit = price; // 면세: 실제 지급 단가
+                const date = toDate(legacyCell(row, iDate));
+                if (!date) { warnings.push(`${r + 1}행 ${name}: 입고일을 읽지 못해 건너뜀`); continue; }
+                if ((lt === '면세') !== (tax === '면세')) warnings.push(`${r + 1}행 ${name}: 과세구분 '${lt}' → ${tax}로 맞춤 (단가 ${price} → ${unit})`);
+                const mfg = String(legacyCell(row, C('제조사')) ?? '').trim().replace(/[\/\s]+$/, '');
+                const note = String(legacyCell(row, C('비고')) ?? '').trim();
+                const obj = {
+                    id: '', date, colA: String(legacyCell(row, C('거래처(입고처)')) ?? '').trim() || '기타', colB: name,
+                    colC: rule.spec || String(legacyCell(row, C('규격')) ?? '').trim(), colD: qty,
+                    pureNote: note, manufacturer: mfg, rawManufacturer: mfg, colE: composeColEWithManufacturer(mfg, note),
+                    amount: unit, taxType: tax, expiryDate: toDate(legacyCell(row, C('유통기한'))), remainQty: qty, itemCode: code,
+                    legacyTaxLabel: lt, legacyPrice: price, legacyRow: r + 1
+                };
+                obj.id = buildIdWithMeta(obj);
+                out.push(obj);
+            }
+            out.warnings = warnings; out.uploadForm = true; out.legacy = true;
+            return out;
+        }
         function parseSheetRowsToOrders(rows2D, orderDate, includeZeroQty = false) {
             const warnings = [];
+            const legacyParsed = convertLegacyReceiptRows(rows2D);
+            if (legacyParsed) return legacyParsed;
             // [v2.9] 원재료 업로드 양식(매입처·구분·발주 단위·발주 수량·과세구분·부가세 포함·공급가·부가세·제조원) 인식
             for (let r = 0; r < Math.min(rows2D.length, 20); r++) {
                 const row = (rows2D[r] || []).slice(0, 15).map(c => String(c ?? '').replace(/\s+/g, ''));
