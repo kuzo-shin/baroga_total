@@ -1090,8 +1090,10 @@
     const mProdPk = mRows.reduce((s, r) => s + r.prod, 0), mPackPk = mRows.reduce((s, r) => s + r.pack, 0);
     // 포장 대기 (포장 기록을 시작한 날부터 오늘까지 생산 − 포장)
     const packStart = Object.keys(pd).filter((d) => ((pd[d] || {}).items || []).length).sort()[0] || '';
-    const wait = packStart ? packCompare(packStart, tdy, products) : [];
-    const waitPk = wait.reduce((s, r) => s + r.prod - r.pack, 0), waitAmt = wait.reduce((s, r) => s + r.prodAmt - r.packAmt, 0);
+    // 첫 포장일에는 그 전 며칠 생산분도 포장하므로, 시작일 6일 전 생산부터 셈. 품목별로 남은 것(생산 > 포장)만 더함
+    const waitFrom = packStart ? (() => { const x = parseYmd(packStart); x.setDate(x.getDate() - 6); return ymd(x); })() : '';
+    const wait = packStart ? packCompare(waitFrom, tdy, products) : [];
+    const waitPk = wait.reduce((s, r) => s + Math.max(0, r.prod - r.pack), 0), waitAmt = wait.reduce((s, r) => s + Math.max(0, r.prodAmt - r.packAmt), 0);
     const kpi = (label, value, sub, hl) => `<div class="${hl ? 'bg-amber-50 border-amber-200' : 'bg-white border-stone-200/90'} rounded-2xl p-4 border shadow-xs"><div class="text-xs font-bold ${hl ? 'text-amber-800' : 'text-stone-500'}">${label}</div><div class="mt-1 text-xl font-extrabold tabular-nums ${hl ? 'text-amber-900' : ''}">${value}</div>${sub ? `<div class="text-xs text-stone-500 mt-0.5">${sub}</div>` : ''}</div>`;
     const weekRows = weeks.map((w, wi) => {
       const inM = w.filter((c) => c.inMonth);
@@ -1146,7 +1148,7 @@
         ${kpi(`${m}월 생산 실행`, won(mProd), `${num(mProdPk)}PK`)}
         ${kpi(`${m}월 포장 완료`, won(mPack), `${num(mPackPk)}PK · 생산 재고 입고`)}
         ${kpi('포장률 (금액)', mProd ? num(pct(mPack, mProd)) + '%' : '-', '포장 완료 ÷ 생산 실행', true)}
-        ${kpi('포장 대기 (현재)', packStart ? won(waitAmt) : '-', packStart ? `${num(waitPk)}PK · ${packStart.slice(5).replace('-', '/')} 포장 기록 시작 이후` : '포장 기록이 아직 없습니다')}
+        ${kpi('포장 대기 (현재)', packStart ? won(waitAmt) : '-', packStart ? `${num(waitPk)}PK · ${waitFrom.slice(5).replace('-', '/')} 생산분부터 남은 수량` : '포장 기록이 아직 없습니다')}
       </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4 flex flex-col gap-1.5">
         <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
