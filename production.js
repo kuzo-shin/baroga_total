@@ -1090,8 +1090,8 @@
     const mProdPk = mRows.reduce((s, r) => s + r.prod, 0), mPackPk = mRows.reduce((s, r) => s + r.pack, 0);
     // 포장 대기 (포장 기록을 시작한 날부터 오늘까지 생산 − 포장)
     const packStart = Object.keys(pd).filter((d) => ((pd[d] || {}).items || []).length).sort()[0] || '';
-    // 첫 포장일에는 그 전 며칠 생산분도 포장하므로, 시작일 6일 전 생산부터 셈. 품목별로 남은 것(생산 > 포장)만 더함
-    const waitFrom = packStart ? (() => { const x = parseYmd(packStart); x.setDate(x.getDate() - 6); return ymd(x); })() : '';
+    // 포장 기록을 시작한 날부터 오늘까지 품목별 생산 − 포장 (남은 것만 더함. 시작 전 생산분을 포장한 만큼은 0으로 잘림)
+    const waitFrom = packStart;
     const wait = packStart ? packCompare(waitFrom, tdy, products) : [];
     const waitPk = wait.reduce((s, r) => s + Math.max(0, r.prod - r.pack), 0), waitAmt = wait.reduce((s, r) => s + Math.max(0, r.prodAmt - r.packAmt), 0);
     const lastProd = {}; Object.entries(db.days).forEach(([d, day]) => { if (d > tdy) return; (day.lines || []).forEach((l) => { if (producedPkOf(l) > 0 && (!lastProd[l.code] || d > lastProd[l.code])) lastProd[String(l.code)] = d; }); });
