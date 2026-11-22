@@ -2077,7 +2077,7 @@
                 const mfg = getOrderManufacturer(o); if (mfg) e.mfg = mfg;
                 const code = getOrderItemCode(o); if (code) e.code = code;
             });
-            const list = Object.values(map);
+            const list = Object.values(map).filter(e => e.unit > 0); // 매입 단가가 없는 내부 품목(파지·식수 등)은 발주 대상이 아니므로 뺌
             if (!list.length) { showToast('원재료 발주 내역이 없어 양식을 만들 수 없습니다.', 'error'); return; }
             const vendorCount = {}; list.forEach(e => { vendorCount[e.vendor] = (vendorCount[e.vendor] || 0) + 1; });
             list.sort((a, b) => (vendorCount[b.vendor] - vendorCount[a.vendor]) || a.vendor.localeCompare(b.vendor, 'ko') || a.item.localeCompare(b.item, 'ko') || a.spec.localeCompare(b.spec, 'ko'));
@@ -2086,7 +2086,7 @@
             list.forEach((e, i) => {
                 const r = i + 2, unit = Math.round(e.unit), tax = e.taxType === '면세' ? '면세' : '과세';
                 const gross = tax === '과세' ? Math.round(unit * 1.1) : unit, supply = tax === '과세' ? Math.round(gross / 1.1) : gross;
-                const memo = e.unit > 0 ? `단가 기준: ${e.date} ${e.vendor} 공급가 ${unit.toLocaleString('ko-KR')}` : '단가 기록 없음 — 확인';
+                const memo = `단가 기준: ${e.date} ${e.vendor} 공급가 ${unit.toLocaleString('ko-KR')}`;
                 const codeVal = /^\d+$/.test(e.code) ? Number(e.code) : e.code;
                 XLSX.utils.sheet_add_aoa(ws, [[e.vendor, e.item, e.spec, '', tax, gross, '', '', e.mfg, codeVal, memo]], { origin: `A${r}` });
                 if (tax === '과세') { ws[`G${r}`] = { t: 'n', f: `ROUND(F${r}/1.1,0)`, v: supply }; ws[`H${r}`] = { t: 'n', f: `F${r}-G${r}`, v: gross - supply }; }
