@@ -464,7 +464,7 @@
       const row = document.querySelector(`[data-line="${l.id}"]`); if (!row) return;
       const tp = lineTargetPk(l), ap = lineActualPk(l), su = lineStockUnit(l);
       const conv = row.querySelector('[data-k="conv"]');
-      if (conv) conv.textContent = l.unit === '배합' || su !== 'PK' ? `목표 ${num(tp)}${su} · 실행 ${num(lineAutoActualPk(l))}${su}` : '';
+      if (conv) conv.textContent = l.unit === '배합' || su !== 'PK' ? ` · 목표 ${num(tp)}${su} · 실행 ${num(lineAutoActualPk(l))}${su}` : '';
       const pkIn = row.querySelector('[data-k="apk"]'); if (pkIn && !l.pkManual) pkIn.placeholder = num(lineAutoActualPk(l));
       row.querySelector('[data-k="tamt"]').textContent = won(tp * linePrice(l));
       row.querySelector('[data-k="aamt"]').textContent = won(ap * linePrice(l));
@@ -540,8 +540,7 @@
       return `<div data-line="${l.id}" class="grid grid-cols-[minmax(0,1.8fr)_96px_96px_112px_minmax(0,1fr)_30px] gap-2 items-center px-2.5 py-1 rounded-lg border border-stone-200 bg-white text-sm transition">
         <div class="min-w-0">
           <div class="flex items-center gap-1.5"><span class="text-[11px] font-bold px-1.5 py-0.5 rounded ${l.unit === 'PK' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}">${CAT_LABEL[l.cat] || ''}</span><span class="font-bold text-stone-900 truncate" title="${esc(l.name)}">${esc(l.name)}</span>${added ? '<span class="text-[11px] font-bold text-blue-700">계획 외</span>' : ''}</div>
-          <div class="text-[11px] text-stone-500 truncate">${l.unit === '배합' ? `1배합 = ${num(linePkPerBatch(l))}PK · ` : ''}${su !== 'PK' ? `재고 ${su} (${linePerStock(l)}PK) · ` : ''}<span class="${cur ? 'text-rose-600' : ''}" title="${cur ? '현재 제품단가와 다름 — [현재 단가로 다시 계산]' : ''}">${won(pr)}/${su}${following ? ' (현재 단가 따름)' : ''}</span></div>
-          <div class="text-[11px] leading-tight text-stone-400" data-k="conv"></div>
+          <div class="text-[11px] text-stone-500 truncate">${l.unit === '배합' ? `1배합 = ${num(linePkPerBatch(l))}PK · ` : ''}${su !== 'PK' ? `재고 ${su} (${linePerStock(l)}PK) · ` : ''}<span class="${cur ? 'text-rose-600' : ''}" title="${cur ? '현재 제품단가와 다름 — [현재 단가로 다시 계산]' : ''}">${won(pr)}/${su}${following ? ' (현재 단가 따름)' : ''}</span><span class="text-stone-400" data-k="conv"></span></div>
         </div>
         ${unitIn(`<input type="number" min="0" step="any" value="${l.target || ''}" placeholder="0" oninput="Prod.setLineField('${l.id}','target',this.value)" class="${inCls} ${bd}">`, l.unit)}
         ${unitIn(`<input type="number" min="0" step="any" value="${l.actual || ''}" placeholder="0" oninput="Prod.setLineField('${l.id}','actual',this.value)" class="${inCls} ${bd} bg-amber-50/70">`, l.unit)}
