@@ -1,0 +1,7 @@
+# Cloudflare Pages 응답 헤더 (GitHub Pages에서는 무시됨)
+/*
+  X-Robots-Tag: noindex, nofollow
+  X-Frame-Options: DENY
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff
+
