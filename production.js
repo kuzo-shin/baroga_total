@@ -1654,7 +1654,7 @@
   }
   let endStockYm = '';
   function openEndStock(ymArg) {
-    endStockYm = ymArg || endStockYm || today().slice(0, 7);
+    endStockYm = ymArg || today().slice(0, 7); // 버튼으로 열면 이번 달, ‹ ›로 다른 달
     const [y, m] = endStockYm.split('-').map(Number), prev = ymd(new Date(y, m - 2, 1)).slice(0, 7), next = ymd(new Date(y, m, 1)).slice(0, 7), es = lossCfg().endStock || {};
     const lam = laminatingItems().filter((x) => doughChain(x.name).ready);
     const inp = (ym, name) => `<input type="number" min="0" step="any" data-es-ym="${ym}" data-es-name="${esc(name)}" value="${(es[ym] || {})[name] !== undefined ? (es[ym] || {})[name] : ''}" placeholder="미입력" class="no-spinner w-24 text-right border border-stone-300 rounded-lg px-2 py-1 font-bold tabular-nums"> 카트`;
