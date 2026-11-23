@@ -1,4 +1,4 @@
-// [VERSION: production.js v2.16 - 2026-11-23 원재료 손실(공정 표 형태로 개편·생산일지 연동 초록 점·생지 실제 생산은 포장 완료 등록 기준): 반죽 1개당 버터 1,000g 현장 기준(설정 가능), 1카트 기준을 반죽 이름 옆에 표시, 설명 문구 수정 / v2.15 - 2026-11-23 원재료 손실 개편: 파이 공정별(믹싱→라미네이팅→성형)·1카트 기준(개수×g)·버터 포함 중량, 파이를 생지 위로, 반제품 이름 레시피 기준 통일 / v2.14 - 2026-11-22 미배정 표시 삼각형 아이콘 + 범례 / v2.13 - 2026-11-22 작업 인원: 미배정 팀원 있으면 칸에 ! 표시·이름 / v2.12 - 2026-11-22 포장 안 된 품목 월별 구분, 참고 자료 안내 문구 / v2.11 - 2026-11-22 포장 달력 칸에 생산·포장 금액 / v2.10 - 2026-11-22 포장 완료: 금액 차이(KPI·주·품목), 포장 안 된 품목 목록 / v2.9 - 2026-11-22 포장 완료 등록 탭 신설(재고 입고 = 포장), 생산일지 창 크기 줄임, '실제 포장 수량'→'포장 수량' / v2.8 - 2026-11-22 일자 창에서 휴무일 지정(사유 문구), 달력 칸 옅은 빨강 + 문구 / v2.7 - 2026-11-22 달력 칸 최소 높이 1행(빈 주는 짧게), 기록 없는 주 합계 한 줄 / v2.6 - 2026-11-22 작업 인원에 1인 생산금액(KPI·날짜·주·파트별), 작업 구분별 생산 파트·인원 기준 설정 / v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
+// [VERSION: production.js v2.16 - 2026-11-23 원재료 손실(투입보다 더 쓴 경우 '초과'로 풀어 표시·공정 표 형태로 개편·생산일지 연동 초록 점·생지 실제 생산은 포장 완료 등록 기준): 반죽 1개당 버터 1,000g 현장 기준(설정 가능), 1카트 기준을 반죽 이름 옆에 표시, 설명 문구 수정 / v2.15 - 2026-11-23 원재료 손실 개편: 파이 공정별(믹싱→라미네이팅→성형)·1카트 기준(개수×g)·버터 포함 중량, 파이를 생지 위로, 반제품 이름 레시피 기준 통일 / v2.14 - 2026-11-22 미배정 표시 삼각형 아이콘 + 범례 / v2.13 - 2026-11-22 작업 인원: 미배정 팀원 있으면 칸에 ! 표시·이름 / v2.12 - 2026-11-22 포장 안 된 품목 월별 구분, 참고 자료 안내 문구 / v2.11 - 2026-11-22 포장 달력 칸에 생산·포장 금액 / v2.10 - 2026-11-22 포장 완료: 금액 차이(KPI·주·품목), 포장 안 된 품목 목록 / v2.9 - 2026-11-22 포장 완료 등록 탭 신설(재고 입고 = 포장), 생산일지 창 크기 줄임, '실제 포장 수량'→'포장 수량' / v2.8 - 2026-11-22 일자 창에서 휴무일 지정(사유 문구), 달력 칸 옅은 빨강 + 문구 / v2.7 - 2026-11-22 달력 칸 최소 높이 1행(빈 주는 짧게), 기록 없는 주 합계 한 줄 / v2.6 - 2026-11-22 작업 인원에 1인 생산금액(KPI·날짜·주·파트별), 작업 구분별 생산 파트·인원 기준 설정 / v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
 //  - 품목 목록·단가: 제품단가 탭(barogaProductPriceBridge.getProductionProducts)
 //      파이 = PK로 입력 / 알생지·파베이크·제과 = 배합으로 입력 → '1배합 PK수'로 PK 환산 (실제 포장 PK를 직접 고칠 수 있음)
 //      금액 = PK × 엠즈 매입가(PK). 줄을 만들 때의 단가를 줄에 저장 → 나중에 단가가 바뀌어도 지난 기록 금액은 그대로
@@ -1450,13 +1450,14 @@
       x.inputKg = ch.cartButterKg != null ? x.carts * ch.cartButterKg : null;
       x.diffKg = x.inputKg != null ? x.inputKg - g.usedKg : null;
       x.lossPct = x.inputKg > 0 ? (1 - g.usedKg / x.inputKg) * 100 : null;
-      x.lossMoney = x.diffKg != null && ch.butterCostPerKg != null ? x.diffKg * ch.butterCostPerKg : null;
+      x.over = x.diffKg != null && x.diffKg < 0;                                   // 투입보다 더 씀 (기록 확인 필요)
+      x.lossMoney = x.diffKg != null && !x.over && ch.butterCostPerKg != null ? x.diffKg * ch.butterCostPerKg : null;
       return x;
     });
     const sumExp = dough.reduce((s, r) => s + r.expC, 0), sumAct = dough.reduce((s, r) => s + r.actC, 0);
     const pieIn = pies.reduce((s, g) => s + (g.inputKg || 0), 0), pieUsed = pies.reduce((s, g) => s + (g.inputKg != null ? g.usedKg : 0), 0);
     return { dough, pies, doughYield: sumExp > 0 ? (sumAct / sumExp) * 100 : null, doughLossMoney: dough.reduce((s, r) => s + (r.lossMoney || 0), 0), unconfirmed: dough.reduce((s, r) => s + r.unconfirmed, 0),
-      pieLossPct: pieIn > 0 ? (1 - pieUsed / pieIn) * 100 : null, pieLossMoney: pies.reduce((s, g) => s + (g.lossMoney || 0), 0), pieHasMoney: pies.some((g) => g.lossMoney != null && g.carts > 0) };
+      pieLossPct: pieIn > 0 ? (1 - pieUsed / pieIn) * 100 : null, pieLossMoney: pies.reduce((s, g) => s + (g.lossMoney || 0), 0), pieHasMoney: pies.some((g) => g.lossMoney != null && g.carts > 0), pieOver: pies.filter((g) => g.over && g.carts > 0).map((g) => g.ch.short) };
   }
   let lossPeriodKey = 'M';
   function yieldCell(v) {
@@ -1468,6 +1469,12 @@
     if (v === null || v === undefined) return '<span class="text-stone-400">-</span>';
     const cls = v <= 0 ? 'text-emerald-700' : v <= 3 ? 'text-amber-700' : 'text-rose-700';
     return `<span class="font-extrabold tabular-nums ${cls}">${v.toFixed(1)}%</span>`;
+  }
+  // 파이 성형: 투입보다 더 쓴 것으로 나오면(음수) 손실이 아니라 '초과' — 카트 기록 누락 가능성
+  function pieLossCell(v) {
+    if (v === null || v === undefined) return '<span class="text-stone-400">-</span>';
+    if (v < 0) return `<span class="font-extrabold tabular-nums text-amber-700" title="투입한 반죽보다 파이에 쓴 반죽이 더 많음 — 라미네이팅 카트 기록 확인">초과 ${Math.abs(v).toFixed(1)}%</span>`;
+    return `<span class="font-extrabold tabular-nums ${v <= 3 ? 'text-emerald-700' : 'text-rose-700'}">손실 ${v.toFixed(1)}%</span>`;
   }
   function renderLoss() {
     const products = getProducts(), defs = pieDoughDefaults(products);
@@ -1504,7 +1511,7 @@
       return `<div class="rounded-2xl border border-stone-200 overflow-hidden">
         <div class="px-3 py-2.5 bg-stone-50 border-b border-stone-200 flex flex-wrap items-center justify-between gap-2">
           <div class="flex flex-wrap items-center gap-2"><b class="text-base">${esc(ch.short)} 반죽</b><span class="px-2 py-0.5 rounded-lg bg-white border border-stone-300 text-xs font-bold text-stone-700 tabular-nums">1카트 = ${ch.pieces}개 × (반죽 ${num(ch.g, 0)}g + 버터 ${num(ch.butterPerPiece, 0)}g) = ${num(ch.cartButterKg)}kg</span></div>
-          <div class="flex items-center gap-3 text-sm">${hasResult ? `<span class="text-stone-500 text-xs">성형 손실</span><b class="tabular-nums ${g.diffKg > 0 ? 'text-rose-700' : 'text-emerald-700'}">${num(g.diffKg)}kg</b>${lossCell(g.lossPct)}${moneyCell(g.lossMoney)}` : '<span class="text-xs text-stone-400">라미네이팅 기록 없음</span>'}</div>
+          <div class="flex items-center gap-3 text-sm">${!hasResult ? '<span class="text-xs text-stone-400">라미네이팅 기록 없음</span>' : g.over ? `<span class="px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-300 text-xs font-extrabold text-amber-800">투입보다 ${num(-g.diffKg)}kg 더 씀 · 카트 기록 확인 필요</span>` : `<span class="text-stone-500 text-xs">성형</span><b class="tabular-nums text-rose-700">${num(g.diffKg)}kg 손실</b>${pieLossCell(g.lossPct)}${moneyCell(g.lossMoney)}`}</div>
         </div>
         <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm min-w-[720px]">
           <thead><tr class="text-[11px] font-extrabold text-stone-500 border-b border-stone-200"><th class="py-1.5 px-2">공정</th><th class="py-1.5 px-2 text-right">입력한 수량</th><th class="py-1.5 px-2">계산 기준</th><th class="py-1.5 px-2 text-right">반죽 무게</th><th class="py-1.5 px-2">비고</th></tr></thead>
@@ -1515,7 +1522,9 @@
             <tr class="border-b border-stone-100 bg-amber-50/50"><td class="${c1}">${no(3)}성형 — 투입</td><td class="${c2}">${live(num(g.carts) + '카트')}</td><td class="${c3}">× 1카트 ${num(ch.cartButterKg)}kg <span class="text-stone-400">(${g.usedRecorded ? '사용 카트' : '만든 카트 기준 · 사용 카트 미입력'})</span></td><td class="${c4}">${kg(g.inputKg)}</td><td></td></tr>
             <tr class="border-b border-stone-100"><td class="py-1.5 px-2 pl-9 font-bold whitespace-nowrap">성형 — 파이에 쓴 반죽</td><td></td><td class="${c3}">${pies.length ? '아래 파이 생산 합계' : '이 기간 파이 생산 기록 없음'}</td><td class="${c4}">${kg(g.usedKg)}</td><td></td></tr>
             ${pieTrs}
-            <tr class="${hasResult ? (g.diffKg > 0 ? 'bg-rose-50' : 'bg-emerald-50') : 'bg-stone-50'}"><td class="${c1}">손실 (투입 − 쓴 반죽)</td><td></td><td class="py-1.5 px-2">${hasResult ? `<div class="h-2 rounded-full bg-rose-200 overflow-hidden max-w-[260px]" title="투입 중 파이에 쓴 비율"><div class="h-full bg-emerald-500" style="width:${usedPct.toFixed(1)}%"></div></div>` : ''}</td><td class="${c4} ${g.diffKg > 0 ? 'text-rose-700' : 'text-emerald-700'}">${hasResult ? kg(g.diffKg) : '-'}</td><td class="${c5}">${hasResult ? `${lossCell(g.lossPct)} · ${moneyCell(g.lossMoney)}` : ''}</td></tr>
+            ${!hasResult ? `<tr class="bg-stone-50"><td class="${c1}">결과</td><td></td><td class="${c3}">라미네이팅 카트 기록이 없어 계산할 수 없습니다</td><td class="${c4}">-</td><td></td></tr>`
+              : g.over ? `<tr class="bg-amber-50"><td class="${c1} text-amber-800">투입보다 더 씀</td><td></td><td class="py-1.5 px-2 text-xs font-bold text-amber-800">쓴 반죽 ${kg(g.usedKg)} − 투입 ${kg(g.inputKg)}</td><td class="${c4} text-amber-700">+${kg(-g.diffKg)} 초과</td><td class="${c5} font-bold text-amber-800">손실이 아니라 기록 차이입니다. 라미네이팅 카트 입력이 빠졌는지 확인하세요.</td></tr>`
+              : `<tr class="bg-rose-50"><td class="${c1} text-rose-800">손실</td><td></td><td class="py-1.5 px-2"><div class="text-xs font-bold text-rose-800 mb-1">투입 ${kg(g.inputKg)} − 쓴 반죽 ${kg(g.usedKg)}</div><div class="h-2 rounded-full bg-rose-200 overflow-hidden max-w-[260px]" title="투입 중 파이에 쓴 비율"><div class="h-full bg-emerald-500" style="width:${usedPct.toFixed(1)}%"></div></div></td><td class="${c4} text-rose-700">${kg(g.diffKg)} 손실</td><td class="${c5}">${pieLossCell(g.lossPct)} · ${moneyCell(g.lossMoney)}</td></tr>`}
           </tbody></table></div>
         ${g.missingG.length ? `<div class="px-3 py-1.5 text-[11px] font-bold text-rose-700 border-t border-stone-200">1개당 반죽 g 미설정: ${esc(g.missingG.join(', '))}</div>` : ''}
       </div>`;
@@ -1523,7 +1532,7 @@
     // 주별 비교
     const shown = L.pies.filter((g) => g.ch.ready);
     const trend = periods.filter((p) => p.key !== 'M').map((p) => ({ p, r: computeLoss(p.from, p.to, products, defs) }));
-    const trendTrs = trend.map(({ p, r }) => `<tr class="border-b border-stone-100 whitespace-nowrap ${p.key === per.key ? 'bg-amber-50' : ''}"><td class="py-1.5 px-2 font-bold">${p.label} <span class="text-xs text-stone-400">${p.sub}</span></td>${r.pies.filter((g) => g.ch.ready).map((g) => `<td class="py-1.5 px-2 text-right">${g.carts ? lossCell(g.lossPct) : '<span class="text-stone-400">-</span>'}</td>`).join('')}<td class="py-1.5 px-2 text-right tabular-nums">${r.pieHasMoney ? moneyCell(r.pieLossMoney) : '<span class="text-stone-400">-</span>'}</td><td class="py-1.5 px-2 text-right">${yieldCell(r.doughYield)}</td><td class="py-1.5 px-2 text-right tabular-nums ${r.doughLossMoney > 0 ? 'text-rose-700' : 'text-emerald-700'}">${r.doughYield === null ? '-' : won(r.doughLossMoney)}</td></tr>`).join('');
+    const trendTrs = trend.map(({ p, r }) => `<tr class="border-b border-stone-100 whitespace-nowrap ${p.key === per.key ? 'bg-amber-50' : ''}"><td class="py-1.5 px-2 font-bold">${p.label} <span class="text-xs text-stone-400">${p.sub}</span></td>${r.pies.filter((g) => g.ch.ready).map((g) => `<td class="py-1.5 px-2 text-right">${g.carts ? pieLossCell(g.lossPct) : '<span class="text-stone-400">-</span>'}</td>`).join('')}<td class="py-1.5 px-2 text-right tabular-nums">${r.pieHasMoney ? moneyCell(r.pieLossMoney) : '<span class="text-stone-400">-</span>'}</td><td class="py-1.5 px-2 text-right">${yieldCell(r.doughYield)}</td><td class="py-1.5 px-2 text-right tabular-nums ${r.doughLossMoney > 0 ? 'text-rose-700' : 'text-emerald-700'}">${r.doughYield === null ? '-' : won(r.doughLossMoney)}</td></tr>`).join('');
     const box = 'bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs';
     return `
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4 flex flex-wrap items-center justify-between gap-2">
@@ -1536,8 +1545,8 @@
         <button type="button" onclick="Prod.openLossSettings()" class="px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-bold cursor-pointer hover:bg-stone-50">손실 기준 설정 (1카트 기준 · 파이 반죽 g)</button>
       </div>
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div class="${box}"><div class="text-xs font-bold text-stone-500">파이 성형 손실률 (${esc(per.label)})</div><div class="mt-1 text-sm flex flex-col gap-0.5">${shown.filter((g) => g.carts || g.usedKg).map((g) => `<div class="flex justify-between"><span>${esc(g.ch.short)}</span>${lossCell(g.lossPct)}</div>`).join('') || '<span class="text-stone-400 text-xs">기록 없음</span>'}</div></div>
-        <div class="${box}"><div class="text-xs font-bold text-stone-500">파이 반죽 손실 원재료비</div><div class="mt-1 text-xl font-extrabold tabular-nums">${L.pieHasMoney ? moneyCell(L.pieLossMoney) : '-'}</div><div class="text-xs text-stone-500">성형 단계 차이 kg × 버터 반죽 원재료비/kg</div></div>
+        <div class="${box}"><div class="text-xs font-bold text-stone-500">파이 성형 결과 (${esc(per.label)})</div><div class="mt-1 text-sm flex flex-col gap-0.5">${shown.filter((g) => g.carts || g.usedKg).map((g) => `<div class="flex justify-between"><span>${esc(g.ch.short)}</span>${pieLossCell(g.lossPct)}</div>`).join('') || '<span class="text-stone-400 text-xs">기록 없음</span>'}</div></div>
+        <div class="${box}"><div class="text-xs font-bold text-stone-500">파이 반죽 손실 원재료비</div><div class="mt-1 text-xl font-extrabold tabular-nums">${L.pieHasMoney ? moneyCell(L.pieLossMoney) : '-'}</div><div class="text-xs ${L.pieOver.length ? 'text-amber-700 font-bold' : 'text-stone-500'}">${L.pieOver.length ? `${esc(L.pieOver.join('·'))}는 투입보다 더 써서 제외 (기록 확인)` : '성형 손실 kg × 버터 반죽 원재료비/kg'}</div></div>
         <div class="${box}"><div class="text-xs font-bold text-stone-500">생지 수율</div><div class="mt-1 text-xl">${yieldCell(L.doughYield)}</div><div class="text-xs text-stone-500">실제 생산 ÷ 표준(투입 배합 × 1배합 PK수)</div></div>
         <div class="${box}"><div class="text-xs font-bold text-stone-500">생지 손실 원재료비</div><div class="mt-1 text-xl font-extrabold tabular-nums ${L.doughLossMoney > 0 ? 'text-rose-700' : 'text-emerald-700'}">${L.doughYield === null ? '-' : won(L.doughLossMoney)}</div><div class="text-xs ${L.unconfirmed ? 'text-amber-700 font-bold' : 'text-stone-500'}">포장 기록 없는 품목 ${L.unconfirmed}종 (계산 제외)</div></div>
       </div>
@@ -1555,7 +1564,7 @@
       </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
         <h3 class="text-sm font-extrabold mb-2">${m}월 주별 비교</h3>
-        <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm"><thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600 whitespace-nowrap"><th class="py-2 px-2">주</th>${shown.map((g) => `<th class="py-2 px-2 text-right">${esc(g.ch.short)} 성형 손실</th>`).join('')}<th class="py-2 px-2 text-right">파이 손실 원재료비</th><th class="py-2 px-2 text-right">생지 수율</th><th class="py-2 px-2 text-right">생지 손실 원재료비</th></tr></thead><tbody>${trendTrs}</tbody></table></div>
+        <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm"><thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600 whitespace-nowrap"><th class="py-2 px-2">주</th>${shown.map((g) => `<th class="py-2 px-2 text-right">${esc(g.ch.short)} 성형</th>`).join('')}<th class="py-2 px-2 text-right">파이 손실 원재료비</th><th class="py-2 px-2 text-right">생지 수율</th><th class="py-2 px-2 text-right">생지 손실 원재료비</th></tr></thead><tbody>${trendTrs}</tbody></table></div>
       </div>`;
   }
   function openLossSettings() {
