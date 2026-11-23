@@ -1620,9 +1620,6 @@
       document.body.removeChild(textarea);
     }
 
-    function escapeBackticks(str) {
-      return String(str).replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
-    }
 
     function escapeQuotes(str) {
       return String(str).replace(/'/g, "\\'");

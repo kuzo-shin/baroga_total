@@ -2566,15 +2566,6 @@ async function pushRecipesToGoogleSheet(silent = false) {
     return ok;
 }
 
-function exportRecipesCsv() {
-    let csv = '\uFEFF구분,품목코드,품목명,분할중량(G),생산수량,PK입수,1배합pk수량,판매금액,원가비율(%),개당원가,판매원가,개별포장,총포장가,원재료비용,중량합계(G),충전합계(G)\n';
-    [...(recipesData || [])].sort(compareRecipeProductCode).forEach(rc => {
-        const m = calculateRecipeMetrics(rc);
-        const typeLabel = rc.recipeType === 'SUB' ? '반제품/충전물' : '완제품';
-        csv += [typeLabel, String(rc.productCode || ''), rc.productName, Number(rc.divisionWeight) || 0, Number(m.prodQty.toFixed(1)), Number(rc.packQty) || 0, Number(m.batchPkQty.toFixed(1)), m.sellPrice, Number(m.costRatioPct.toFixed(2)), Number(m.unitCost.toFixed(2)), Math.round(m.salesCost), Math.round(m.unitPackCost), Math.round(m.totalPackCost), Number(m.productionCost.toFixed(2)), Math.round(m.weightTotalG), Math.round(m.fillingWeightG)].map(csvCell).join(',') + '\n';
-    });
-    triggerCsvDownload(csv, `바로가공장_배합비원가표_${getTodayStr()}.csv`);
-}
 
 window.calculateRecipeMetrics = calculateRecipeMetrics;
 window.renderRecipeDetailPanel = renderRecipeDetailPanel;
