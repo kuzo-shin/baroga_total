@@ -1,4 +1,4 @@
-// [VERSION: production.js v2.19 - 2026-11-23 원재료 손실: 금액 표기 통일(+초록 = 초과 생산, −빨강 = 생산 부족), 파이 초과분도 금액 표시 / v2.18 - 2026-11-23 원재료 손실: 상단 카드 파이·생지 같은 양식(수율+금액), 문구 정리(투입 대비 생산 초과/부족 등), 생지 부족분 원재료 팝업 / v2.17 - 2026-11-23 원재료 손실: 투입보다 파이에 쓴 반죽이 많으면 음수 대신 '투입보다 더 씀(초과)'으로 풀어 표시, 초과분은 손실 원재료비에서 제외 / v2.16 - 2026-11-23 원재료 손실(공정 표 형태로 개편·생산일지 연동 초록 점·생지 실제 생산은 포장 완료 등록 기준): 반죽 1개당 버터 1,000g 현장 기준(설정 가능), 1카트 기준을 반죽 이름 옆에 표시, 설명 문구 수정 / v2.15 - 2026-11-23 원재료 손실 개편: 파이 공정별(믹싱→라미네이팅→성형)·1카트 기준(개수×g)·버터 포함 중량, 파이를 생지 위로, 반제품 이름 레시피 기준 통일 / v2.14 - 2026-11-22 미배정 표시 삼각형 아이콘 + 범례 / v2.13 - 2026-11-22 작업 인원: 미배정 팀원 있으면 칸에 ! 표시·이름 / v2.12 - 2026-11-22 포장 안 된 품목 월별 구분, 참고 자료 안내 문구 / v2.11 - 2026-11-22 포장 달력 칸에 생산·포장 금액 / v2.10 - 2026-11-22 포장 완료: 금액 차이(KPI·주·품목), 포장 안 된 품목 목록 / v2.9 - 2026-11-22 포장 완료 등록 탭 신설(재고 입고 = 포장), 생산일지 창 크기 줄임, '실제 포장 수량'→'포장 수량' / v2.8 - 2026-11-22 일자 창에서 휴무일 지정(사유 문구), 달력 칸 옅은 빨강 + 문구 / v2.7 - 2026-11-22 달력 칸 최소 높이 1행(빈 주는 짧게), 기록 없는 주 합계 한 줄 / v2.6 - 2026-11-22 작업 인원에 1인 생산금액(KPI·날짜·주·파트별), 작업 구분별 생산 파트·인원 기준 설정 / v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
+// [VERSION: production.js v2.20 - 2026-11-23 원재료 손실(파이 보관분 대응): 기간 '최근 3개월·누적', 월말 카트 재고 입력 → 재고 반영 계산, 성형한 날 사용 카트 미입력 경고(달력·일자 창) / v2.19 - 2026-11-23 원재료 손실: 금액 표기 통일(+초록 = 초과 생산, −빨강 = 생산 부족), 파이 초과분도 금액 표시 / v2.18 - 2026-11-23 원재료 손실: 상단 카드 파이·생지 같은 양식(수율+금액), 문구 정리(투입 대비 생산 초과/부족 등), 생지 부족분 원재료 팝업 / v2.17 - 2026-11-23 원재료 손실: 투입보다 파이에 쓴 반죽이 많으면 음수 대신 '투입보다 더 씀(초과)'으로 풀어 표시, 초과분은 손실 원재료비에서 제외 / v2.16 - 2026-11-23 원재료 손실(공정 표 형태로 개편·생산일지 연동 초록 점·생지 실제 생산은 포장 완료 등록 기준): 반죽 1개당 버터 1,000g 현장 기준(설정 가능), 1카트 기준을 반죽 이름 옆에 표시, 설명 문구 수정 / v2.15 - 2026-11-23 원재료 손실 개편: 파이 공정별(믹싱→라미네이팅→성형)·1카트 기준(개수×g)·버터 포함 중량, 파이를 생지 위로, 반제품 이름 레시피 기준 통일 / v2.14 - 2026-11-22 미배정 표시 삼각형 아이콘 + 범례 / v2.13 - 2026-11-22 작업 인원: 미배정 팀원 있으면 칸에 ! 표시·이름 / v2.12 - 2026-11-22 포장 안 된 품목 월별 구분, 참고 자료 안내 문구 / v2.11 - 2026-11-22 포장 달력 칸에 생산·포장 금액 / v2.10 - 2026-11-22 포장 완료: 금액 차이(KPI·주·품목), 포장 안 된 품목 목록 / v2.9 - 2026-11-22 포장 완료 등록 탭 신설(재고 입고 = 포장), 생산일지 창 크기 줄임, '실제 포장 수량'→'포장 수량' / v2.8 - 2026-11-22 일자 창에서 휴무일 지정(사유 문구), 달력 칸 옅은 빨강 + 문구 / v2.7 - 2026-11-22 달력 칸 최소 높이 1행(빈 주는 짧게), 기록 없는 주 합계 한 줄 / v2.6 - 2026-11-22 작업 인원에 1인 생산금액(KPI·날짜·주·파트별), 작업 구분별 생산 파트·인원 기준 설정 / v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
 //  - 품목 목록·단가: 제품단가 탭(barogaProductPriceBridge.getProductionProducts)
 //      파이 = PK로 입력 / 알생지·파베이크·제과 = 배합으로 입력 → '1배합 PK수'로 PK 환산 (실제 포장 PK를 직접 고칠 수 있음)
 //      금액 = PK × 엠즈 매입가(PK). 줄을 만들 때의 단가를 줄에 저장 → 나중에 단가가 바뀌어도 지난 기록 금액은 그대로
@@ -37,6 +37,7 @@
     const L = d.loss || {};
     ['cartKg', 'cart'].forEach((k) => { if (L[k]) Object.keys(L[k]).forEach((old) => { if (SEMI_RENAME[old]) { if (L[k][SEMI_RENAME[old]] === undefined) L[k][SEMI_RENAME[old]] = L[k][old]; delete L[k][old]; n++; } }); });
     Object.values(L.pie || {}).forEach((x) => { if (x && x.group) x.group = nn(x.group); });
+    Object.values(L.endStock || {}).forEach((o) => Object.keys(o).forEach((old) => { if (SEMI_RENAME[old]) { o[SEMI_RENAME[old]] = o[old]; delete o[old]; n++; } }));
     const semiKey = (k) => (String(k).startsWith('SEMI:') && SEMI_RENAME[String(k).slice(5)] ? 'SEMI:' + SEMI_RENAME[String(k).slice(5)] : null);
     if (d.stockBase && d.stockBase.counts) Object.keys(d.stockBase.counts).forEach((k) => { const nk = semiKey(k); if (nk) { d.stockBase.counts[nk] = d.stockBase.counts[k]; delete d.stockBase.counts[k]; n++; } });
     d.stockAdjusts.forEach((a) => { const nk = semiKey(a.code); if (nk) { a.code = nk; n++; } if (a.name) a.name = nn(a.name); });
@@ -262,6 +263,8 @@
   }
   function renderCalendar() {
     const ym = cursorMonth, [y, m] = ym.split('-').map(Number);
+    const _prods = getProducts(), _defs = pieDoughDefaults(_prods);
+    const usedWarn = (date) => { if (date < USED_WARN_FROM) return ''; const miss = missingUsedGroups(db.days[date], _prods, _defs); return miss.length ? `<span class="self-center" title="파이를 성형했는데 사용 카트 미입력: ${esc(miss.map(semiShort).join(', '))}">${WARN_TRI('w-4 h-4')}</span>` : ''; };
     const weeks = monthWeeks(ym);
     const tdy = today();
     let mT = 0, mA = 0, toDateT = 0, workDays = 0;
@@ -321,7 +324,7 @@
           <div class="flex items-center justify-between gap-1"><span class="flex items-baseline gap-1.5 min-w-0"><span class="text-xl leading-none font-black tabular-nums ${isToday ? 'text-amber-700' : 'text-rose-600'}">${c.day}</span>${crewBadge(c.date)}</span></div>${offBlock}
         </button>`;
         return `<button type="button" onclick="Prod.openDay('${c.date}')" class="text-left min-h-[64px] rounded-xl border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : off ? 'border-rose-200' : 'border-stone-200'} ${off ? 'bg-rose-50' : 'bg-white'} hover:border-amber-400 hover:shadow-xs p-2 flex flex-col gap-1 cursor-pointer min-w-0">
-          <div class="flex items-center justify-between gap-1"><span class="flex items-baseline gap-1.5 min-w-0"><span class="text-xl leading-none font-black tabular-nums ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}</span>${crewBadge(c.date)}</span>${off ? `<span class="px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-700 text-[11px] font-extrabold">${esc(off)}</span>` : dayBadge(c, t)}</div>
+          <div class="flex items-center justify-between gap-1"><span class="flex items-baseline gap-1.5 min-w-0"><span class="text-xl leading-none font-black tabular-nums ${isToday ? 'text-amber-700' : dayCls(c)}">${c.day}</span>${crewBadge(c.date)}${usedWarn(c.date)}</span>${off ? `<span class="px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-700 text-[11px] font-extrabold">${esc(off)}</span>` : dayBadge(c, t)}</div>
           ${lines.length ? `<div class="grid grid-cols-[auto_1fr] gap-x-1 text-xs tabular-nums"><span class="font-semibold text-stone-500">목표</span><span class="text-right font-bold">${won(t.target)}</span><span class="font-semibold text-stone-500">실행</span><span class="text-right font-extrabold text-amber-900">${won(t.actual)}</span></div>` : ''}
           ${items.length ? `<div class="${lines.length ? 'border-t border-stone-100 pt-1 ' : ''}flex flex-col gap-1">${shown}</div>` : '<div class="text-xs text-stone-300 mt-1">클릭해서 목표 입력</div>'}
         </button>`;
@@ -550,6 +553,22 @@
     return `<div class="flex flex-wrap items-center gap-1 mb-1.5">${tabs}</div>
       <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-1">${items.join('') || '<div class="col-span-full py-4 text-center text-sm text-stone-400">찾는 품목이 없습니다.</div>'}</div>`;
   }
+  function draftMissingUsed() {
+    if (!draft || draft.date < USED_WARN_FROM) return [];
+    const products = getProducts();
+    return missingUsedGroups(draft, products, pieDoughDefaults(products));
+  }
+  function usedWarnBanner() {
+    const miss = draftMissingUsed(); if (!miss.length) return '';
+    return `<div class="mb-2 rounded-xl bg-amber-50 border border-amber-300 px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-sm"><span class="inline-flex items-center gap-1.5 font-bold text-amber-900">${WARN_TRI('w-4 h-4')}파이를 성형했는데 사용 카트가 비어 있습니다: ${esc(miss.map(semiShort).join(', '))}</span><button type="button" onclick="Prod.addUsedRows()" class="px-3 py-1 rounded-lg bg-amber-600 text-white text-xs font-extrabold cursor-pointer">사용 카트 칸으로 이동</button></div>`;
+  }
+  // 사용 카트를 적을 라미네이팅 줄이 없으면 추가하고 첫 줄로 이동
+  function addUsedRows() {
+    const miss = draftMissingUsed(); if (!miss.length) return;
+    let firstId = null;
+    miss.forEach((name) => { let l = draft.semi.find((x) => x.name === name); if (!l) { const it = db.semiItems.find((x) => x.name === name) || { name, unit: '카트' }; l = { id: uid(), name: it.name, unit: it.unit, target: 0, actual: 0, note: '' }; draft.semi.push(l); } if (!firstId) firstId = l.id; });
+    renderEditor(); if (firstId) focusRow(firstId);
+  }
   function renderEditor() {
     const host = document.getElementById('prodModal'); if (!host || !draft) return;
     const products = getProducts();
@@ -612,6 +631,7 @@
             <div id="prodPicker" class="rounded-xl bg-stone-50 border border-stone-200 p-2">${renderPickerBody()}</div>
           </section>
           <section>
+            ${usedWarnBanner()}
             <div class="grid grid-cols-[minmax(0,1.8fr)_96px_96px_112px_minmax(0,1fr)_30px] gap-2 px-2.5 pb-1 text-xs font-extrabold text-stone-500">
               <div>오늘 품목</div><div class="text-right">목표</div><div class="text-right">실행</div><div class="text-right" title="배합으로 만든 실제 PK 수량 (원재료 손실 분석에 사용). 재고는 [포장 완료 등록] 기준">포장 수량</div><div class="text-right">목표 / 실행 금액</div><div></div>
             </div>
@@ -1386,9 +1406,25 @@
       return { key: 'W' + (i + 1), label: `${i + 1}주`, sub: `${inM[0].date.slice(5).replace('-', '/')}~${inM[inM.length - 1].date.slice(5).replace('-', '/')}`, from: inM[0].date, to: inM[inM.length - 1].date };
     });
     const [y, m] = ym.split('-').map(Number);
-    return [{ key: 'M', label: `${m}월 전체`, sub: '', from: `${ym}-01`, to: ymd(new Date(y, m, 0)) }, ...weeks];
+    const ymOf = (k) => ymd(new Date(y, m - 1 + k, 1)).slice(0, 7), end = ymd(new Date(y, m, 0));
+    const first = Object.keys(db.days).sort()[0] || `${ym}-01`, firstYm = first.slice(0, 7), [fy, fm] = firstYm.split('-').map(Number);
+    // stockPrev/stockLast: 월초·월말 카트 재고(실사)를 반영할 때 쓰는 달 (기간 시작 전달 말 · 기간 마지막 달 말)
+    return [
+      { key: 'M', label: `${m}월 전체`, sub: '', from: `${ym}-01`, to: end, stockPrev: ymOf(-1), stockLast: ym },
+      { key: 'Q', label: '최근 3개월', sub: `${Number(ymOf(-2).slice(5))}~${m}월`, from: `${ymOf(-2)}-01`, to: end, stockPrev: ymOf(-3), stockLast: ym },
+      { key: 'ALL', label: '누적', sub: `${firstYm.slice(2).replace('-', '.')}~`, from: `${firstYm}-01`, to: end, stockPrev: ymd(new Date(fy, fm - 2, 1)).slice(0, 7), stockLast: ym },
+      ...weeks];
   }
-  function computeLoss(from, to, products, defs) {
+  // 성형한 날 '사용 카트' 입력 확인 (이 날짜부터 경고)
+  const USED_WARN_FROM = '2026-11-23';
+  function missingUsedGroups(day, products, defs) {
+    if (!day) return [];
+    const need = {};
+    (day.lines || []).forEach((l) => { if (l.cat !== 'PIE' || !(lineActualPk(l) > 0)) return; const g = pieSetting(l.code, defs).group; if (g) need[g] = true; });
+    (day.semi || []).forEach((x) => { if (need[x.name] && Number(x.used) > 0) delete need[x.name]; });
+    return Object.keys(need).filter((n) => doughChain(n).ready);
+  }
+  function computeLoss(from, to, products, defs, per) {
     const doughRows = {}, pieGroups = {}, mixOf = {};
     laminatingItems().forEach((s) => { const ch = doughChain(s.name); pieGroups[s.name] = { name: s.name, ch, batches: 0, made: 0, usedCarts: 0, usedRecorded: false, waste: 0, usedKg: 0, pies: {}, missingG: [] }; mixOf[ch.mixName] = pieGroups[s.name]; });
     Object.entries(db.days).forEach(([d, day]) => {
@@ -1445,8 +1481,13 @@
       x.mixLossPct = x.mixDiffKg != null && x.mixKg > 0 ? (x.mixDiffKg / x.mixKg) * 100 : null;
       x.mixLossMoney = x.mixDiffKg != null && ch.baseCostPerKg != null ? x.mixDiffKg * ch.baseCostPerKg : null;
       // ③ 성형 (사용 카트를 적었으면 사용 카트, 아니면 만든 카트)
-      x.basis = g.usedRecorded ? '사용 카트' : '만든 카트(사용 미입력)';
-      x.carts = g.usedRecorded ? g.usedCarts : g.made;
+      // 기준 우선순위: ① 사용 카트(성형한 날 적은 값) ② 재고 반영(기간 전 재고 + 만든 카트 − 기간 말 재고) ③ 만든 카트
+      const es = lossCfg().endStock || {}, o = per && per.stockPrev ? (es[per.stockPrev] || {})[g.name] : undefined, c = per && per.stockLast ? (es[per.stockLast] || {})[g.name] : undefined;
+      x.stockOpen = o; x.stockClose = c;
+      x.stockCarts = o !== undefined && c !== undefined ? Number(o) + g.made - Number(c) : null;
+      x.basisKey = g.usedRecorded ? 'USED' : x.stockCarts !== null ? 'STOCK' : 'MADE';
+      x.basis = { USED: '사용 카트', STOCK: '재고 반영', MADE: '만든 카트 (사용 카트·재고 미입력)' }[x.basisKey];
+      x.carts = x.basisKey === 'USED' ? g.usedCarts : x.basisKey === 'STOCK' ? x.stockCarts : g.made;
       x.inputKg = ch.cartButterKg != null ? x.carts * ch.cartButterKg : null;
       x.diffKg = x.inputKg != null ? x.inputKg - g.usedKg : null;
       x.lossPct = x.inputKg > 0 ? (1 - g.usedKg / x.inputKg) * 100 : null;
@@ -1481,7 +1522,7 @@
     const products = getProducts(), defs = pieDoughDefaults(products);
     const periods = lossPeriods(cursorMonth);
     const per = periods.find((p) => p.key === lossPeriodKey) || periods[0];
-    const L = computeLoss(per.from, per.to, products, defs);
+    const L = computeLoss(per.from, per.to, products, defs, per);
     const [y, m] = cursorMonth.split('-').map(Number);
     const prevYm = ymd(new Date(y, m - 2, 1)).slice(0, 7), nextYm = ymd(new Date(y, m, 1)).slice(0, 7);
     const pBtns = periods.map((p) => `<button type="button" onclick="Prod.setLossPeriod('${p.key}')" class="px-2.5 py-1 rounded-xl text-xs cursor-pointer ${p.key === per.key ? 'bg-amber-600 text-white font-extrabold' : 'bg-white border border-stone-200 text-stone-600 font-bold hover:bg-stone-100'}">${p.label}${p.sub ? ` <span class="${p.key === per.key ? 'text-amber-100' : 'text-stone-400'} font-semibold">${p.sub}</span>` : ''}</button>`).join('');
@@ -1520,7 +1561,7 @@
             <tr class="border-b border-stone-100"><td class="${c1}">${no(1)}믹싱</td><td class="${c2}">${live(num(g.batches) + '배합')}</td><td class="${c3}">× 1배합 ${num(ch.baseBatchKg)}kg <span class="text-stone-400">(레시피 ${esc(ch.baseName)} · ${num(ch.piecesPerBatch)}개)</span></td><td class="${c4}">${kg(g.mixKg)}</td><td class="${c5} text-stone-500">원재료 투입 ${g.mixCost != null ? won(g.mixCost) : '-'}</td></tr>
             <tr class="border-b border-stone-100"><td class="${c1}">${no(2)}라미네이팅</td><td class="${c2}">${live(num(g.made) + '카트')}</td><td class="${c3}">× ${ch.pieces}개 × ${num(ch.g, 0)}g <span class="text-stone-400">(접은 반죽 ${num(g.lamPieces, 0)}개)</span></td><td class="${c4}">${kg(g.lamBaseKg)}</td><td class="${c5} ${g.mixDiffKg > 0 ? 'text-amber-700 font-bold' : 'text-stone-500'}">${g.batches > 0 && g.mixDiffKg != null ? `믹싱보다 ${num(Math.abs(g.mixDiffKg))}kg ${g.mixDiffKg > 0 ? '적음' : '많음'} (${Math.abs(g.mixLossPct).toFixed(1)}%)` : ''}</td></tr>
             <tr class="border-b border-stone-200"><td class="py-1.5 px-2 pl-9 text-xs text-stone-600">+ 버터</td><td></td><td class="${c3}">${num(g.lamPieces, 0)}개 × ${num(ch.butterPerPiece, 0)}g</td><td class="py-1.5 px-2 text-right text-xs tabular-nums">+${kg(g.lamPieces != null ? (g.lamPieces * ch.butterPerPiece) / 1000 : null)}</td><td class="${c5} text-stone-500">버터 포함 ${kg(g.lamButterKg)}</td></tr>
-            <tr class="border-b border-stone-100 bg-amber-50/50"><td class="${c1}">${no(3)}생산된 라미네이팅 반죽</td><td class="${c2}">${live(num(g.carts) + '카트')}</td><td class="${c3}">× 1카트 ${num(ch.cartButterKg)}kg <span class="text-stone-400">(${g.usedRecorded ? '사용 카트' : '만든 카트 기준 · 사용 카트 미입력'})</span></td><td class="${c4}">${kg(g.inputKg)}</td><td></td></tr>
+            <tr class="border-b border-stone-100 bg-amber-50/50"><td class="${c1}">${no(3)}생산된 라미네이팅 반죽</td><td class="${c2}">${live(num(g.carts) + '카트')}</td><td class="${c3}">× 1카트 ${num(ch.cartButterKg)}kg <span class="px-1.5 py-0.5 rounded-md border text-[11px] font-bold ${g.basisKey === 'MADE' ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'}">${esc(g.basis)}</span>${g.basisKey === 'STOCK' ? ` <span class="text-stone-400">기간 전 ${num(g.stockOpen)} + 만든 ${num(g.made)} − 기간 말 ${num(g.stockClose)}</span>` : ''}</td><td class="${c4}">${kg(g.inputKg)}</td><td class="${c5} text-stone-500">${g.basisKey === 'USED' && g.stockCarts !== null ? `재고 기준으로는 ${num(g.stockCarts)}카트 (차이 ${num(g.stockCarts - g.usedCarts)}카트 = 폐기·입력 누락)` : g.basisKey === 'MADE' ? '보관분(최대 2주) 때문에 월 단위는 오차가 큼' : ''}</td></tr>
             <tr class="border-b border-stone-100"><td class="py-1.5 px-2 pl-9 font-bold whitespace-nowrap">성형에 사용한 반죽</td><td></td><td class="${c3}">${pies.length ? '아래 파이 생산 합계' : '이 기간 파이 생산 기록 없음'}</td><td class="${c4}">${kg(g.usedKg)}</td><td></td></tr>
             ${pieTrs}
             ${!hasResult ? `<tr class="bg-stone-50"><td class="${c1}">결과</td><td></td><td class="${c3}">라미네이팅 카트 기록이 없어 계산할 수 없습니다</td><td class="${c4}">-</td><td></td></tr>`
@@ -1532,7 +1573,7 @@
     }).join('');
     // 주별 비교
     const shown = L.pies.filter((g) => g.ch.ready);
-    const trend = periods.filter((p) => p.key !== 'M').map((p) => ({ p, r: computeLoss(p.from, p.to, products, defs) }));
+    const trend = periods.filter((p) => p.key[0] === 'W').map((p) => ({ p, r: computeLoss(p.from, p.to, products, defs, p) }));
     const trendTrs = trend.map(({ p, r }) => `<tr class="border-b border-stone-100 whitespace-nowrap ${p.key === per.key ? 'bg-amber-50' : ''}"><td class="py-1.5 px-2 font-bold">${p.label} <span class="text-xs text-stone-400">${p.sub}</span></td>${r.pies.filter((g) => g.ch.ready).map((g) => `<td class="py-1.5 px-2 text-right">${g.carts ? pieLossCell(g.lossPct) : '<span class="text-stone-400">-</span>'}</td>`).join('')}<td class="py-1.5 px-2 text-right tabular-nums">${r.pieHasMoney ? moneyCell(r.pieLossMoney) : '<span class="text-stone-400">-</span>'}</td><td class="py-1.5 px-2 text-right">${yieldCell(r.doughYield)}</td><td class="py-1.5 px-2 text-right tabular-nums">${r.doughYield === null ? '-' : moneyCell(r.doughLossMoney)}</td></tr>`).join('');
     // 상단 요약 카드: 파이·생지 같은 양식 (수율 + 부족 원재료비, 아래에 구분별)
     const sumCard = (title, sub, y, money, rows, warn) => `<div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs flex flex-col gap-2">
@@ -1548,7 +1589,8 @@
           <button type="button" onclick="Prod.setMonth('${nextYm}')" class="w-8 h-8 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">›</button>
           <div class="flex flex-wrap gap-1 ml-2">${pBtns}</div>
         </div>
-        <button type="button" onclick="Prod.openLossSettings()" class="px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-bold cursor-pointer hover:bg-stone-50">손실 기준 설정 (1카트 기준 · 파이 반죽 g)</button>
+        <div class="flex flex-wrap gap-1.5"><button type="button" onclick="Prod.openEndStock()" class="px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 text-xs font-bold text-amber-900 cursor-pointer hover:bg-amber-100">월말 카트 재고 입력</button>
+        <button type="button" onclick="Prod.openLossSettings()" class="px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-bold cursor-pointer hover:bg-stone-50">손실 기준 설정 (1카트 기준 · 파이 반죽 g)</button></div>
       </div>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
         ${sumCard('파이 수율', '성형에 사용한 반죽 ÷ 생산된 라미네이팅 반죽', L.pieYield, L.pieHasMoney ? L.pieLossMoney : null, shown.filter((g) => g.carts > 0).map((g) => ({ name: g.ch.short, y: g.inputKg > 0 ? (g.usedKg / g.inputKg) * 100 : null, money: g.lossMoney, note: g.over ? '생산 초과' : '' })), '')}
@@ -1556,7 +1598,7 @@
       </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
         <h3 class="text-sm font-extrabold mb-1">파이 — 반죽 공정별 손실 (믹싱 → 라미네이팅 → 성형)</h3>
-        <div class="text-xs text-stone-500 mb-2 leading-relaxed"><span class="inline-flex items-center gap-1 font-bold text-stone-700"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>초록 점</span> = 생산일지(배합·카트·파이 생산)에 입력한 값을 실시간으로 불러온 것입니다. 회색 글씨는 계산 기준(레시피·1카트 기준)입니다.<br>반죽은 믹싱 후 1~2일 냉장 숙성하고 카트를 만든 날과 성형한 날도 달라서, 주 단위는 앞뒤로 밀립니다. <b>월 전체</b>로 보는 것이 정확합니다.</div>
+        <div class="text-xs text-stone-500 mb-2 leading-relaxed"><span class="inline-flex items-center gap-1 font-bold text-stone-700"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>초록 점</span> = 생산일지(배합·카트·파이 생산)에 입력한 값을 실시간으로 불러온 것입니다. 회색 글씨는 계산 기준(레시피·1카트 기준)입니다.<br>라미네이팅 반죽은 최대 2주 보관했다가 쓰므로 '만든 카트' 기준은 달마다 튑니다. 정확도는 <b>① 사용 카트</b>(성형한 날 일자 창에 적기) &gt; <b>② 재고 반영</b>([월말 카트 재고 입력]) &gt; ③ 만든 카트 순이며, ③일 때는 <b>최근 3개월·누적</b>으로 보세요.</div>
         <div class="flex flex-col gap-3">${pieCards || '<div class="py-6 text-center text-xs text-stone-400">라미네이팅 반제품이 없습니다.</div>'}</div>
       </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
@@ -1586,7 +1628,7 @@
   function openLossMaterials(code) {
     const products = getProducts(), defs = pieDoughDefaults(products);
     const periods = lossPeriods(cursorMonth), per = periods.find((p) => p.key === lossPeriodKey) || periods[0];
-    const r = computeLoss(per.from, per.to, products, defs).dough.find((x) => String(x.code) === String(code)); if (!r) return;
+    const r = computeLoss(per.from, per.to, products, defs, per).dough.find((x) => String(x.code) === String(code)); if (!r) return;
     const recipes = Array.isArray(window.recipesData) ? window.recipesData : [];
     const rc = recipes.find((x) => String(x.productCode) === String(code) && x.recipeType !== 'SUB');
     const lostBatches = r.expC > 0 ? (1 - r.actC / r.expC) * r.bC : 0;
@@ -1606,6 +1648,26 @@
         <div class="text-xs text-stone-500 mt-0.5">투입 ${num(r.bC)}배합 · 표준 생산 ${num(r.expC)} ${r.su} · 실제 생산 ${num(r.actC)} ${r.su} · 수율 ${r.yieldPct == null ? '-' : r.yieldPct.toFixed(1) + '%'} → 부족 ${num(lostBatches, 2)}배합 분량${rc ? ` · 레시피 ${esc(rc.productName)}` : ''}</div></div>
       <div class="p-4 max-h-[65vh] overflow-y-auto">${body}</div>
       <div class="px-5 py-3 border-t border-stone-200 flex justify-end"><button type="button" onclick="Prod.closeModal()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">닫기</button></div>`);
+  }
+  function openEndStock() {
+    const [y, m] = cursorMonth.split('-').map(Number), prev = ymd(new Date(y, m - 2, 1)).slice(0, 7), es = lossCfg().endStock || {};
+    const lam = laminatingItems().filter((x) => doughChain(x.name).ready);
+    const inp = (ym, name) => `<input type="number" min="0" step="any" data-es-ym="${ym}" data-es-name="${esc(name)}" value="${(es[ym] || {})[name] !== undefined ? (es[ym] || {})[name] : ''}" placeholder="미입력" class="no-spinner w-24 text-right border border-stone-300 rounded-lg px-2 py-1 font-bold tabular-nums"> 카트`;
+    modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold">월말 카트 재고 입력 (실사)</h3><div class="text-xs text-stone-500 mt-0.5">월 마지막 근무일 마감 후 냉동고에 남은 라미네이팅 카트 수입니다. 두 칸이 모두 있으면 그 달 투입 = 전월 말 재고 + 만든 카트 − 이번 달 말 재고로 계산합니다. 0카트면 0을 적고, 모르면 비워 두세요.</div></div>
+      <div class="p-4"><table class="w-full text-sm"><thead><tr class="text-xs font-extrabold text-stone-500"><th class="py-1.5 px-2 text-left">반죽</th><th class="py-1.5 px-2 text-right">${Number(prev.slice(5))}월 말 (전월)</th><th class="py-1.5 px-2 text-right">${m}월 말</th></tr></thead>
+        <tbody>${lam.map((x) => `<tr class="border-b border-stone-100"><td class="py-1.5 px-2 font-bold">${esc(x.name)}</td><td class="py-1.5 px-2 text-right whitespace-nowrap">${inp(prev, x.name)}</td><td class="py-1.5 px-2 text-right whitespace-nowrap">${inp(cursorMonth, x.name)}</td></tr>`).join('')}</tbody></table></div>
+      <div class="px-5 py-3 border-t border-stone-200 flex justify-end gap-2"><button type="button" onclick="Prod.closeModal()" class="px-4 py-2 rounded-xl border border-stone-300 text-sm font-bold cursor-pointer">취소</button><button type="button" onclick="Prod.saveEndStock()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">저장</button></div>`);
+  }
+  function saveEndStock() {
+    const cfg = lossCfg(); cfg.endStock = cfg.endStock || {};
+    document.querySelectorAll('[data-es-ym]').forEach((el) => {
+      const ym = el.dataset.esYm, name = el.dataset.esName, v = String(el.value).trim();
+      cfg.endStock[ym] = cfg.endStock[ym] || {};
+      if (v === '' || isNaN(parseFloat(v))) delete cfg.endStock[ym][name]; else cfg.endStock[ym][name] = Math.max(0, parseFloat(v));
+      if (!Object.keys(cfg.endStock[ym]).length) delete cfg.endStock[ym];
+    });
+    closeModal(); markChanged(); render();
+    toast('월말 카트 재고를 저장했습니다.', 'success');
   }
   function openLossSettings() {
     const products = getProducts(), defs = pieDoughDefaults(products), cfg = lossCfg();
@@ -1867,7 +1929,7 @@
     openPackDay, closePackDay, packAdd, packAddAll, packField, packRemove, packPicker, savePackDay, packMemo: (v) => { if (packDraft) packDraft.memo = v; },
     openCrewDay, closeCrewDay, crewAdd, crewToggleW, crewRemove, crewAddLeave, crewLeaveField, crewRemoveLeave, crewCopyPrev, saveCrewDay,
     openCrewSettings, cfgField, cfgAdd, cfgRemove, saveCrewSettings, crewSetTabTo, crewToggleRetired, cfgPerCapita,
-    setLossPeriod: (k) => { lossPeriodKey = k; render(); }, openLossSettings, saveLossSettings, openLossMaterials,
+    setLossPeriod: (k) => { lossPeriodKey = k; render(); }, openLossSettings, saveLossSettings, openLossMaterials, openEndStock, saveEndStock, addUsedRows,
     openCountModal, saveCount, openAdjustModal, saveAdjust, removeAdjust, closeModal, loadMs, openDbModal, saveDbUrl,
     _debug: () => ({ db, dbRevision, cloudLoaded, products: getProducts() }),
   };
