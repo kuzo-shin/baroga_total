@@ -1404,9 +1404,9 @@
     }).join('');
     const monthBtns = Array.from({ length: 12 }, (_, i) => { const mm = `${y}-${pad(i + 1)}`, on = mm === ym; return `<button type="button" onclick="Prod.setMonth('${mm}')" class="px-2.5 py-1 rounded-xl text-xs cursor-pointer ${on ? 'bg-amber-600 text-white font-extrabold shadow-xs' : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200 font-bold'}">${i + 1}월</button>`; }).join('');
     const kpi = (label, value, sub, cls) => `<div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold ${cls || 'text-stone-500'}">${label}</div><div class="mt-1 text-xl font-extrabold tabular-nums">${value}</div><div class="text-xs text-stone-500 mt-0.5">${sub}</div></div>`;
-    // 품목별: 그 달 실행 수량 대비 파지
+    // 품목별: 파지를 입력한 날의 실행 수량 대비 파지 (입력하지 않은 날의 생산은 빼고 비교)
     const prodQty = {};
-    Object.entries(db.days).forEach(([d, day]) => { if (d < mFrom || d > mTo) return; (day.lines || []).forEach((l) => { if (l.cat !== 'PIE' || !(Number(l.actual) > 0)) return; const x = prodQty[l.code] || (prodQty[l.code] = { qty: 0, unit: l.unit }); x.qty += Number(l.actual); }); });
+    Object.entries(sd).forEach(([d, sday]) => { if (d < mFrom || d > mTo) return; const codes = new Set((sday.items || []).filter((it) => Number(it.kg) > 0).map((it) => String(it.code))); pieLinesOf(d).forEach((l) => { if (!codes.has(String(l.code))) return; const x = prodQty[l.code] || (prodQty[l.code] = { qty: 0, unit: l.unit }); x.qty += Number(l.actual); }); });
     const tableRows = Object.values(mt.byCode).sort((a, b) => SCRAP_TYPES.indexOf(a.type) - SCRAP_TYPES.indexOf(b.type) || b.kg - a.kg).map((r) => { const pq = prodQty[r.code], st = SCRAP_STYLE[r.type] || {}; return `<tr class="border-b border-stone-100 whitespace-nowrap"><td class="py-1.5 px-2"><span class="border-l-[3px] ${st.bar || 'border-stone-300'} pl-1.5 text-xs font-extrabold ${st.text || 'text-stone-600'}">${esc(r.type || '-')}</span></td><td class="py-1.5 px-2 font-semibold">${esc(r.name)}</td><td class="py-1.5 px-2 text-right tabular-nums">${r.days}일</td><td class="py-1.5 px-2 text-right tabular-nums">${pq ? num(pq.qty) + ' ' + esc(pq.unit) : '-'}</td><td class="py-1.5 px-2 text-right tabular-nums font-extrabold">${num(r.kg)}kg</td><td class="py-1.5 px-2 text-right tabular-nums text-stone-600">${pq && pq.qty > 0 ? num(r.kg / pq.qty, 2) + 'kg/' + esc(pq.unit) : '-'}</td></tr>`; }).join('');
     return `<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
         ${kpi(`${m}월 파지 발생 합계`, num(mt.total) + 'kg', `입력한 날 ${Object.keys(sd).filter((d) => d >= mFrom && d <= mTo && ((sd[d].items || []).some((it) => Number(it.kg) > 0))).length}일`)}
@@ -1427,7 +1427,7 @@
       </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
         <h3 class="text-sm font-extrabold mb-2">${m}월 품목별 파지 발생</h3>
-        <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm"><thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600 whitespace-nowrap"><th class="py-2 px-2">파지 종류</th><th class="py-2 px-2">품목</th><th class="py-2 px-2 text-right">입력 일수</th><th class="py-2 px-2 text-right">${m}월 실행 합계</th><th class="py-2 px-2 text-right">파지 발생량</th><th class="py-2 px-2 text-right">실행 1단위당 파지</th></tr></thead>
+        <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm"><thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600 whitespace-nowrap"><th class="py-2 px-2">파지 종류</th><th class="py-2 px-2">품목</th><th class="py-2 px-2 text-right">입력 일수</th><th class="py-2 px-2 text-right">입력한 날의 실행 합계</th><th class="py-2 px-2 text-right">파지 발생량</th><th class="py-2 px-2 text-right">실행 1단위당 파지</th></tr></thead>
           <tbody>${tableRows || '<tr><td colspan="6" class="py-6 text-center text-xs text-stone-400">이 달 파지 기록이 없습니다.</td></tr>'}</tbody></table></div>
       </div>`;
   }
