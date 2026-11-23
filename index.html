@@ -2430,12 +2430,6 @@
             return `"${t.replace(/"/g, '""')}"`;
         }
         function triggerCsvDownload(csv, name) { const b = new Blob([csv], { type: 'text/csv;charset=utf-8;' }), u = URL.createObjectURL(b), a = document.createElement('a'); a.href = u; a.download = name; a.click(); URL.revokeObjectURL(u); }
-        function exportFilteredCsv() {
-            const list = getFilteredOrders(activeWorkspace !== 'ORDER'); if (list.length === 0) return showToast('내보낼 데이터가 없습니다.', 'error');
-            let csv = '\uFEFF발주일자,거래처,원재료명,규격,발주수량,현재고,과세구분,개당단가,합산금액,소비기한,제조원,비고\n';
-            list.forEach(o => { const { qty, unitAmt, totalAmt, taxType } = getOrderLineAmounts(o); csv += [o.date, o.colA, o.colB, o.colC, qty, getOrderRemainQty(o), taxType, unitAmt, totalAmt, getOrderExpiryDate(o), (o.mfgInferred ? '(추정) ' : '') + getOrderManufacturer(o), getOrderPureNote(o)].map(csvCell).join(',') + '\n'; });
-            triggerCsvDownload(csv, `바로가공장_발주내역_${getTodayStr()}.csv`);
-        }
         function exportInventoryCsv() {
             let csv = '\uFEFF거래처,원재료명,규격,현재고,과세구분,단가,합산금액,소비기한\n';
             ordersData.forEach(o => { const rem = getOrderRemainQty(o); if (hideZeroStock && rem <= 0) return; const { unitAmt, taxType } = getOrderLineAmounts(o); csv += [o.colA, o.colB, o.colC, rem, taxType, unitAmt, Math.round(rem * unitAmt), getOrderExpiryDate(o)].map(csvCell).join(',') + '\n'; });
@@ -2456,7 +2450,7 @@
         };
     </script>
     <script src="./ms_inbound.js?v=2.52"></script>
-    <script src="./recipe.js?v=2.45"></script>
+    <script src="./recipe.js?v=2.52"></script>
     <script src="./price.js?v=2.45"></script>
     <script src="./production.js?v=2.45"></script>
     <script src="./price_compare.js?v=2.51"></script>
