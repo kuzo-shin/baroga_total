@@ -1,4 +1,4 @@
-// [VERSION: production.js v2.23 - 2026-11-23 '2. 파지 관리' 탭 신설(달력·일자 창에서 파이 품목별 파지 kg 입력, 3종), 탭에 번호 표시 / v2.22 - 2026-11-23 원재료 손실: 알생지·파베이크 수율을 상단 카드·아래 표·주별 비교에서 따로 분리 / v2.21 - 2026-11-23 원재료 손실 머리: 1~12월 버튼(윗줄) + 보는 기간 버튼(아랫줄), 월말 카트 재고 입력을 생산 재고 화면으로 이동 / v2.20 - 2026-11-23 원재료 손실(파이 보관분 대응): 기간 '최근 3개월·누적', 월말 카트 재고 입력 → 재고 반영 계산, 성형한 날 사용 카트 미입력 경고(달력·일자 창) / v2.19 - 2026-11-23 원재료 손실: 금액 표기 통일(+초록 = 초과 생산, −빨강 = 생산 부족), 파이 초과분도 금액 표시 / v2.18 - 2026-11-23 원재료 손실: 상단 카드 파이·생지 같은 양식(수율+금액), 문구 정리(투입 대비 생산 초과/부족 등), 생지 부족분 원재료 팝업 / v2.17 - 2026-11-23 원재료 손실: 투입보다 파이에 쓴 반죽이 많으면 음수 대신 '투입보다 더 씀(초과)'으로 풀어 표시, 초과분은 손실 원재료비에서 제외 / v2.16 - 2026-11-23 원재료 손실(공정 표 형태로 개편·생산일지 연동 초록 점·생지 실제 생산은 포장 완료 등록 기준): 반죽 1개당 버터 1,000g 현장 기준(설정 가능), 1카트 기준을 반죽 이름 옆에 표시, 설명 문구 수정 / v2.15 - 2026-11-23 원재료 손실 개편: 파이 공정별(믹싱→라미네이팅→성형)·1카트 기준(개수×g)·버터 포함 중량, 파이를 생지 위로, 반제품 이름 레시피 기준 통일 / v2.14 - 2026-11-22 미배정 표시 삼각형 아이콘 + 범례 / v2.13 - 2026-11-22 작업 인원: 미배정 팀원 있으면 칸에 ! 표시·이름 / v2.12 - 2026-11-22 포장 안 된 품목 월별 구분, 참고 자료 안내 문구 / v2.11 - 2026-11-22 포장 달력 칸에 생산·포장 금액 / v2.10 - 2026-11-22 포장 완료: 금액 차이(KPI·주·품목), 포장 안 된 품목 목록 / v2.9 - 2026-11-22 포장 완료 등록 탭 신설(재고 입고 = 포장), 생산일지 창 크기 줄임, '실제 포장 수량'→'포장 수량' / v2.8 - 2026-11-22 일자 창에서 휴무일 지정(사유 문구), 달력 칸 옅은 빨강 + 문구 / v2.7 - 2026-11-22 달력 칸 최소 높이 1행(빈 주는 짧게), 기록 없는 주 합계 한 줄 / v2.6 - 2026-11-22 작업 인원에 1인 생산금액(KPI·날짜·주·파트별), 작업 구분별 생산 파트·인원 기준 설정 / v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
+// [VERSION: production.js v2.24 - 2026-11-23 파지 관리: 생산 반죽 kg 대비 파지 비율(카드·달력·일자 창·표) / 원재료 손실: 파지 전환율(발생 vs 파지 품목 사용) / v2.23 - 2026-11-23 '2. 파지 관리' 탭 신설(달력·일자 창에서 파이 품목별 파지 kg 입력, 3종), 탭에 번호 표시 / v2.22 - 2026-11-23 원재료 손실: 알생지·파베이크 수율을 상단 카드·아래 표·주별 비교에서 따로 분리 / v2.21 - 2026-11-23 원재료 손실 머리: 1~12월 버튼(윗줄) + 보는 기간 버튼(아랫줄), 월말 카트 재고 입력을 생산 재고 화면으로 이동 / v2.20 - 2026-11-23 원재료 손실(파이 보관분 대응): 기간 '최근 3개월·누적', 월말 카트 재고 입력 → 재고 반영 계산, 성형한 날 사용 카트 미입력 경고(달력·일자 창) / v2.19 - 2026-11-23 원재료 손실: 금액 표기 통일(+초록 = 초과 생산, −빨강 = 생산 부족), 파이 초과분도 금액 표시 / v2.18 - 2026-11-23 원재료 손실: 상단 카드 파이·생지 같은 양식(수율+금액), 문구 정리(투입 대비 생산 초과/부족 등), 생지 부족분 원재료 팝업 / v2.17 - 2026-11-23 원재료 손실: 투입보다 파이에 쓴 반죽이 많으면 음수 대신 '투입보다 더 씀(초과)'으로 풀어 표시, 초과분은 손실 원재료비에서 제외 / v2.16 - 2026-11-23 원재료 손실(공정 표 형태로 개편·생산일지 연동 초록 점·생지 실제 생산은 포장 완료 등록 기준): 반죽 1개당 버터 1,000g 현장 기준(설정 가능), 1카트 기준을 반죽 이름 옆에 표시, 설명 문구 수정 / v2.15 - 2026-11-23 원재료 손실 개편: 파이 공정별(믹싱→라미네이팅→성형)·1카트 기준(개수×g)·버터 포함 중량, 파이를 생지 위로, 반제품 이름 레시피 기준 통일 / v2.14 - 2026-11-22 미배정 표시 삼각형 아이콘 + 범례 / v2.13 - 2026-11-22 작업 인원: 미배정 팀원 있으면 칸에 ! 표시·이름 / v2.12 - 2026-11-22 포장 안 된 품목 월별 구분, 참고 자료 안내 문구 / v2.11 - 2026-11-22 포장 달력 칸에 생산·포장 금액 / v2.10 - 2026-11-22 포장 완료: 금액 차이(KPI·주·품목), 포장 안 된 품목 목록 / v2.9 - 2026-11-22 포장 완료 등록 탭 신설(재고 입고 = 포장), 생산일지 창 크기 줄임, '실제 포장 수량'→'포장 수량' / v2.8 - 2026-11-22 일자 창에서 휴무일 지정(사유 문구), 달력 칸 옅은 빨강 + 문구 / v2.7 - 2026-11-22 달력 칸 최소 높이 1행(빈 주는 짧게), 기록 없는 주 합계 한 줄 / v2.6 - 2026-11-22 작업 인원에 1인 생산금액(KPI·날짜·주·파트별), 작업 구분별 생산 파트·인원 기준 설정 / v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
 //  - 품목 목록·단가: 제품단가 탭(barogaProductPriceBridge.getProductionProducts)
 //      파이 = PK로 입력 / 알생지·파베이크·제과 = 배합으로 입력 → '1배합 PK수'로 PK 환산 (실제 포장 PK를 직접 고칠 수 있음)
 //      금액 = PK × 엠즈 매입가(PK). 줄을 만들 때의 단가를 줄에 저장 → 나중에 단가가 바뀌어도 지난 기록 금액은 그대로
@@ -1363,27 +1363,49 @@
     }); });
     return t;
   }
+  // 파이 한 줄의 생산 반죽 kg = 생산 개수 × 1개당 반죽 g (원재료 손실과 같은 기준). 기준이 없으면 null
+  function pieLineKg(l, products, defs) {
+    const p = productByCode(l.code, products), g = pieSetting(l.code, defs).gPerEa;
+    const ea = lineActualPk(l) * linePerStock(l) * (p ? Number(p.pkQuantityEa) || 0 : 0);
+    return g > 0 && ea > 0 ? (ea * g) / 1000 : null;
+  }
+  // 기간의 파이 생산 반죽 kg: 파지 종류별(그 품목이 쓰는 반죽 기준) · 품목별 · 날짜×품목별
+  function pieProdKg(from, to, products, defs) {
+    const out = { total: 0, byType: {}, byCode: {}, byDayCode: {} };
+    Object.entries(db.days).forEach(([d, day]) => { if (d < from || d > to) return; (day.lines || []).forEach((l) => {
+      if (l.cat !== 'PIE' || !(Number(l.actual) > 0)) return;
+      const kg = pieLineKg(l, products, defs), t = defaultScrapType(l.code, defs); if (kg == null) return;
+      out.byCode[l.code] = (out.byCode[l.code] || 0) + kg; out.byDayCode[d + '|' + l.code] = (out.byDayCode[d + '|' + l.code] || 0) + kg;
+      if (!t) return; // 파지로 만드는 품목 등은 파지 발생 대상이 아니므로 합계에서 제외
+      out.total += kg; out.byType[t] = (out.byType[t] || 0) + kg;
+    }); });
+    return out;
+  }
+  const ratioTxt = (scrapKg, prodKg) => (prodKg > 0 && scrapKg > 0 ? num((scrapKg / prodKg) * 100) + '%' : '');
   function pieLinesOf(date) { return ((db.days[date] || {}).lines || []).filter((l) => l.cat === 'PIE' && Number(l.actual) > 0); }
   function renderScrap() {
     const ym = cursorMonth, [y, m] = ym.split('-').map(Number), weeks = monthWeeks(ym), tdy = today(), sd = scrapDays();
     const prevYm = ymd(new Date(y, m - 2, 1)).slice(0, 7), nextYm = ymd(new Date(y, m, 0 + 1)).slice(0, 7);
     const mFrom = `${ym}-01`, mTo = `${ym}-31`, mt = scrapTotals(mFrom, mTo);
+    const products = getProducts(), defs = pieDoughDefaults(products), mp = pieProdKg(mFrom, mTo, products, defs);
+    const pctChip = (scrapKg, prodKg) => { const r = ratioTxt(scrapKg, prodKg); return r ? `<span class="ml-1 text-[10px] font-bold text-stone-500 tabular-nums">${r}</span>` : ''; };
     const dayCls = (c) => (c.dow === 0 ? 'text-rose-600' : c.dow === 6 ? 'text-blue-600' : 'text-stone-900');
     const GRID_STYLE = 'grid-template-columns: repeat(5, minmax(0, 1fr)) 60px 150px';
     const kgTxt = (v) => `${num(v)}<span class="text-[10px] text-stone-400 font-bold ml-px">kg</span>`;
-    const typeRows = (byType) => SCRAP_TYPES.filter((t) => byType[t]).map((t) => `<div class="flex items-center justify-between gap-1 text-xs"><span class="font-bold ${SCRAP_STYLE[t].text}">${scrapShort(t)}</span><b class="tabular-nums">${kgTxt(byType[t])}</b></div>`).join('');
+    const typeRows = (byType, prodBy) => SCRAP_TYPES.filter((t) => byType[t]).map((t) => `<div class="flex items-center justify-between gap-1 text-xs"><span class="font-bold ${SCRAP_STYLE[t].text}">${scrapShort(t)}</span><span class="whitespace-nowrap"><b class="tabular-nums">${kgTxt(byType[t])}</b>${pctChip(byType[t], (prodBy || {})[t])}</span></div>`).join('');
     const weekRows = weeks.map((w, wi) => {
       const inM = w.filter((c) => c.inMonth);
       const wt = inM.length ? scrapTotals(inM[0].date, inM[inM.length - 1].date) : { total: 0, byType: {} };
+      const wp = inM.length ? pieProdKg(inM[0].date, inM[inM.length - 1].date, products, defs) : { total: 0, byType: {} };
       const cells = w.slice(0, 5).map((c) => {
         if (!c.inMonth) return `<div class="rounded-xl bg-stone-50/60 border border-dashed border-stone-200 p-2 text-xl leading-none text-stone-300 font-black">${c.day}</div>`;
         const items = ((sd[c.date] || {}).items || []).filter((it) => Number(it.kg) > 0), isToday = c.date === tdy, off = dayOff(c.date), pies = pieLinesOf(c.date);
         const sum = items.reduce((s, it) => s + Number(it.kg), 0);
         const done = new Set(items.map((it) => String(it.code)));
         const waiting = pies.filter((l) => !done.has(String(l.code)) && !madeFromScrap(l.code)).length;
-        const groups = SCRAP_TYPES.map((t) => { const rows = items.filter((it) => it.type === t); return rows.length ? `<div class="border-l-[3px] ${SCRAP_STYLE[t].bar} pl-1.5 flex flex-col gap-0.5">${rows.map((it) => `<div class="text-xs leading-tight flex items-center justify-between gap-1"><span class="truncate font-semibold text-stone-800" title="${esc(it.name)}">${esc(it.name)}</span><b class="font-extrabold tabular-nums text-stone-900 whitespace-nowrap">${kgTxt(it.kg)}</b></div>`).join('')}</div>` : ''; }).join('');
+        const groups = SCRAP_TYPES.map((t) => { const rows = items.filter((it) => it.type === t); return rows.length ? `<div class="border-l-[3px] ${SCRAP_STYLE[t].bar} pl-1.5 flex flex-col gap-0.5">${rows.map((it) => `<div class="text-xs leading-tight flex items-center justify-between gap-1"><span class="truncate font-semibold text-stone-800" title="${esc(it.name)}">${esc(it.name)}</span><span class="whitespace-nowrap"><b class="font-extrabold tabular-nums text-stone-900">${kgTxt(it.kg)}</b>${pctChip(it.kg, mp.byDayCode[c.date + '|' + it.code])}</span></div>`).join('')}</div>` : ''; }).join('');
         return `<button type="button" onclick="Prod.openScrapDay('${c.date}')" class="text-left min-h-[64px] rounded-xl border ${isToday ? 'border-amber-500 ring-1 ring-amber-300' : off ? 'border-rose-200' : 'border-stone-200'} ${off ? 'bg-rose-50' : 'bg-white'} hover:border-amber-400 hover:shadow-xs p-2 flex flex-col gap-1 cursor-pointer min-w-0">
-          <div class="flex items-center justify-between gap-1"><span class="text-xl leading-none font-black tabular-nums ${isToday ? 'text-amber-700' : off ? 'text-rose-600' : dayCls(c)}">${c.day}</span>${off ? `<span class="px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-700 text-[11px] font-extrabold">${esc(off)}</span>` : sum ? `<span class="px-1.5 py-0.5 rounded-md bg-stone-900 text-white text-[11px] font-extrabold tabular-nums">${num(sum)}kg</span>` : ''}</div>
+          <div class="flex items-center justify-between gap-1"><span class="text-xl leading-none font-black tabular-nums ${isToday ? 'text-amber-700' : off ? 'text-rose-600' : dayCls(c)}">${c.day}</span>${off ? `<span class="px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-700 text-[11px] font-extrabold">${esc(off)}</span>` : sum ? `<span class="px-1.5 py-0.5 rounded-md bg-stone-900 text-white text-[11px] font-extrabold tabular-nums whitespace-nowrap">${num(sum)}kg${(() => { const dp = pies.reduce((a, l) => a + (defaultScrapType(l.code, defs) ? mp.byDayCode[c.date + '|' + l.code] || 0 : 0), 0), r = ratioTxt(sum, dp); return r ? ` · ${r}` : ''; })()}</span>` : ''}</div>
           ${groups ? `<div class="flex flex-col gap-1">${groups}</div>` : ''}
           ${waiting ? `<div class="text-[11px] font-bold text-amber-700">파이 ${waiting}종 생산 · 파지 미입력</div>` : !groups && !off ? '<div class="text-xs text-stone-300 mt-0.5">클릭해서 파지 입력</div>' : ''}
         </button>`;
@@ -1399,18 +1421,19 @@
       return `<div class="grid gap-1.5" style="${GRID_STYLE}">${cells}<div class="flex flex-col gap-1.5 min-w-0">${wk}</div>
         <div class="rounded-xl border ${wt.total ? 'border-amber-200 bg-amber-50/50' : 'border-stone-200 bg-stone-50/60'} p-2.5 flex flex-col gap-1 text-xs">
           <div class="flex items-center justify-between"><span class="px-1.5 py-0.5 rounded-md bg-white border border-stone-200 text-stone-600 font-extrabold">${wi + 1}주</span>${wt.total ? `<b class="tabular-nums text-sm">${num(wt.total)}kg</b>` : '<span class="text-stone-400 font-semibold">기록 없음</span>'}</div>
-          ${typeRows(wt.byType)}
+          ${wt.total ? `<div class="text-[11px] text-stone-500 tabular-nums">생산 반죽 ${num(wp.total)}kg${ratioTxt(wt.total, wp.total) ? ` · 파지 <b class="text-stone-800">${ratioTxt(wt.total, wp.total)}</b>` : ''}</div>` : ''}
+          ${typeRows(wt.byType, wp.byType)}
         </div></div>`;
     }).join('');
     const monthBtns = Array.from({ length: 12 }, (_, i) => { const mm = `${y}-${pad(i + 1)}`, on = mm === ym; return `<button type="button" onclick="Prod.setMonth('${mm}')" class="px-2.5 py-1 rounded-xl text-xs cursor-pointer ${on ? 'bg-amber-600 text-white font-extrabold shadow-xs' : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200 font-bold'}">${i + 1}월</button>`; }).join('');
-    const kpi = (label, value, sub, cls) => `<div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold ${cls || 'text-stone-500'}">${label}</div><div class="mt-1 text-xl font-extrabold tabular-nums">${value}</div><div class="text-xs text-stone-500 mt-0.5">${sub}</div></div>`;
-    // 품목별: 파지를 입력한 날의 실행 수량 대비 파지 (입력하지 않은 날의 생산은 빼고 비교)
-    const prodQty = {};
-    Object.entries(sd).forEach(([d, sday]) => { if (d < mFrom || d > mTo) return; const codes = new Set((sday.items || []).filter((it) => Number(it.kg) > 0).map((it) => String(it.code))); pieLinesOf(d).forEach((l) => { if (!codes.has(String(l.code))) return; const x = prodQty[l.code] || (prodQty[l.code] = { qty: 0, unit: l.unit }); x.qty += Number(l.actual); }); });
-    const tableRows = Object.values(mt.byCode).sort((a, b) => SCRAP_TYPES.indexOf(a.type) - SCRAP_TYPES.indexOf(b.type) || b.kg - a.kg).map((r) => { const pq = prodQty[r.code], st = SCRAP_STYLE[r.type] || {}; return `<tr class="border-b border-stone-100 whitespace-nowrap"><td class="py-1.5 px-2"><span class="border-l-[3px] ${st.bar || 'border-stone-300'} pl-1.5 text-xs font-extrabold ${st.text || 'text-stone-600'}">${esc(r.type || '-')}</span></td><td class="py-1.5 px-2 font-semibold">${esc(r.name)}</td><td class="py-1.5 px-2 text-right tabular-nums">${r.days}일</td><td class="py-1.5 px-2 text-right tabular-nums">${pq ? num(pq.qty) + ' ' + esc(pq.unit) : '-'}</td><td class="py-1.5 px-2 text-right tabular-nums font-extrabold">${num(r.kg)}kg</td><td class="py-1.5 px-2 text-right tabular-nums text-stone-600">${pq && pq.qty > 0 ? num(r.kg / pq.qty, 2) + 'kg/' + esc(pq.unit) : '-'}</td></tr>`; }).join('');
+    // 카드: 생산 반죽 kg → 파지 kg, 비율(파지 ÷ 생산 반죽)
+    const ratioCard = (label, prodKg, scrapKg, sub, cls) => `<div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="flex items-start justify-between gap-2"><div class="text-xs font-extrabold ${cls || 'text-stone-700'}">${label}</div><div class="text-xl leading-none font-extrabold tabular-nums ${cls || 'text-stone-900'}">${ratioTxt(scrapKg, prodKg) || '-'}</div></div>
+        <div class="mt-2 flex items-center gap-1.5 text-sm tabular-nums"><span class="text-stone-500 text-xs">생산 반죽</span><b>${num(prodKg)}kg</b><span class="text-stone-300 font-extrabold">→</span><span class="text-stone-500 text-xs">파지</span><b>${num(scrapKg)}kg</b></div><div class="text-[11px] text-stone-500 mt-0.5">${sub}</div></div>`;
+    // 품목별: 그 달 생산 반죽 kg 대비 파지
+    const tableRows = Object.values(mt.byCode).sort((a, b) => SCRAP_TYPES.indexOf(a.type) - SCRAP_TYPES.indexOf(b.type) || b.kg - a.kg).map((r) => { const pk = mp.byCode[r.code], st = SCRAP_STYLE[r.type] || {}; return `<tr class="border-b border-stone-100 whitespace-nowrap"><td class="py-1.5 px-2"><span class="border-l-[3px] ${st.bar || 'border-stone-300'} pl-1.5 text-xs font-extrabold ${st.text || 'text-stone-600'}">${esc(r.type || '-')}</span></td><td class="py-1.5 px-2 font-semibold">${esc(r.name)}</td><td class="py-1.5 px-2 text-right tabular-nums">${r.days}일</td><td class="py-1.5 px-2 text-right tabular-nums">${pk ? num(pk) + 'kg' : '-'}</td><td class="py-1.5 px-2 text-right tabular-nums font-extrabold">${num(r.kg)}kg</td><td class="py-1.5 px-2 text-right tabular-nums font-bold">${ratioTxt(r.kg, pk) || '-'}</td></tr>`; }).join('');
     return `<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        ${kpi(`${m}월 파지 발생 합계`, num(mt.total) + 'kg', `입력한 날 ${Object.keys(sd).filter((d) => d >= mFrom && d <= mTo && ((sd[d].items || []).some((it) => Number(it.kg) > 0))).length}일`)}
-        ${SCRAP_TYPES.map((t) => kpi(t, num(mt.byType[t] || 0) + 'kg', mt.total ? `전체의 ${num(((mt.byType[t] || 0) / mt.total) * 100)}%` : '기록 없음', SCRAP_STYLE[t].text)).join('')}
+        ${ratioCard(`${m}월 파이 전체`, mp.total, mt.total, `입력한 날 ${Object.keys(sd).filter((d) => d >= mFrom && d <= mTo && ((sd[d].items || []).some((it) => Number(it.kg) > 0))).length}일`)}
+        ${SCRAP_TYPES.map((t) => ratioCard(t, mp.byType[t] || 0, mt.byType[t] || 0, `${scrapShort(t)} 반죽을 쓰는 파이`, SCRAP_STYLE[t].text)).join('')}
       </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4 flex flex-col gap-1.5">
         <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
@@ -1420,14 +1443,14 @@
             <button type="button" onclick="Prod.setMonth('${nextYm}')" class="w-8 h-8 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">›</button>
             <div class="flex flex-wrap items-center gap-1 ml-2">${monthBtns}</div>
           </div>
-          <div class="text-xs text-stone-500">칸을 눌러 그날 파이 품목별 파지 발생량(kg) 입력</div>
+          <div class="text-xs text-stone-500">칸을 눌러 그날 파이 품목별 파지 발생량(kg) 입력 · % = 파지 ÷ 생산 반죽(생산 개수 × 1개당 반죽 g)</div>
         </div>
         <div class="grid gap-1.5 text-xs font-extrabold text-stone-500 px-1" style="${GRID_STYLE}">${['월', '화', '수', '목', '금'].map((d) => `<div>${d}</div>`).join('')}<div>주말</div><div>주간 합계</div></div>
         ${weekRows}
       </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
         <h3 class="text-sm font-extrabold mb-2">${m}월 품목별 파지 발생</h3>
-        <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm"><thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600 whitespace-nowrap"><th class="py-2 px-2">파지 종류</th><th class="py-2 px-2">품목</th><th class="py-2 px-2 text-right">입력 일수</th><th class="py-2 px-2 text-right">입력한 날의 실행 합계</th><th class="py-2 px-2 text-right">파지 발생량</th><th class="py-2 px-2 text-right">실행 1단위당 파지</th></tr></thead>
+        <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm"><thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600 whitespace-nowrap"><th class="py-2 px-2">파지 종류</th><th class="py-2 px-2">품목</th><th class="py-2 px-2 text-right">입력 일수</th><th class="py-2 px-2 text-right">${m}월 생산 반죽</th><th class="py-2 px-2 text-right">파지 발생량</th><th class="py-2 px-2 text-right">파지 비율</th></tr></thead>
           <tbody>${tableRows || '<tr><td colspan="6" class="py-6 text-center text-xs text-stone-400">이 달 파지 기록이 없습니다.</td></tr>'}</tbody></table></div>
       </div>`;
   }
@@ -1436,7 +1459,7 @@
     const products = getProducts(), defs = pieDoughDefaults(products), saved = ((scrapDays()[date] || {}).items || []), used = new Set();
     const items = pieLinesOf(date).map((l) => {
       const sv = saved.find((x) => String(x.code) === String(l.code)); if (sv) used.add(sv);
-      return { id: uid(), code: String(l.code), name: l.name, actual: Number(l.actual) || 0, unit: l.unit, fromScrap: madeFromScrap(l.code), type: sv ? sv.type : defaultScrapType(l.code, defs), kg: sv ? Number(sv.kg) || 0 : 0 };
+      return { id: uid(), code: String(l.code), name: l.name, actual: Number(l.actual) || 0, unit: l.unit, prodKg: pieLineKg(l, products, defs), fromScrap: madeFromScrap(l.code), type: sv ? sv.type : defaultScrapType(l.code, defs), kg: sv ? Number(sv.kg) || 0 : 0 };
     });
     saved.filter((x) => !used.has(x)).forEach((x) => items.push({ id: uid(), code: String(x.code || ''), name: x.name, actual: 0, unit: '', manual: true, type: x.type, kg: Number(x.kg) || 0 }));
     scrapDraft = { date, items, memo: (scrapDays()[date] || {}).memo || '' };
@@ -1446,16 +1469,16 @@
     const d = scrapDraft; if (!d) return;
     const dt = new Date(d.date + 'T00:00:00'), inCls = 'no-spinner w-24 text-right border border-stone-300 rounded-lg px-2 py-1.5 text-sm font-extrabold tabular-nums bg-amber-50/70';
     const sel = (it) => `<select onchange="Prod.setScrapField('${it.id}','type',this.value)" class="border border-stone-300 rounded-lg px-2 py-1.5 text-sm font-bold ${SCRAP_STYLE[it.type] ? SCRAP_STYLE[it.type].text : 'text-stone-400'}"><option value="">해당 없음</option>${SCRAP_TYPES.map((t) => `<option ${t === it.type ? 'selected' : ''}>${t}</option>`).join('')}</select>`;
-    const rows = d.items.map((it) => `<div class="grid grid-cols-[minmax(0,1.6fr)_110px_150px_150px_30px] gap-2 items-center px-2.5 py-1.5 rounded-lg border ${it.type ? 'border-stone-200 bg-white' : 'border-dashed border-stone-300 bg-stone-50'}">
+    const rows = d.items.map((it) => `<div class="grid grid-cols-[minmax(0,1.5fr)_100px_140px_200px_26px] gap-2 items-center px-2.5 py-1.5 rounded-lg border ${it.type ? 'border-stone-200 bg-white' : 'border-dashed border-stone-300 bg-stone-50'}">
         <div class="min-w-0">${it.manual ? `<input type="text" value="${esc(it.name)}" oninput="Prod.setScrapField('${it.id}','name',this.value)" placeholder="내용 (예: 재단 자투리)" class="w-full border border-stone-300 rounded-lg px-2 py-1.5 text-sm font-bold">` : `<div class="font-bold text-stone-900 truncate">${esc(it.name)}</div>${it.fromScrap ? '<div class="text-[11px] font-bold text-stone-400">파지로 생산하는 품목 — 보통 입력하지 않음</div>' : ''}`}</div>
-        <div class="text-right text-sm tabular-nums">${it.manual ? '<span class="text-xs text-stone-400">직접 추가</span>' : `<span class="inline-flex items-center gap-1" title="생산 스케쥴의 실행 값"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span><b>${num(it.actual)}</b> ${esc(it.unit)}</span>`}</div>
+        <div class="text-right text-sm tabular-nums">${it.manual ? '<span class="text-xs text-stone-400">직접 추가</span>' : `<span class="inline-flex items-center gap-1" title="생산 스케쥴의 실행 값"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span><b>${num(it.actual)}</b> ${esc(it.unit)}</span>${it.prodKg ? `<div class="text-[11px] text-stone-500">반죽 ${num(it.prodKg)}kg</div>` : ''}`}</div>
         ${sel(it)}
-        <div class="flex items-center justify-end gap-1"><input type="number" min="0" step="any" value="${it.kg || ''}" placeholder="0" oninput="Prod.setScrapField('${it.id}','kg',this.value)" class="${inCls}"><span class="text-xs font-bold text-stone-500">kg</span></div>
+        <div class="flex items-center justify-end gap-1"><input type="number" min="0" step="any" value="${it.kg || ''}" placeholder="0" oninput="Prod.setScrapField('${it.id}','kg',this.value)" class="${inCls}"><span class="text-xs font-bold text-stone-500">kg</span><span data-scrap-pct="${it.id}" class="w-12 text-right text-xs font-bold text-stone-500 tabular-nums">${ratioTxt(it.kg, it.prodKg)}</span></div>
         ${it.manual ? `<button type="button" onclick="Prod.removeScrapRow('${it.id}')" title="삭제" class="w-7 h-7 rounded-lg text-stone-400 hover:text-rose-700 hover:bg-rose-50 cursor-pointer text-lg leading-none">×</button>` : '<span></span>'}
       </div>`).join('');
     modal(`<div class="px-5 py-3 border-b border-stone-200 flex items-center justify-between gap-2"><div><h3 class="text-base font-extrabold">${dt.getMonth() + 1}월 ${dt.getDate()}일 (${DOW[dt.getDay()]}) 파지 발생</h3><div class="text-xs text-stone-500 mt-0.5">그날 생산 스케쥴에 실행이 입력된 파이 품목입니다. 품목마다 나온 파지를 kg으로 적으세요. 비워 두면 기록하지 않습니다.</div></div><span id="scrapSum" class="px-2.5 py-1 rounded-lg bg-stone-900 text-white text-sm font-extrabold tabular-nums whitespace-nowrap"></span></div>
       <div class="p-4 max-h-[65vh] overflow-y-auto flex flex-col gap-1.5">
-        <div class="grid grid-cols-[minmax(0,1.6fr)_110px_150px_150px_30px] gap-2 px-2.5 text-xs font-extrabold text-stone-500"><div>파이 품목</div><div class="text-right">실행</div><div>파지 종류</div><div class="text-right">파지 발생량</div><div></div></div>
+        <div class="grid grid-cols-[minmax(0,1.5fr)_100px_140px_200px_26px] gap-2 px-2.5 text-xs font-extrabold text-stone-500"><div>파이 품목</div><div class="text-right">실행</div><div>파지 종류</div><div class="text-right">파지 발생량 · 비율</div><div></div></div>
         ${rows || '<div class="py-8 text-center text-sm text-stone-400">이 날 실행이 입력된 파이 품목이 없습니다. 생산 스케쥴에 실행을 먼저 입력하거나 아래에서 직접 추가하세요.</div>'}
         <div><button type="button" onclick="Prod.addScrapRow()" class="mt-1 px-3 py-1.5 rounded-lg border border-dashed border-stone-300 text-xs font-bold text-stone-600 cursor-pointer hover:bg-stone-50">+ 직접 추가 (품목 없이 파지만)</button></div>
         <input type="text" value="${esc(d.memo)}" oninput="Prod.setScrapMemo(this.value)" placeholder="메모" class="mt-1 w-full border border-stone-300 rounded-lg px-3 py-1.5 text-sm">
@@ -1471,7 +1494,7 @@
   }
   function setScrapField(id, field, value) {
     const it = scrapDraft && scrapDraft.items.find((x) => x.id === id); if (!it) return;
-    if (field === 'kg') { it.kg = Math.max(0, parseFloat(value) || 0); updateScrapSum(); }
+    if (field === 'kg') { it.kg = Math.max(0, parseFloat(value) || 0); updateScrapSum(); const el = document.querySelector(`[data-scrap-pct="${id}"]`); if (el) el.textContent = ratioTxt(it.kg, it.prodKg); }
     else if (field === 'type') { it.type = value; renderScrapEditor(); }
     else if (field === 'name') it.name = value;
   }
@@ -1580,6 +1603,35 @@
     (day.semi || []).forEach((x) => { if (need[x.name] && Number(x.used) > 0) delete need[x.name]; });
     return Object.keys(need).filter((n) => doughChain(n).ready);
   }
+  // 레시피 1배합에 들어가는 파지 g: 원재료 이름에 '파지' 또는 '(파지)…' 반제품
+  function recipeScrapG(code) {
+    const recipes = Array.isArray(window.recipesData) ? window.recipesData : [];
+    const rc = recipes.find((x) => String(x.productCode) === String(code) && x.recipeType !== 'SUB'); if (!rc) return 0;
+    let g = 0;
+    (rc.ingredients || []).forEach((i) => {
+      const q = Number(i.qty) || 0, unit = String(i.unit || '').toUpperCase();
+      if (i.rowType === 'SUB_RECIPE') { const sub = recipes.find((r) => r.id === i.subRecipeId); if (/파지/.test(String((sub && sub.productName) || i.item || ''))) g += unit === 'EA' ? q * (Number(sub && sub.divisionWeight) || 0) : unit === 'KG' ? q * 1000 : q; }
+      else if (/파지/.test(String(i.item || ''))) g += unit === 'KG' ? q * 1000 : q;
+    });
+    return g;
+  }
+  // 파지 전환: 기간에 발생한 파지(2. 파지 관리) vs 파지를 쓰는 품목의 생산에 들어간 파지(레시피 기준)
+  function computeScrapConversion(from, to, products) {
+    const made = scrapTotals(from, to), use = {};
+    Object.entries(db.days).forEach(([d, day]) => { if (d < from || d > to) return; (day.lines || []).forEach((l) => {
+      if (!(Number(l.actual) > 0)) return;
+      const g = recipeScrapG(l.code); if (!(g > 0)) return;
+      const p = productByCode(l.code, products);
+      // 레시피 배합 수: 배합 입력은 그대로, PK·BOX 입력은 생산 개수 ÷ 1배합 실생산(ea)
+      const ea = lineActualPk(l) * linePerStock(l) * (p ? Number(p.pkQuantityEa) || 0 : 0), outEa = p ? Number(p.batchOutputEa) || 0 : 0;
+      const batches = l.unit === '배합' ? Number(l.actual) : outEa > 0 ? ea / outEa : null;
+      const x = use[l.code] || (use[l.code] = { code: l.code, name: l.name, cat: l.cat, qty: 0, unit: l.unit, gPerBatch: g, batches: 0, kg: 0, unknown: false });
+      x.qty += Number(l.actual);
+      if (batches == null) x.unknown = true; else { x.batches += batches; x.kg += (batches * g) / 1000; }
+    }); });
+    const rows = Object.values(use).sort((a, b) => b.kg - a.kg), usedKg = rows.reduce((s, r) => s + r.kg, 0);
+    return { made, rows, usedKg, rate: made.total > 0 ? (usedKg / made.total) * 100 : null };
+  }
   function computeLoss(from, to, products, defs, per) {
     const doughRows = {}, pieGroups = {}, mixOf = {};
     laminatingItems().forEach((s) => { const ch = doughChain(s.name); pieGroups[s.name] = { name: s.name, ch, batches: 0, made: 0, usedCarts: 0, usedRecorded: false, waste: 0, usedKg: 0, pies: {}, missingG: [] }; mixOf[ch.mixName] = pieGroups[s.name]; });
@@ -1679,6 +1731,7 @@
     const periods = lossPeriods(cursorMonth);
     const per = periods.find((p) => p.key === lossPeriodKey) || periods[0];
     const L = computeLoss(per.from, per.to, products, defs, per);
+    const SC = computeScrapConversion(per.from, per.to, products);
     const [y, m] = cursorMonth.split('-').map(Number);
     const prevYm = ymd(new Date(y, m - 2, 1)).slice(0, 7), nextYm = ymd(new Date(y, m, 1)).slice(0, 7);
     const monthBtns = Array.from({ length: 12 }, (_, i) => { const mm = `${y}-${pad(i + 1)}`, on = mm === cursorMonth; return `<button type="button" onclick="Prod.setMonth('${mm}')" class="px-2.5 py-1 rounded-xl text-xs cursor-pointer ${on ? 'bg-amber-600 text-white font-extrabold shadow-xs' : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200 font-bold'}">${i + 1}월</button>`; }).join('');
@@ -1752,14 +1805,31 @@
         </div>
         <div class="flex flex-wrap items-center gap-1 border-t border-stone-100 pt-2.5"><span class="text-xs font-extrabold text-stone-500 mr-1">보는 기간</span>${pBtns}</div>
       </div>
-      <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-${Math.min(4, 1 + L.doughCats.length) || 1} gap-3">
+      <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-${Math.min(4, 2 + L.doughCats.length) || 1} gap-3">
         ${sumCard('파이 수율', '성형에 사용한 반죽 ÷ 생산된 라미네이팅 반죽', L.pieYield, L.pieHasMoney ? L.pieLossMoney : null, shown.filter((g) => g.carts > 0).map((g) => ({ name: g.ch.short, y: g.inputKg > 0 ? (g.usedKg / g.inputKg) * 100 : null, money: g.lossMoney, note: g.over ? '생산 초과' : '' })), '')}
         ${L.doughCats.map((x) => sumCard(CAT_LABEL[x.cat] + ' 수율', '실제 생산(포장) ÷ 표준 생산(투입 배합 × 1배합 PK수)', x.yieldPct, x.money, x.rows.filter((r) => r.lossMoney != null).sort((p, q) => Math.abs(q.lossMoney) - Math.abs(p.lossMoney)).slice(0, 3).map((r) => ({ name: r.name, y: r.yieldPct, money: r.lossMoney })), x.unconfirmed ? `포장 기록 없는 품목 ${x.unconfirmed}종 제외` : '', '금액 차이 큰 품목')).join('')}
+        <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs flex flex-col gap-2">
+          <div class="flex items-start justify-between gap-3"><div><div class="text-sm font-extrabold text-stone-900">파지 전환율 <span class="text-xs font-bold text-stone-400">${esc(per.label)}</span></div><div class="text-[11px] text-stone-500">파지 품목 생산에 쓴 파지 ÷ 파이에서 나온 파지</div></div>
+            <div class="text-right"><div class="text-2xl leading-none font-extrabold tabular-nums ${SC.rate == null ? 'text-stone-400' : SC.rate > 100 ? 'text-amber-700' : 'text-stone-900'}">${SC.rate == null ? '-' : SC.rate.toFixed(1) + '%'}</div><div class="mt-1 text-xs text-stone-500 tabular-nums">발생 <b class="text-stone-800">${num(SC.made.total)}kg</b> → 사용 <b class="text-stone-800">${num(SC.usedKg)}kg</b></div></div></div>
+          <div class="border-t border-stone-100 pt-1.5 flex flex-col gap-0.5 text-sm"><div class="text-[11px] font-bold text-stone-400">파지를 많이 쓴 품목</div>${SC.rows.slice(0, 3).map((r) => `<div class="flex items-center justify-between gap-2"><span class="font-bold text-stone-700 truncate">${esc(r.name)}</span><b class="tabular-nums whitespace-nowrap">${num(r.kg)}kg</b></div>`).join('') || '<span class="text-xs text-stone-400">파지 품목 생산 기록 없음</span>'}</div>
+        </div>
       </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
         <h3 class="text-sm font-extrabold mb-1">파이 — 반죽 공정별 손실 (믹싱 → 라미네이팅 → 성형)</h3>
         <div class="text-xs text-stone-500 mb-2 leading-relaxed"><span class="inline-flex items-center gap-1 font-bold text-stone-700"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>초록 점</span> = 생산일지(배합·카트·파이 생산)에 입력한 값을 실시간으로 불러온 것입니다. 회색 글씨는 계산 기준(레시피·1카트 기준)입니다.<br>라미네이팅 반죽은 최대 2주 보관했다가 쓰므로 '만든 카트' 기준은 달마다 튑니다. 정확도는 <b>① 사용 카트</b>(성형한 날 일자 창에 적기) &gt; <b>② 재고 반영</b>(생산 재고 화면의 [월말 카트 재고 입력]) &gt; ③ 만든 카트 순이며, ③일 때는 <b>최근 3개월·누적</b>으로 보세요.</div>
         <div class="flex flex-col gap-3">${pieCards || '<div class="py-6 text-center text-xs text-stone-400">라미네이팅 반제품이 없습니다.</div>'}</div>
+      </div>
+      <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-1"><h3 class="text-sm font-extrabold">파지 전환 — 파이에서 나온 파지 대비 파지 품목에 쓴 양</h3><div class="flex items-center gap-3 text-sm"><span class="text-xs text-stone-500">전환율</span><b class="tabular-nums">${SC.rate == null ? '-' : SC.rate.toFixed(1) + '%'}</b><span class="text-xs text-stone-500">남은 파지(발생 − 사용)</span><b class="tabular-nums ${SC.made.total - SC.usedKg < 0 ? 'text-amber-700' : ''}">${num(SC.made.total - SC.usedKg)}kg</b></div></div>
+        <div class="text-xs text-stone-500 mb-2 leading-relaxed">발생 = <b>2. 파지 관리</b>에 입력한 kg · 사용 = 파지가 들어가는 품목의 생산 배합 수 × 레시피 1배합 파지 g (PK로 입력한 품목은 생산 개수 ÷ 제품단가 '1배합 실생산'으로 배합 수 계산). 파지도 보관했다가 쓰므로 <b>최근 3개월·누적</b>으로 보는 것이 정확합니다. 레시피의 '파지'는 종류(패스츄리·몽마르트·쇼숑) 구분이 없어 합계로 비교합니다.</div>
+        <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-3">
+          <div class="rounded-xl border border-stone-200 overflow-hidden"><table class="w-full text-sm"><thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600"><th class="py-2 px-2 text-left">발생한 파지</th><th class="py-2 px-2 text-right">kg</th></tr></thead><tbody>
+            ${SCRAP_TYPES.map((t) => `<tr class="border-b border-stone-100"><td class="py-1.5 px-2"><span class="border-l-[3px] ${SCRAP_STYLE[t].bar} pl-1.5 font-bold ${SCRAP_STYLE[t].text}">${t}</span></td><td class="py-1.5 px-2 text-right tabular-nums font-bold">${live(num(SC.made.byType[t] || 0) + 'kg', '2. 파지 관리')}</td></tr>`).join('')}
+            <tr class="bg-stone-50 font-extrabold"><td class="py-1.5 px-2">합계</td><td class="py-1.5 px-2 text-right tabular-nums">${num(SC.made.total)}kg</td></tr></tbody></table></div>
+          <div class="rounded-xl border border-stone-200 overflow-x-auto"><table class="w-full text-sm"><thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600 whitespace-nowrap"><th class="py-2 px-2 text-left">파지를 쓰는 품목</th><th class="py-2 px-2 text-right">생산 (실행)</th><th class="py-2 px-2 text-right">배합 수</th><th class="py-2 px-2 text-right">1배합 파지</th><th class="py-2 px-2 text-right">사용한 파지</th></tr></thead><tbody>
+            ${SC.rows.map((r) => `<tr class="border-b border-stone-100 whitespace-nowrap"><td class="py-1.5 px-2 font-bold">${esc(r.name)} <span class="text-[11px] font-bold text-stone-400">${CAT_LABEL[r.cat] || ''}</span></td><td class="py-1.5 px-2 text-right tabular-nums">${live(num(r.qty) + ' ' + esc(r.unit))}</td><td class="py-1.5 px-2 text-right tabular-nums text-stone-600">${r.unknown ? '<span class="text-rose-700 text-xs font-bold">1배합 실생산 없음</span>' : num(r.batches, 2)}</td><td class="py-1.5 px-2 text-right tabular-nums text-stone-600">${num(r.gPerBatch / 1000, 2)}kg</td><td class="py-1.5 px-2 text-right tabular-nums font-extrabold">${num(r.kg)}kg</td></tr>`).join('') || '<tr><td colspan="5" class="py-6 text-center text-xs text-stone-400">이 기간에 파지를 쓰는 품목의 생산 기록이 없습니다.</td></tr>'}
+            ${SC.rows.length ? `<tr class="bg-stone-50 font-extrabold"><td class="py-1.5 px-2" colspan="4">합계</td><td class="py-1.5 px-2 text-right tabular-nums">${num(SC.usedKg)}kg</td></tr>` : ''}</tbody></table></div>
+        </div>
       </div>
       ${L.doughCats.map((x) => `<div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
         <div class="flex flex-wrap items-center justify-between gap-2 mb-1"><h3 class="text-sm font-extrabold">${CAT_LABEL[x.cat]} — 투입 배합 대비 실제 생산</h3><div class="flex items-center gap-3 text-sm"><span class="text-xs text-stone-500">수율</span>${yieldCell(x.yieldPct)}<span class="text-xs text-stone-500">원재료비 차이</span>${moneyCell(x.money)}</div></div>
