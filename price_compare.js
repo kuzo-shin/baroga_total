@@ -1,4 +1,4 @@
-// [VERSION: price_compare.js v1.0 - 2026-11-23 신규: 원재료 > 5. 원재료 단가 비교 (Claude 조사 HTML 8개 탭 이관, 시스템 디자인)]
+// [VERSION: price_compare.js v1.1 - 2026-11-23 기본 DB 주소 등록 / v1.0 - 2026-11-23 신규: 원재료 > 5. 원재료 단가 비교 (Claude 조사 HTML 8개 탭 이관, 시스템 디자인)]
 //  - 자료(후보 가격·업체 연락처·견적 메일·재확인 기록)는 공개 저장소에 두지 않고 '원재료 단가 비교 DB'(GAS 6_price_compare.gs)에만 저장
 //  - [자료 가져오기]: Claude가 만든 단가 비교 HTML(baroga_price_compare.html) 또는 JSON 파일을 골라 → 내용 확인 → DB에 통째로 저장
 //  - 화면은 읽기 전용 (전화·메일·구매는 이 화면에서 하지 않음)
@@ -6,7 +6,7 @@
   'use strict';
 
   const URL_KEY = 'baroga_price_compare_gas_url_v1';
-  const DEFAULT_URL = ''; // GAS 배포 후 주소를 넣으면 모든 기기 기본값이 됨 (그 전에는 [DB 연결]에서 기기마다 입력)
+  const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbzgx_coielgbXWvLuw3I3ymUv1kh3oPXD3eHBtB_hSsRDzq4yZz5SmETpOGsioYPabp0A/exec'; // 원재료 단가 비교 DB (다른 DB를 쓸 때만 [DB 연결]에서 변경)
 
   // ---------- 공용 도우미 ----------
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -162,7 +162,7 @@
 
   // ---------- DB 연결 ----------
   function openDbModal() {
-    modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold">원재료 단가 비교 DB 연결</h3><div class="text-xs text-stone-500 mt-0.5">Apps Script(6_price_compare.gs) 웹 앱 주소를 넣으세요. 접속 코드는 다른 탭과 같습니다.</div></div>
+    modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold">원재료 단가 비교 DB 연결</h3><div class="text-xs text-stone-500 mt-0.5">기본 주소(바로가 원재료 단가 비교 DB)가 들어 있습니다. 다른 DB를 쓸 때만 바꾸세요. 접속 코드는 다른 탭과 같습니다.</div></div>
       <div class="p-4"><input id="pcUrlInput" type="text" value="${esc(getUrl())}" placeholder="https://script.google.com/macros/s/.../exec" class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm font-mono"></div>
       <div class="px-5 py-3 border-t border-stone-200 flex justify-end gap-2"><button type="button" onclick="PriceCmp.closeModal()" class="px-4 py-2 rounded-xl border border-stone-300 text-sm font-bold cursor-pointer">취소</button><button type="button" onclick="PriceCmp.saveDbUrl()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">저장 후 불러오기</button></div>`);
   }
