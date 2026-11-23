@@ -1,4 +1,4 @@
-// [VERSION: price_compare.js v1.1 - 2026-11-23 기본 DB 주소 등록 / v1.0 - 2026-11-23 신규: 원재료 > 5. 원재료 단가 비교 (Claude 조사 HTML 8개 탭 이관, 시스템 디자인)]
+// [VERSION: price_compare.js v1.2 - 2026-11-23 품목명 줄바꿈 없이 넓게, 1·2순위 업체명 한 줄로 자름, '더 듦'→'더 비쌈' / v1.1 - 2026-11-23 기본 DB 주소 등록 / v1.0 - 2026-11-23 신규: 원재료 > 5. 원재료 단가 비교 (Claude 조사 HTML 8개 탭 이관, 시스템 디자인)]
 //  - 자료(후보 가격·업체 연락처·견적 메일·재확인 기록)는 공개 저장소에 두지 않고 '원재료 단가 비교 DB'(GAS 6_price_compare.gs)에만 저장
 //  - [자료 가져오기]: Claude가 만든 단가 비교 HTML(baroga_price_compare.html) 또는 JSON 파일을 골라 → 내용 확인 → DB에 통째로 저장
 //  - 화면은 읽기 전용 (전화·메일·구매는 이 화면에서 하지 않음)
@@ -315,7 +315,7 @@
   }
   const unitOf = (it) => String(it.spec || '').split('/')[1] || '개';
   const curMonth = (it) => (it.curKg && it.monthlyKg ? Math.round(it.curKg * it.monthlyKg) : null);
-  const gap = (x) => (!isNum(x) ? '—' : x < 0 ? `<span class="text-emerald-700 font-bold">${won(-x)}원 절감</span>` : x > 0 ? `<span class="text-rose-600 font-bold">${won(x)}원 <span class="whitespace-nowrap">더 듦</span></span>` : '같음');
+  const gap = (x) => (!isNum(x) ? '—' : x < 0 ? `<span class="text-emerald-700 font-bold">${won(-x)}원 절감</span>` : x > 0 ? `<span class="text-rose-600 font-bold">${won(x)}원 <span class="whitespace-nowrap">더 비쌈</span></span>` : '같음');
   const curVatWord = (s) => { s = String(s || ''); return s.startsWith('별도') ? '부가세 별도 → 포함으로 환산' : s.startsWith('포함') ? '부가세 포함' : s.startsWith('면세') ? '면세(부가세 없음)' : '부가세 구분 미확인'; };
   const candVat = (v) => { const s = String(v.vat || ''); return s.startsWith('포함') ? '부가세 포함' : s.startsWith('별도') ? '별도 → 포함 환산' : (s === '면세' || s.startsWith('면세(')) ? '면세' : s.includes('면세') ? '면세 추정' : '포함 추정'; };
   const vatPill = (s) => pill(esc(s), s === '별도' ? P.warn : s === '면세' ? P.mute : P.accent);
@@ -327,7 +327,7 @@
   }
   function candCells(it, v, label) {
     if (!v) return `<td colspan="4" class="${td} text-xs text-stone-400 border-l border-stone-100">${label === '1순위' ? '공개가 후보 없음' + (it.nQ ? ' · 견적 필요' : '') : '2순위 후보 없음'}</td>`;
-    return `<td class="${td} border-l border-stone-100">${safeUrl(v.url) ? ext(v.url, esc(v.vendor)) : esc(v.vendor)}${sub(esc(v.same) + (String(v.stock || '').startsWith('판매중') ? ' · 판매중' : ''))}</td>
+    return `<td class="${td} border-l border-stone-100 max-w-[130px]" title="${esc(v.vendor)}"><span class="block truncate">${safeUrl(v.url) ? ext(v.url, esc(v.vendor)) : esc(v.vendor)}</span>${sub(esc(v.same) + (String(v.stock || '').startsWith('판매중') ? ' · 판매중' : ''))}</td>
       <td class="${td} text-right tabular-nums"><b>${won(v.wkg)}</b>${v.diff == null ? '' : sub(sgn(v.diff) + '원/kg', tone(v.diff))}${sub(candVat(v))}</td>
       <td class="${td} text-right tabular-nums">${gap(v.m1)}</td>
       <td class="${td} text-right tabular-nums">${gap(v.m12)}</td>`;
@@ -340,8 +340,8 @@
     const badges = [it.meritRank ? pill('절감 ' + it.meritRank + '위', P.save) : '', it.nA ? gp('A', ' ' + it.nA) : '', it.nB ? gp('B', ' ' + it.nB) : '', it.nQ ? gp('Q', ' ' + it.nQ) : '', it.trust === '불일치' ? pill('규격 불일치', P.warn) : ''].filter(Boolean).join(' ');
     return `<tr data-code="${esc(it.code)}" onclick="PriceCmp.toggle(this.dataset.code, event)" class="cursor-pointer ${isOpen ? 'bg-amber-50/70' : 'hover:bg-stone-50'}">
       <td class="${td} text-center font-extrabold text-stone-500 tabular-nums"><i data-lucide="${isOpen ? 'chevron-down' : 'chevron-right'}" class="w-3.5 h-3.5 inline -mt-0.5 text-stone-400"></i> ${esc(it.priRank)}</td>
-      <td class="${td}"><b class="text-stone-900">${esc(it.name)}</b>${sub(esc(it.code) + ' · ' + esc(it.spec))}${badges ? `<span class="flex flex-wrap gap-1 mt-1">${badges}</span>` : ''}</td>
-      <td class="${td} border-l border-stone-100 bg-stone-50/60">${esc(it.supplier)}${sub(`<b class="text-sm text-stone-900">${it.curKg ? won(it.curKg) + '원/kg' : '원/kg 미산정'}</b>`)}${it.curPrice ? sub('전표 단가 ' + won(it.curPrice) + '원 · ' + curVatWord(it.curVat)) : ''}${curBadge(it)}</td>
+      <td class="${td} min-w-[210px]"><b class="text-stone-900 whitespace-nowrap">${esc(it.name)}</b>${sub(`<span class="whitespace-nowrap">${esc(it.code)} · ${esc(it.spec)}</span>`)}${badges ? `<span class="flex flex-wrap gap-1 mt-1">${badges}</span>` : ''}</td>
+      <td class="${td} border-l border-stone-100 bg-stone-50/60 max-w-[170px]" title="${esc(it.supplier)}"><span class="block truncate">${esc(it.supplier)}</span>${sub(`<b class="text-sm text-stone-900">${it.curKg ? won(it.curKg) + '원/kg' : '원/kg 미산정'}</b>`)}${it.curPrice ? sub('전표 단가 ' + won(it.curPrice) + '원 · ' + curVatWord(it.curVat)) : ''}${curBadge(it)}</td>
       <td class="${td} text-right tabular-nums bg-stone-50/60">${it.monthlyKg ? kgf(it.monthlyKg) + 'kg' : '—'}${sub(it.qtyAvg ? kgf(it.qtyAvg) + esc(unitOf(it)) : '출고 기록 없음')}</td>
       <td class="${td} text-right tabular-nums bg-stone-50/60">${it.monthlyKg ? won(it.monthlyKg * 12) + 'kg' : '—'}</td>
       <td class="${td} text-right tabular-nums bg-stone-50/60"><b>${cm == null ? '—' : won(cm) + '원'}</b>${cm == null ? '' : sub('1년 ' + won(cm * 12) + '원')}</td>
