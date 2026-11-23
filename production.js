@@ -1,4 +1,4 @@
-// [VERSION: production.js v2.14 - 2026-11-22 미배정 표시 삼각형 아이콘 + 범례 / v2.13 - 2026-11-22 작업 인원: 미배정 팀원 있으면 칸에 ! 표시·이름 / v2.12 - 2026-11-22 포장 안 된 품목 월별 구분, 참고 자료 안내 문구 / v2.11 - 2026-11-22 포장 달력 칸에 생산·포장 금액 / v2.10 - 2026-11-22 포장 완료: 금액 차이(KPI·주·품목), 포장 안 된 품목 목록 / v2.9 - 2026-11-22 포장 완료 등록 탭 신설(재고 입고 = 포장), 생산일지 창 크기 줄임, '실제 포장 수량'→'포장 수량' / v2.8 - 2026-11-22 일자 창에서 휴무일 지정(사유 문구), 달력 칸 옅은 빨강 + 문구 / v2.7 - 2026-11-22 달력 칸 최소 높이 1행(빈 주는 짧게), 기록 없는 주 합계 한 줄 / v2.6 - 2026-11-22 작업 인원에 1인 생산금액(KPI·날짜·주·파트별), 작업 구분별 생산 파트·인원 기준 설정 / v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
+// [VERSION: production.js v2.15 - 2026-11-23 원재료 손실 개편: 파이 공정별(믹싱→라미네이팅→성형)·1카트 기준(개수×g)·버터 포함 중량, 파이를 생지 위로, 반제품 이름 레시피 기준 통일 / v2.14 - 2026-11-22 미배정 표시 삼각형 아이콘 + 범례 / v2.13 - 2026-11-22 작업 인원: 미배정 팀원 있으면 칸에 ! 표시·이름 / v2.12 - 2026-11-22 포장 안 된 품목 월별 구분, 참고 자료 안내 문구 / v2.11 - 2026-11-22 포장 달력 칸에 생산·포장 금액 / v2.10 - 2026-11-22 포장 완료: 금액 차이(KPI·주·품목), 포장 안 된 품목 목록 / v2.9 - 2026-11-22 포장 완료 등록 탭 신설(재고 입고 = 포장), 생산일지 창 크기 줄임, '실제 포장 수량'→'포장 수량' / v2.8 - 2026-11-22 일자 창에서 휴무일 지정(사유 문구), 달력 칸 옅은 빨강 + 문구 / v2.7 - 2026-11-22 달력 칸 최소 높이 1행(빈 주는 짧게), 기록 없는 주 합계 한 줄 / v2.6 - 2026-11-22 작업 인원에 1인 생산금액(KPI·날짜·주·파트별), 작업 구분별 생산 파트·인원 기준 설정 / v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
 //  - 품목 목록·단가: 제품단가 탭(barogaProductPriceBridge.getProductionProducts)
 //      파이 = PK로 입력 / 알생지·파베이크·제과 = 배합으로 입력 → '1배합 PK수'로 PK 환산 (실제 포장 PK를 직접 고칠 수 있음)
 //      금액 = PK × 엠즈 매입가(PK). 줄을 만들 때의 단가를 줄에 저장 → 나중에 단가가 바뀌어도 지난 기록 금액은 그대로
@@ -16,10 +16,32 @@
   // 재고·엠즈 거래 단위가 PK가 아닌 품목 (생산 입력은 PK/배합 그대로, 재고·금액은 이 단위)
   //  쇼숑오뽐므: 파손 방지로 엠즈 입고·가맹점 판매가 BOX 단위 → 1BOX = 4PK, 엠즈 매입가도 BOX당
   const STOCK_UNIT_RULES = { '1006': { stockUnit: 'BOX', pkPerStock: 4 } };
+  // 반제품 이름은 레시피 이름 기준: (기본)○○반죽 = 믹싱(배합), (버터)○○반죽 = 라미네이팅(카트)
   const DEFAULT_SEMI_ITEMS = [
-    ['패스츄리 반죽 믹싱', '배합'], ['쇼숑 반죽 믹싱', '배합'], ['몽마르트 반죽 믹싱', '배합'], ['셰브런 토스트 반죽 믹싱', '배합'], ['정사각퍼프도우 반죽 믹싱', '배합'],
-    ['패스츄리 반죽 라미네이팅', '카트'], ['쇼숑 반죽 라미네이팅', '카트'], ['몽마르트 반죽 라미네이팅', '카트'], ['셰브런 토스트 반죽 라미네이팅', '카트'], ['정사각퍼프도우 반죽 라미네이팅', '카트'],
+    ['(기본)패스츄리반죽 믹싱', '배합'], ['(기본)파트푀이테반죽 믹싱', '배합'], ['(기본)몽마르트반죽 믹싱', '배합'], ['셰브런 토스트 반죽 믹싱', '배합'], ['정사각퍼프도우 반죽 믹싱', '배합'],
+    ['(버터)패스츄리반죽 라미네이팅', '카트'], ['(버터)파트푀이테반죽 라미네이팅', '카트'], ['(버터)몽마르트반죽 라미네이팅', '카트'], ['셰브런 토스트 반죽 라미네이팅', '카트'], ['정사각퍼프도우 반죽 라미네이팅', '카트'],
   ].map(([name, unit], i) => ({ id: 'semi-' + (i + 1), name, unit }));
+  // v2.15 이름 통일: 예전 생산일지 이름 → 레시피 이름 (기록·설정·재고 실사에 남은 이름을 불러올 때 한 번 바꿈)
+  const SEMI_RENAME = {
+    '패스츄리 반죽 믹싱': '(기본)패스츄리반죽 믹싱', '쇼숑 반죽 믹싱': '(기본)파트푀이테반죽 믹싱', '몽마르트 반죽 믹싱': '(기본)몽마르트반죽 믹싱',
+    '패스츄리 반죽 라미네이팅': '(버터)패스츄리반죽 라미네이팅', '쇼숑 반죽 라미네이팅': '(버터)파트푀이테반죽 라미네이팅', '몽마르트 반죽 라미네이팅': '(버터)몽마르트반죽 라미네이팅',
+  };
+  // 1카트 기준 (2026-11-23 현장 기준): 반죽 덩어리 개수 × 버터 넣기 전 반죽 1개 무게(g)
+  const DEFAULT_CART_STD = { '(버터)패스츄리반죽 라미네이팅': { pieces: 25, g: 3700 }, '(버터)몽마르트반죽 라미네이팅': { pieces: 14, g: 3700 }, '(버터)파트푀이테반죽 라미네이팅': { pieces: 20, g: 3100 } };
+  let renamedOnLoad = false;
+  function migrateSemiNames(d) {
+    let n = 0;
+    const nn = (v) => { if (SEMI_RENAME[v]) { n++; return SEMI_RENAME[v]; } return v; };
+    d.semiItems.forEach((x) => { x.name = nn(x.name); });
+    Object.values(d.days).forEach((day) => (day.semi || []).forEach((l) => { l.name = nn(l.name); }));
+    const L = d.loss || {};
+    ['cartKg', 'cart'].forEach((k) => { if (L[k]) Object.keys(L[k]).forEach((old) => { if (SEMI_RENAME[old]) { if (L[k][SEMI_RENAME[old]] === undefined) L[k][SEMI_RENAME[old]] = L[k][old]; delete L[k][old]; n++; } }); });
+    Object.values(L.pie || {}).forEach((x) => { if (x && x.group) x.group = nn(x.group); });
+    const semiKey = (k) => (String(k).startsWith('SEMI:') && SEMI_RENAME[String(k).slice(5)] ? 'SEMI:' + SEMI_RENAME[String(k).slice(5)] : null);
+    if (d.stockBase && d.stockBase.counts) Object.keys(d.stockBase.counts).forEach((k) => { const nk = semiKey(k); if (nk) { d.stockBase.counts[nk] = d.stockBase.counts[k]; delete d.stockBase.counts[k]; n++; } });
+    d.stockAdjusts.forEach((a) => { const nk = semiKey(a.code); if (nk) { a.code = nk; n++; } if (a.name) a.name = nn(a.name); });
+    return n;
+  }
 
   // ---------- 공용 도우미 (index.html 것을 쓰고, 없으면 대체) ----------
   const esc = (s) => (typeof window.escapeHtml === 'function' ? window.escapeHtml(s) : String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])));
@@ -47,7 +69,7 @@
   let mounted = false;
 
   function blankDb() {
-    return { version: 1, days: {}, semiItems: DEFAULT_SEMI_ITEMS.map((x) => ({ ...x })), stockBase: null, stockAdjusts: [], loss: { cartKg: {}, pie: {} }, crew: {}, crewCfg: null, pack: {}, updatedAt: '' };
+    return { version: 1, days: {}, semiItems: DEFAULT_SEMI_ITEMS.map((x) => ({ ...x })), stockBase: null, stockAdjusts: [], loss: { cart: {}, pie: {} }, crew: {}, crewCfg: null, pack: {}, updatedAt: '' };
   }
   function normalizeDb(p) {
     const d = blankDb();
@@ -56,11 +78,12 @@
     d.semiItems = Array.isArray(p.semiItems) && p.semiItems.length ? p.semiItems : d.semiItems;
     d.stockBase = p.stockBase && p.stockBase.date ? p.stockBase : null;
     d.stockAdjusts = Array.isArray(p.stockAdjusts) ? p.stockAdjusts : [];
-    d.loss = p.loss && typeof p.loss === 'object' ? p.loss : { cartKg: {}, pie: {} };
+    d.loss = p.loss && typeof p.loss === 'object' ? p.loss : { cart: {}, pie: {} };
     d.crew = p.crew && typeof p.crew === 'object' ? p.crew : {};
     d.crewCfg = p.crewCfg && typeof p.crewCfg === 'object' ? p.crewCfg : null;
     d.pack = p.pack && typeof p.pack === 'object' ? p.pack : {};
     d.updatedAt = p.updatedAt || '';
+    if (migrateSemiNames(d) > 0) renamedOnLoad = true;
     return d;
   }
 
@@ -159,6 +182,7 @@
         saveLocal();
         setStatus('불러옴 ' + nowHm() + ' · ' + Object.keys(db.days).length + '일');
         if (showMsg) toast('생산일지 DB를 불러왔습니다.', 'success');
+        if (renamedOnLoad) { renamedOnLoad = false; markChanged(); toast('반제품 이름을 레시피 기준으로 바꿔 저장합니다.', 'info'); }
       }
       render();
     } catch (e) {
@@ -1290,11 +1314,46 @@
   }
 
   // ----- 원재료 손실 (수율) 분석 -----
+  //  파이(공정 순서대로): ① 믹싱  배합 × 레시피 '(기본)○○반죽' 1배합 중량 = 만든 반죽
+  //                      ② 라미네이팅  카트 × 1카트 개수 × 반죽 1개 g = 접은 반죽 (여기에 버터가 들어가 '(버터)○○반죽'이 됨)
+  //                      ③ 성형  카트 × 1카트 개수 × 버터 포함 1개 g = 투입한 버터 반죽  vs  파이 생산 개수 × 1개당 반죽 g
   //  생지(배합 입력): 투입 배합 × 1배합 PK수(표준) vs 실제 생산 수량(포장 수량을 직접 입력한 줄만) → 수율·손실 원재료비
-  //  파이: 반제품 라미네이팅 카트 투입 반죽(kg) vs 생산한 파이가 쓴 반죽(개수 × 1개당 반죽 g) → 반죽 손실률
-  function lossCfg() { db.loss = db.loss && typeof db.loss === 'object' ? db.loss : {}; db.loss.cartKg = db.loss.cartKg || {}; db.loss.pie = db.loss.pie || {}; return db.loss; }
+  function lossCfg() { db.loss = db.loss && typeof db.loss === 'object' ? db.loss : {}; db.loss.cart = db.loss.cart || {}; db.loss.pie = db.loss.pie || {}; return db.loss; }
   function isLaminating(name) { return /라미네이팅/.test(String(name || '')); }
   function laminatingItems() { return db.semiItems.filter((s) => isLaminating(s.name)); }
+  // '(버터)패스츄리반죽 라미네이팅' → '패스츄리'
+  function semiShort(name) { return String(name || '').replace(/^\((기본|버터)\)/, '').replace(/\s*(라미네이팅|믹싱)$/, '').replace(/\s*반죽$/, '').trim(); }
+  function cartStd(name) { const c = lossCfg().cart[name] || DEFAULT_CART_STD[name] || {}; return { pieces: Number(c.pieces) || 0, g: Number(c.g) || 0 }; }
+  function recipeMetricsByName(name) {
+    const recipes = Array.isArray(window.recipesData) ? window.recipesData : [];
+    const rc = recipes.find((r) => r.recipeType === 'SUB' && String(r.productName || '').trim() === name);
+    if (!rc || typeof window.calculateRecipeMetrics !== 'function') return null;
+    try { const m = window.calculateRecipeMetrics(JSON.parse(JSON.stringify(rc))); return { rc, weightG: Number(m.weightTotalG) || 0, cost: Number(m.rawMaterialCost) || 0 }; } catch (e) { return null; }
+  }
+  // 라미네이팅 반제품 1종의 공정 기준: 믹싱 반제품·레시피(기본/버터)·1카트 기준을 한데 묶음
+  function doughChain(lamName) {
+    const butterName = lamName.replace(/\s*라미네이팅$/, ''), linked = /^\(버터\)/.test(butterName);
+    const baseName = butterName.replace(/^\(버터\)/, '(기본)');
+    const mixName = lamName.replace(/^\(버터\)/, '(기본)').replace(/라미네이팅$/, '믹싱');
+    const std = cartStd(lamName), c = { lamName, mixName, short: semiShort(lamName), butterName: linked ? butterName : '', baseName: linked ? baseName : '', pieces: std.pieces, g: std.g };
+    const base = linked ? recipeMetricsByName(baseName) : null, butter = linked ? recipeMetricsByName(butterName) : null;
+    c.hasBase = !!base; c.hasButter = !!butter;
+    c.baseBatchKg = base ? base.weightG / 1000 : null;                       // 믹싱 1배합 반죽 kg
+    c.baseCostPerKg = base && base.weightG > 0 ? (base.cost / base.weightG) * 1000 : null;
+    c.batchCost = base ? base.cost : null;                                   // 믹싱 1배합 원재료비
+    c.piecesPerBatch = base && std.g > 0 ? base.weightG / std.g : null;      // 1배합으로 나오는 반죽 개수
+    // 버터 1개분 = (버터)레시피의 버터 등 직접 재료 g ÷ 기본 반죽 개수
+    let rawG = 0, baseEa = 0;
+    ((butter && butter.rc.ingredients) || []).forEach((i) => { const q = Number(i.qty) || 0; if (i.rowType === 'SUB_RECIPE') { if (String(i.unit || '').toUpperCase() === 'EA') baseEa += q; } else rawG += q; });
+    c.butterPerPiece = butter && baseEa > 0 ? rawG / baseEa : null;
+    c.butterPieceG = c.butterPerPiece != null && std.g > 0 ? std.g + c.butterPerPiece : null;  // 버터 넣은 뒤 1개 g
+    c.butterCostPerKg = butter && butter.weightG > 0 ? (butter.cost / butter.weightG) * 1000 : null;
+    c.cartBaseKg = std.pieces && std.g ? (std.pieces * std.g) / 1000 : null;  // 1카트 기본 반죽 kg
+    c.cartButterKg = std.pieces && c.butterPieceG ? (std.pieces * c.butterPieceG) / 1000 : null; // 1카트 버터 반죽 kg
+    c.ready = !!(c.cartBaseKg && c.cartButterKg);
+    c.why = !linked ? '레시피 연결 없음' : !std.pieces || !std.g ? '1카트 기준 미설정' : !base ? `레시피 '${baseName}' 없음` : !butter ? `레시피 '${butterName}' 없음` : c.butterPerPiece == null ? '버터 레시피에 기본 반죽(EA) 없음' : '';
+    return c;
+  }
   function pieDoughDefaults(products) {
     const recipes = Array.isArray(window.recipesData) ? window.recipesData : [];
     const byId = {}; recipes.forEach((r) => { byId[r.id] = r; });
@@ -1310,23 +1369,11 @@
         names.push(i.item); if (i.subRecipeId) subIds.push(i.subRecipeId);
       });
       const nm = names.join(' ');
-      const group = /패스츄리/.test(nm) ? '패스츄리 반죽 라미네이팅' : /파트푀이테|쇼숑/.test(nm) ? '쇼숑 반죽 라미네이팅' : /몽마르트/.test(nm) ? '몽마르트 반죽 라미네이팅' : '';
+      const lamHit = laminatingItems().find((x) => { const k = semiShort(x.name).replace(/\s/g, ''); return k && nm.replace(/\s/g, '').includes(k); });
+      const group = lamHit ? lamHit.name : '';
       out[p.productCode] = { group, gPerEa: grams > 0 && p.batchOutputEa > 0 ? Math.round((grams / p.batchOutputEa) * 10) / 10 : 0, recipeDiv: r ? Number(r.divisionWeight) || 0 : 0, doughNames: nm, subIds, hasRecipe: !!r };
     });
     return out;
-  }
-  // 라미네이팅 반죽 1kg 원재료비: 그 그룹 파이 레시피가 쓰는 반죽 반제품 레시피(가장 많이 쓰인 것)의 원재료비 ÷ 총중량
-  function laminatingDoughInfo(name, products, defs) {
-    const recipes = Array.isArray(window.recipesData) ? window.recipesData : [];
-    const cnt = {};
-    products.filter((p) => p.cat === 'PIE' && pieSetting(p.productCode, defs).group === name).forEach((p) => ((defs[p.productCode] || {}).subIds || []).forEach((id) => { cnt[id] = (cnt[id] || 0) + 1; }));
-    const subId = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0];
-    const rc = subId && recipes.find((r) => r.id === subId);
-    if (!rc || typeof window.calculateRecipeMetrics !== 'function') return { recipeName: rc ? rc.productName : '', costPerKg: null, batchKg: null };
-    try {
-      const m = window.calculateRecipeMetrics(JSON.parse(JSON.stringify(rc)));
-      return { recipeName: rc.productName, costPerKg: m.weightTotalG > 0 ? (m.rawMaterialCost / m.weightTotalG) * 1000 : null, batchKg: m.weightTotalG / 1000 };
-    } catch (e) { return { recipeName: rc.productName, costPerKg: null, batchKg: null }; }
   }
   function pieSetting(code, defs) {
     const c = lossCfg().pie[code] || {}, d = defs[code] || {};
@@ -1341,11 +1388,16 @@
     return [{ key: 'M', label: `${m}월 전체`, sub: '', from: `${ym}-01`, to: ymd(new Date(y, m, 0)) }, ...weeks];
   }
   function computeLoss(from, to, products, defs) {
-    const doughRows = {}, pieGroups = {};
-    laminatingItems().forEach((s) => { pieGroups[s.name] = { name: s.name, made: 0, usedCarts: 0, usedRecorded: false, carts: 0, cartKg: Number(lossCfg().cartKg[s.name]) || 0, usedKg: 0, pies: {}, missingG: [] }; });
+    const doughRows = {}, pieGroups = {}, mixOf = {};
+    laminatingItems().forEach((s) => { const ch = doughChain(s.name); pieGroups[s.name] = { name: s.name, ch, batches: 0, made: 0, usedCarts: 0, usedRecorded: false, waste: 0, usedKg: 0, pies: {}, missingG: [] }; mixOf[ch.mixName] = pieGroups[s.name]; });
     Object.entries(db.days).forEach(([d, day]) => {
       if (d < from || d > to) return;
-      (day.semi || []).forEach((s) => { const g = pieGroups[s.name]; if (!g) return; g.made += Number(s.actual) || 0; if (s.used !== undefined && s.used !== '' && Number(s.used) >= 0 && (Number(s.used) > 0 || Number(s.actual) > 0)) { if (Number(s.used) > 0) g.usedRecorded = true; g.usedCarts += Number(s.used) || 0; } });
+      (day.semi || []).forEach((s) => {
+        if (mixOf[s.name]) { mixOf[s.name].batches += Number(s.actual) || 0; return; }
+        const g = pieGroups[s.name]; if (!g) return;
+        g.made += Number(s.actual) || 0; g.waste += Number(s.waste) || 0;
+        if (Number(s.used) > 0) { g.usedRecorded = true; g.usedCarts += Number(s.used); }
+      });
       (day.lines || []).forEach((l) => {
         const p = productByCode(l.code, products);
         if (l.unit === '배합') {
@@ -1371,13 +1423,32 @@
       return { ...r, yieldPct, diff: r.actC - r.expC, lossMoney };
     }).sort((a, b) => CAT_ORDER.indexOf(a.cat) - CAT_ORDER.indexOf(b.cat) || a.code.localeCompare(b.code));
     const pies = Object.values(pieGroups).map((g) => {
-      g.basis = g.usedRecorded ? '사용 카트' : '만든 카트(사용 미입력)';
-      g.carts = g.usedRecorded ? g.usedCarts : g.made;
-      const inputKg = g.carts * g.cartKg;
-      return { ...g, inputKg, diffKg: inputKg - g.usedKg, lossPct: inputKg > 0 ? (1 - g.usedKg / inputKg) * 100 : null };
+      const ch = g.ch, x = { ...g };
+      x.active = g.batches > 0 || g.made > 0 || g.usedKg > 0;
+      // ① 믹싱
+      x.mixKg = ch.baseBatchKg != null ? g.batches * ch.baseBatchKg : null;
+      x.mixPieces = ch.piecesPerBatch != null ? g.batches * ch.piecesPerBatch : null;
+      x.mixCost = ch.batchCost != null ? g.batches * ch.batchCost : null;
+      // ② 라미네이팅 (만든 카트)
+      x.lamPieces = ch.pieces ? g.made * ch.pieces : null;
+      x.lamBaseKg = ch.cartBaseKg != null ? g.made * ch.cartBaseKg : null;
+      x.lamButterKg = ch.cartButterKg != null ? g.made * ch.cartButterKg : null;
+      x.mixDiffKg = x.mixKg != null && x.lamBaseKg != null ? x.mixKg - x.lamBaseKg : null;        // 믹싱했지만 라미네이팅하지 않은 반죽
+      x.mixLossPct = x.mixDiffKg != null && x.mixKg > 0 ? (x.mixDiffKg / x.mixKg) * 100 : null;
+      x.mixLossMoney = x.mixDiffKg != null && ch.baseCostPerKg != null ? x.mixDiffKg * ch.baseCostPerKg : null;
+      // ③ 성형 (사용 카트를 적었으면 사용 카트, 아니면 만든 카트)
+      x.basis = g.usedRecorded ? '사용 카트' : '만든 카트(사용 미입력)';
+      x.carts = g.usedRecorded ? g.usedCarts : g.made;
+      x.inputKg = ch.cartButterKg != null ? x.carts * ch.cartButterKg : null;
+      x.diffKg = x.inputKg != null ? x.inputKg - g.usedKg : null;
+      x.lossPct = x.inputKg > 0 ? (1 - g.usedKg / x.inputKg) * 100 : null;
+      x.lossMoney = x.diffKg != null && ch.butterCostPerKg != null ? x.diffKg * ch.butterCostPerKg : null;
+      return x;
     });
     const sumExp = dough.reduce((s, r) => s + r.expC, 0), sumAct = dough.reduce((s, r) => s + r.actC, 0);
-    return { dough, pies, doughYield: sumExp > 0 ? (sumAct / sumExp) * 100 : null, doughLossMoney: dough.reduce((s, r) => s + (r.lossMoney || 0), 0), unconfirmed: dough.reduce((s, r) => s + r.unconfirmed, 0) };
+    const pieIn = pies.reduce((s, g) => s + (g.inputKg || 0), 0), pieUsed = pies.reduce((s, g) => s + (g.inputKg != null ? g.usedKg : 0), 0);
+    return { dough, pies, doughYield: sumExp > 0 ? (sumAct / sumExp) * 100 : null, doughLossMoney: dough.reduce((s, r) => s + (r.lossMoney || 0), 0), unconfirmed: dough.reduce((s, r) => s + r.unconfirmed, 0),
+      pieLossPct: pieIn > 0 ? (1 - pieUsed / pieIn) * 100 : null, pieLossMoney: pies.reduce((s, g) => s + (g.lossMoney || 0), 0), pieHasMoney: pies.some((g) => g.lossMoney != null && g.carts > 0) };
   }
   let lossPeriodKey = 'M';
   function yieldCell(v) {
@@ -1409,20 +1480,42 @@
         <td class="py-1.5 px-2 text-right tabular-nums ${r.lossMoney > 0 ? 'text-rose-700 font-bold' : 'text-emerald-700'}">${r.lossMoney === null ? '-' : (r.matPerBatch ? won(r.lossMoney) : '<span class="text-stone-400" title="제품단가 탭 원재료비 없음">원재료비 없음</span>')}</td>
         <td class="py-1.5 px-2 text-right text-xs ${r.unconfirmed ? 'text-amber-700 font-bold' : 'text-stone-400'}">${r.unconfirmed ? r.unconfirmed + '건' : '-'}</td>
       </tr>`).join('');
-    const pieCards = L.pies.map((g) => {
-      const pieRows = Object.values(g.pies).map((pe) => `<div class="flex justify-between text-xs"><span>${esc(pe.name)} ${num(pe.ea, 0)}개 × ${pe.gPerEa ? num(pe.gPerEa) + 'g' : '<b class="text-rose-700">g 미설정</b>'}</span><span class="tabular-nums">${num((pe.ea * pe.gPerEa) / 1000)}kg</span></div>`).join('');
-      return `<div class="rounded-xl border border-stone-200 p-3 flex flex-col gap-1.5">
-        <div class="flex items-center justify-between"><b class="text-sm">${esc(g.name.replace(' 라미네이팅', ''))}</b>${g.cartKg ? lossCell(g.lossPct) : '<span class="text-xs font-bold text-rose-700">1카트 kg 미설정</span>'}</div>
-        <div class="grid grid-cols-2 gap-x-2 text-xs tabular-nums"><span class="text-stone-500">투입 카트 <span class="text-[11px] ${g.usedRecorded ? 'text-blue-700' : 'text-amber-700'}">(${g.basis})</span></span><span class="text-right font-bold">${num(g.carts)}카트${g.cartKg ? ` × ${num(g.cartKg)}kg` : ''}</span>
-          <span class="text-stone-500">투입 반죽</span><span class="text-right font-bold">${g.cartKg ? num(g.inputKg) + 'kg' : '-'}</span>
-          <span class="text-stone-500">생산에 쓴 반죽</span><span class="text-right font-bold">${num(g.usedKg)}kg</span>
-          <span class="text-stone-500">차이(손실)</span><span class="text-right font-extrabold ${g.diffKg > 0 ? 'text-rose-700' : 'text-emerald-700'}">${g.cartKg ? num(g.diffKg) + 'kg' : '-'}</span></div>
-        ${pieRows ? `<div class="border-t border-stone-100 pt-1 flex flex-col gap-0.5">${pieRows}</div>` : '<div class="text-xs text-stone-400">이 기간 생산 기록 없음</div>'}
+    const kg = (v) => (v == null ? '-' : num(v) + 'kg');
+    const moneyCell = (v) => (v == null ? '<span class="text-stone-400">-</span>' : `<span class="font-bold tabular-nums ${v > 0 ? 'text-rose-700' : 'text-emerald-700'}">${won(v)}</span>`);
+    const step = (no, title, sub, rows, foot) => `<div class="rounded-xl bg-stone-50 border border-stone-200 p-2.5 flex flex-col gap-1 min-w-0">
+        <div class="flex items-center gap-1.5"><span class="w-5 h-5 rounded-full bg-stone-900 text-white text-[11px] font-extrabold flex items-center justify-center shrink-0">${no}</span><b class="text-xs text-stone-900">${title}</b></div>
+        <div class="text-[11px] text-stone-500 truncate" title="${esc(sub)}">${esc(sub)}</div>
+        <div class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs tabular-nums">${rows.map(([l, v, cls]) => `<span class="text-stone-500">${l}</span><span class="text-right ${cls || 'font-bold'}">${v}</span>`).join('')}</div>${foot || ''}</div>`;
+    const arrow = '<div class="hidden lg:flex items-center justify-center text-stone-300 text-lg font-extrabold">→</div>';
+    const pieCards = L.pies.filter((g) => g.active || g.ch.ready).map((g) => {
+      const ch = g.ch;
+      const pieRows = Object.values(g.pies).map((pe) => `<div class="flex justify-between gap-2 text-[11px]"><span class="truncate">${esc(pe.name)} ${num(pe.ea, 0)}개 × ${pe.gPerEa ? num(pe.gPerEa) + 'g' : '<b class="text-rose-700">g 미설정</b>'}</span><span class="tabular-nums">${num((pe.ea * pe.gPerEa) / 1000)}kg</span></div>`).join('');
+      const s1 = step(1, '믹싱', ch.baseName || ch.mixName, [
+        ['실행', `${num(g.batches)}배합`], ['만든 반죽', kg(g.mixKg)],
+        ['반죽 개수', g.mixPieces != null ? `${num(g.mixPieces)}개 <span class="text-stone-400 font-normal">(${num(ch.g, 0)}g)</span>` : '-'], ['원재료 투입', g.mixCost != null ? won(g.mixCost) : '-'],
+      ], ch.baseBatchKg != null ? `<div class="text-[11px] text-stone-400">1배합 ${num(ch.baseBatchKg)}kg${ch.piecesPerBatch != null ? ` = ${num(ch.piecesPerBatch)}개` : ''}</div>` : '');
+      const s2 = step(2, '라미네이팅', ch.butterName || ch.lamName, [
+        ['만든 카트', `${num(g.made)}카트`], ['접은 반죽', g.lamPieces != null ? `${num(g.lamPieces, 0)}개 · ${kg(g.lamBaseKg)}` : '-'],
+        ['버터 포함', kg(g.lamButterKg)],
+        ['믹싱과 차이', g.mixDiffKg != null && g.batches > 0 ? `${g.mixDiffKg > 0 ? '+' : ''}${num(g.mixDiffKg)}kg (${g.mixLossPct.toFixed(1)}%)` : '-', g.mixDiffKg > 0 ? 'font-extrabold text-amber-700' : 'font-bold text-stone-600'],
+      ], ch.ready ? `<div class="text-[11px] text-stone-400">1카트 ${ch.pieces}개 × ${num(ch.g, 0)}g → 버터 포함 ${num(ch.butterPieceG, 0)}g = ${num(ch.cartButterKg)}kg</div>` : '');
+      const s3 = step(3, '성형 (파이 생산)', `기준: ${g.basis}`, [
+        ['투입 반죽', `${num(g.carts)}카트 · ${kg(g.inputKg)}`], ['생산에 쓴 반죽', kg(g.usedKg)],
+        ['차이(손실)', g.inputKg != null ? `${num(g.diffKg)}kg` : '-', g.diffKg > 0 ? 'font-extrabold text-rose-700' : 'font-extrabold text-emerald-700'],
+        ['손실 원재료비', moneyCell(g.inputKg > 0 ? g.lossMoney : null), ''],
+      ], pieRows ? `<div class="border-t border-stone-200 pt-1 flex flex-col gap-0.5">${pieRows}</div>` : '<div class="text-[11px] text-stone-400">이 기간 파이 생산 기록 없음</div>');
+      return `<div class="rounded-2xl border border-stone-200 p-3 flex flex-col gap-2">
+        <div class="flex flex-wrap items-center justify-between gap-2"><b class="text-sm">${esc(ch.short)} 반죽</b>
+          ${ch.ready ? `<span class="text-xs text-stone-500">성형 손실률 ${g.carts > 0 ? lossCell(g.lossPct) : '<span class="text-stone-400">-</span>'}</span>` : `<span class="text-xs font-bold text-rose-700">기준 미설정 — ${esc(ch.why)}</span>`}</div>
+        <div class="grid grid-cols-1 lg:grid-cols-[1fr_20px_1fr_20px_1.25fr] gap-2">${s1}${arrow}${s2}${arrow}${s3}</div>
+        ${g.missingG.length ? `<div class="text-[11px] font-bold text-rose-700">1개당 반죽 g 미설정: ${esc(g.missingG.join(', '))}</div>` : ''}
       </div>`;
     }).join('');
     // 주별 비교
+    const shown = L.pies.filter((g) => g.ch.ready);
     const trend = periods.filter((p) => p.key !== 'M').map((p) => ({ p, r: computeLoss(p.from, p.to, products, defs) }));
-    const trendTrs = trend.map(({ p, r }) => `<tr class="border-b border-stone-100 whitespace-nowrap ${p.key === per.key ? 'bg-amber-50' : ''}"><td class="py-1.5 px-2 font-bold">${p.label} <span class="text-xs text-stone-400">${p.sub}</span></td><td class="py-1.5 px-2 text-right">${yieldCell(r.doughYield)}</td><td class="py-1.5 px-2 text-right tabular-nums ${r.doughLossMoney > 0 ? 'text-rose-700' : 'text-emerald-700'}">${r.doughYield === null ? '-' : won(r.doughLossMoney)}</td>${r.pies.map((g) => `<td class="py-1.5 px-2 text-right">${g.cartKg && g.carts ? lossCell(g.lossPct) : '<span class="text-stone-400">-</span>'}</td>`).join('')}</tr>`).join('');
+    const trendTrs = trend.map(({ p, r }) => `<tr class="border-b border-stone-100 whitespace-nowrap ${p.key === per.key ? 'bg-amber-50' : ''}"><td class="py-1.5 px-2 font-bold">${p.label} <span class="text-xs text-stone-400">${p.sub}</span></td>${r.pies.filter((g) => g.ch.ready).map((g) => `<td class="py-1.5 px-2 text-right">${g.carts ? lossCell(g.lossPct) : '<span class="text-stone-400">-</span>'}</td>`).join('')}<td class="py-1.5 px-2 text-right tabular-nums">${r.pieHasMoney ? moneyCell(r.pieLossMoney) : '<span class="text-stone-400">-</span>'}</td><td class="py-1.5 px-2 text-right">${yieldCell(r.doughYield)}</td><td class="py-1.5 px-2 text-right tabular-nums ${r.doughLossMoney > 0 ? 'text-rose-700' : 'text-emerald-700'}">${r.doughYield === null ? '-' : won(r.doughLossMoney)}</td></tr>`).join('');
+    const box = 'bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs';
     return `
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4 flex flex-wrap items-center justify-between gap-2">
         <div class="flex flex-wrap items-center gap-1.5">
@@ -1431,13 +1524,18 @@
           <button type="button" onclick="Prod.setMonth('${nextYm}')" class="w-8 h-8 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">›</button>
           <div class="flex flex-wrap gap-1 ml-2">${pBtns}</div>
         </div>
-        <button type="button" onclick="Prod.openLossSettings()" class="px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-bold cursor-pointer hover:bg-stone-50">손실 기준 설정 (카트 kg · 파이 반죽 g)</button>
+        <button type="button" onclick="Prod.openLossSettings()" class="px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-bold cursor-pointer hover:bg-stone-50">손실 기준 설정 (1카트 기준 · 파이 반죽 g)</button>
       </div>
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">생지 수율 (${esc(per.label)})</div><div class="mt-1 text-xl">${yieldCell(L.doughYield)}</div><div class="text-xs text-stone-500">실제 생산 ÷ 표준(투입 배합 × 1배합 PK수)</div></div>
-        <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">생지 손실 원재료비</div><div class="mt-1 text-xl font-extrabold tabular-nums ${L.doughLossMoney > 0 ? 'text-rose-700' : 'text-emerald-700'}">${L.doughYield === null ? '-' : won(L.doughLossMoney)}</div><div class="text-xs text-stone-500">−면 표준보다 더 생산</div></div>
-        <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">파이 반죽 손실 (그룹별)</div><div class="mt-1 text-sm flex flex-col gap-0.5">${L.pies.filter((g) => g.carts || g.usedKg).map((g) => `<div class="flex justify-between"><span>${esc(g.name.replace(' 반죽 라미네이팅', ''))}</span>${g.cartKg ? lossCell(g.lossPct) : '<span class="text-xs text-rose-700 font-bold">kg 미설정</span>'}</div>`).join('') || '<span class="text-stone-400 text-xs">기록 없음</span>'}</div></div>
-        <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">확인 안 된 생지 줄</div><div class="mt-1 text-xl font-extrabold ${L.unconfirmed ? 'text-amber-700' : 'text-emerald-700'}">${L.unconfirmed}건</div><div class="text-xs text-stone-500">실제 생산 수량 미입력 → 수율 계산 제외</div></div>
+        <div class="${box}"><div class="text-xs font-bold text-stone-500">파이 성형 손실률 (${esc(per.label)})</div><div class="mt-1 text-sm flex flex-col gap-0.5">${shown.filter((g) => g.carts || g.usedKg).map((g) => `<div class="flex justify-between"><span>${esc(g.ch.short)}</span>${lossCell(g.lossPct)}</div>`).join('') || '<span class="text-stone-400 text-xs">기록 없음</span>'}</div></div>
+        <div class="${box}"><div class="text-xs font-bold text-stone-500">파이 반죽 손실 원재료비</div><div class="mt-1 text-xl font-extrabold tabular-nums">${L.pieHasMoney ? moneyCell(L.pieLossMoney) : '-'}</div><div class="text-xs text-stone-500">성형 단계 차이 kg × 버터 반죽 원재료비/kg</div></div>
+        <div class="${box}"><div class="text-xs font-bold text-stone-500">생지 수율</div><div class="mt-1 text-xl">${yieldCell(L.doughYield)}</div><div class="text-xs text-stone-500">실제 생산 ÷ 표준(투입 배합 × 1배합 PK수)</div></div>
+        <div class="${box}"><div class="text-xs font-bold text-stone-500">생지 손실 원재료비</div><div class="mt-1 text-xl font-extrabold tabular-nums ${L.doughLossMoney > 0 ? 'text-rose-700' : 'text-emerald-700'}">${L.doughYield === null ? '-' : won(L.doughLossMoney)}</div><div class="text-xs ${L.unconfirmed ? 'text-amber-700 font-bold' : 'text-stone-500'}">확인 안 된 생지 줄 ${L.unconfirmed}건 (계산 제외)</div></div>
+      </div>
+      <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
+        <h3 class="text-sm font-extrabold mb-1">파이 — 반죽 공정별 손실 (믹싱 → 라미네이팅 → 성형)</h3>
+        <div class="text-xs text-stone-500 mb-2 leading-relaxed">① <b>믹싱</b> 배합 × 레시피 1배합 중량 = 만든 반죽 · ② <b>라미네이팅</b> 카트 × 1카트 개수 = 접은 반죽(버터가 들어가 '(버터)○○반죽'이 됨) · ③ <b>성형</b> 투입 = 카트 × 버터 포함 반죽 kg, 사용 = 파이 생산 개수 × 1개당 반죽 g.<br>반죽은 믹싱 후 1~2일 냉장 숙성하고, 카트를 만든 날과 성형한 날도 달라서 하루·주 단위는 앞뒤로 밀립니다. <b>월 전체</b>로 보는 것이 정확합니다. ②의 '믹싱과 차이'는 손실뿐 아니라 숙성 중인 반죽·입력 누락도 포함합니다.</div>
+        <div class="flex flex-col gap-3">${pieCards || '<div class="py-6 text-center text-xs text-stone-400">라미네이팅 반제품이 없습니다.</div>'}</div>
       </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
         <h3 class="text-sm font-extrabold mb-1">생지 (알생지·파베이크·제과) — 투입 배합 대비 실제 생산</h3>
@@ -1447,19 +1545,15 @@
           <tbody>${doughTrs || '<tr><td colspan="10" class="py-6 text-center text-xs text-stone-400">이 기간 생지 실행 기록이 없습니다.</td></tr>'}</tbody></table></div>
       </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
-        <h3 class="text-sm font-extrabold mb-1">파이 — 라미네이팅 카트 투입 반죽 대비 생산에 쓴 반죽</h3>
-        <div class="text-xs text-stone-500 mb-2">투입 = 라미네이팅 <b>사용 카트</b>(없으면 만든 카트) × 1카트 반죽 kg · 사용 = 파이 생산 개수 × 1개당 반죽 g. 카트를 만든 날과 성형한 날이 다를 수 있어 하루보다 주·월로 보세요.</div>
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-${Math.max(1, Math.min(5, L.pies.length))} gap-3">${pieCards}</div>
-      </div>
-      <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
         <h3 class="text-sm font-extrabold mb-2">${m}월 주별 비교</h3>
-        <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm"><thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600 whitespace-nowrap"><th class="py-2 px-2">주</th><th class="py-2 px-2 text-right">생지 수율</th><th class="py-2 px-2 text-right">생지 손실 원재료비</th>${laminatingItems().map((s) => `<th class="py-2 px-2 text-right">${esc(s.name.replace(' 반죽 라미네이팅', ''))} 반죽 손실</th>`).join('')}</tr></thead><tbody>${trendTrs}</tbody></table></div>
+        <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm"><thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600 whitespace-nowrap"><th class="py-2 px-2">주</th>${shown.map((g) => `<th class="py-2 px-2 text-right">${esc(g.ch.short)} 성형 손실</th>`).join('')}<th class="py-2 px-2 text-right">파이 손실 원재료비</th><th class="py-2 px-2 text-right">생지 수율</th><th class="py-2 px-2 text-right">생지 손실 원재료비</th></tr></thead><tbody>${trendTrs}</tbody></table></div>
       </div>`;
   }
   function openLossSettings() {
     const products = getProducts(), defs = pieDoughDefaults(products), cfg = lossCfg();
     const lam = laminatingItems();
-    const cartRows = lam.map((s) => { const di = laminatingDoughInfo(s.name, products, defs); return `<tr class="border-b border-stone-100"><td class="py-1.5 px-2"><div class="font-bold">${esc(s.name)}</div><div class="text-xs text-stone-500">${di.recipeName ? `반죽 레시피 ${esc(di.recipeName)} · 1배합 ${num(di.batchKg)}kg · 원재료비 ${di.costPerKg == null ? '-' : won(di.costPerKg) + '/kg'}` : '연결된 파이 반죽 레시피 없음'}</div></td><td class="py-1.5 px-2 text-right"><input type="number" min="0" step="any" data-cart="${esc(s.name)}" value="${cfg.cartKg[s.name] || ''}" placeholder="kg" class="no-spinner w-24 text-right border border-stone-300 rounded-lg px-2 py-1 font-bold tabular-nums"> kg</td></tr>`; }).join('');
+    const cin = 'no-spinner w-20 text-right border border-stone-300 rounded-lg px-2 py-1 font-bold tabular-nums';
+    const cartRows = lam.map((s) => { const ch = doughChain(s.name); return `<tr class="border-b border-stone-100"><td class="py-1.5 px-2"><div class="font-bold">${esc(s.name)}</div><div class="text-xs ${ch.ready ? 'text-stone-500' : 'text-rose-700 font-bold'}">${ch.ready ? `믹싱 1배합 ${num(ch.baseBatchKg)}kg = ${num(ch.piecesPerBatch)}개 · 버터 포함 1개 ${num(ch.butterPieceG, 0)}g · 1카트 ${num(ch.cartButterKg)}kg · 원재료비 ${ch.butterCostPerKg == null ? '-' : won(ch.butterCostPerKg) + '/kg'}` : esc(ch.why)}</div></td><td class="py-1.5 px-2 text-right whitespace-nowrap"><input type="number" min="0" step="any" data-cart-pieces="${esc(s.name)}" value="${ch.pieces || ''}" placeholder="개" class="${cin}"> 개 × <input type="number" min="0" step="any" data-cart-g="${esc(s.name)}" value="${ch.g || ''}" placeholder="g" class="${cin}"> g</td></tr>`; }).join('');
     const pieRows = products.filter((p) => p.cat === 'PIE').map((p) => {
       const st = pieSetting(p.productCode, defs), d = defs[p.productCode] || {};
       const warn = !d.hasRecipe ? '레시피 없음' : !d.gPerEa ? '레시피에 반죽 없음' : (d.recipeDiv && Math.abs(d.gPerEa - d.recipeDiv) / d.recipeDiv > 0.3 ? `레시피 분할중량 ${num(d.recipeDiv)}g과 차이 큼` : '');
@@ -1470,14 +1564,19 @@
     }).join('');
     modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold">손실 기준 설정</h3><div class="text-xs text-stone-500 mt-0.5">파이 반죽 손실 계산에 쓰는 기준입니다. 1개당 반죽 g을 비워 두면 레시피에서 계산한 값(회색)을 씁니다.</div></div>
       <div class="p-4 max-h-[65vh] overflow-y-auto flex flex-col gap-4">
-        <div><h4 class="text-sm font-extrabold mb-1">라미네이팅 1카트 반죽 중량</h4><table class="w-full text-sm">${cartRows}</table></div>
+        <div><h4 class="text-sm font-extrabold mb-1">라미네이팅 1카트 기준</h4><div class="text-xs text-stone-500 mb-1">1카트에 올리는 반죽 개수 × 버터 넣기 전 반죽 1개 무게. 버터 무게와 원재료비는 레시피 '(기본)·(버터)○○반죽'에서 계산합니다.</div><table class="w-full text-sm">${cartRows}</table></div>
         <div><h4 class="text-sm font-extrabold mb-1">파이별 반죽 그룹 · 1개당 반죽 사용량</h4><div class="text-xs text-stone-500 mb-1">레시피 계산 = 레시피의 반죽 반제품 총량 ÷ 제품단가 '1배합 실생산(ea)'</div><table class="w-full text-sm">${pieRows}</table></div>
       </div>
       <div class="px-5 py-3 border-t border-stone-200 flex justify-end gap-2"><button type="button" onclick="Prod.closeModal()" class="px-4 py-2 rounded-xl border border-stone-300 text-sm font-bold cursor-pointer">취소</button><button type="button" onclick="Prod.saveLossSettings()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">저장</button></div>`);
   }
   function saveLossSettings() {
     const cfg = lossCfg(), defs = pieDoughDefaults(getProducts());
-    document.querySelectorAll('[data-cart]').forEach((el) => { const v = parseFloat(el.value); if (v > 0) cfg.cartKg[el.dataset.cart] = v; else delete cfg.cartKg[el.dataset.cart]; });
+    document.querySelectorAll('[data-cart-pieces]').forEach((el) => {
+      const name = el.dataset.cartPieces, gEl = document.querySelector(`[data-cart-g="${CSS.escape(name)}"]`);
+      const pieces = parseFloat(el.value) || 0, g = parseFloat(gEl && gEl.value) || 0, d = DEFAULT_CART_STD[name] || {};
+      if (pieces > 0 && g > 0 && !(pieces === d.pieces && g === d.g)) cfg.cart[name] = { pieces, g }; else delete cfg.cart[name];
+    });
+    delete cfg.cartKg; // 예전 '1카트 kg' 설정은 1카트 기준(개수 × g)으로 대체
     document.querySelectorAll('[data-pie-group]').forEach((el) => {
       const code = el.dataset.pieGroup, gEl = document.querySelector(`[data-pie-g="${CSS.escape(code)}"]`), g = parseFloat(gEl && gEl.value);
       const d = defs[code] || {}, entry = {};
@@ -1521,10 +1620,10 @@
       Object.entries(db.days).forEach(([d, day]) => { if (!after(d)) return; (day.semi || []).forEach((l) => { if (l.name !== s.name) return; x.made += Number(l.actual) || 0; x.used += Number(l.used) || 0; x.waste += Number(l.waste) || 0; }); });
       db.stockAdjusts.forEach((a) => { if (after(a.date) && a.code === key) x.adjust += Number(a.deltaPk) || 0; });
       x.cur = r1(x.base + x.made - x.used - x.waste + x.adjust);
-      x.cartKg = Number(lossCfg().cartKg[s.name]) || 0;
-      const di = laminatingDoughInfo(s.name, products, defs);
-      x.costPerKg = di.costPerKg; x.recipeName = di.recipeName;
-      x.cartCost = x.cartKg && di.costPerKg != null ? x.cartKg * di.costPerKg : null;
+      const ch = doughChain(s.name);
+      x.cartKg = ch.cartButterKg || 0; // 버터 포함 1카트 반죽 kg
+      x.costPerKg = ch.butterCostPerKg; x.recipeName = ch.butterName;
+      x.cartCost = x.cartKg && ch.butterCostPerKg != null ? x.cartKg * ch.butterCostPerKg : null;
       x.amt = x.cartCost == null ? null : x.cur * x.cartCost;
       return x;
     });
