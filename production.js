@@ -1431,7 +1431,7 @@
     const cumMade = first ? scrapTotals(first, mTo) : { total: 0, byType: {} }, cumUse = first ? scrapUseTotals(first, mTo) : { total: 0, byType: {} };
     // 보는 기간(카드·아래 표): N월 전체 · 최근 3개월 · 누적. 파지 기록 시작일 이전은 계산에서 뺌
     const sPeriods = lossPeriods(ym).filter((p) => ['M', 'Q', 'ALL'].includes(p.key)), sPer = sPeriods.find((p) => p.key === scrapPeriodKey) || sPeriods[0];
-    const pClamped = sPer.key !== 'M' && !!first && first > sPer.from, pFrom = pClamped ? first : sPer.from, pTo = sPer.to, pLabel = sPer.label;
+    const pClamped = sPer.key !== 'M' && !!first && first > sPer.from, pFrom = pClamped ? first : sPer.from, pTo = sPer.to, pLabel = sPer.key === 'M' ? `${m}월` : sPer.label;
     const pt = sPer.key === 'M' ? mt : scrapTotals(pFrom, pTo), pp = sPer.key === 'M' ? mp : pieProdKg(pFrom, pTo, products, defs), pu = sPer.key === 'M' ? mu : scrapUseTotals(pFrom, pTo);
     const pctChip = (scrapKg, prodKg) => { const r = ratioTxt(scrapKg, prodKg); return r ? `<span class="ml-1 text-[10px] font-bold text-stone-500 tabular-nums">${r}</span>` : ''; };
     const dayCls = (c) => (c.dow === 0 ? 'text-rose-600' : c.dow === 6 ? 'text-blue-600' : 'text-stone-900');
