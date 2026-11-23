@@ -1,4 +1,4 @@
-// [VERSION: production.js v2.16 - 2026-11-23 원재료 손실: 반죽 1개당 버터 1,000g 현장 기준(설정 가능), 1카트 기준을 반죽 이름 옆에 표시, 설명 문구 수정 / v2.15 - 2026-11-23 원재료 손실 개편: 파이 공정별(믹싱→라미네이팅→성형)·1카트 기준(개수×g)·버터 포함 중량, 파이를 생지 위로, 반제품 이름 레시피 기준 통일 / v2.14 - 2026-11-22 미배정 표시 삼각형 아이콘 + 범례 / v2.13 - 2026-11-22 작업 인원: 미배정 팀원 있으면 칸에 ! 표시·이름 / v2.12 - 2026-11-22 포장 안 된 품목 월별 구분, 참고 자료 안내 문구 / v2.11 - 2026-11-22 포장 달력 칸에 생산·포장 금액 / v2.10 - 2026-11-22 포장 완료: 금액 차이(KPI·주·품목), 포장 안 된 품목 목록 / v2.9 - 2026-11-22 포장 완료 등록 탭 신설(재고 입고 = 포장), 생산일지 창 크기 줄임, '실제 포장 수량'→'포장 수량' / v2.8 - 2026-11-22 일자 창에서 휴무일 지정(사유 문구), 달력 칸 옅은 빨강 + 문구 / v2.7 - 2026-11-22 달력 칸 최소 높이 1행(빈 주는 짧게), 기록 없는 주 합계 한 줄 / v2.6 - 2026-11-22 작업 인원에 1인 생산금액(KPI·날짜·주·파트별), 작업 구분별 생산 파트·인원 기준 설정 / v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
+// [VERSION: production.js v2.16 - 2026-11-23 원재료 손실(공정 표 형태로 개편·생산일지 연동 초록 점·생지 실제 생산은 포장 완료 등록 기준): 반죽 1개당 버터 1,000g 현장 기준(설정 가능), 1카트 기준을 반죽 이름 옆에 표시, 설명 문구 수정 / v2.15 - 2026-11-23 원재료 손실 개편: 파이 공정별(믹싱→라미네이팅→성형)·1카트 기준(개수×g)·버터 포함 중량, 파이를 생지 위로, 반제품 이름 레시피 기준 통일 / v2.14 - 2026-11-22 미배정 표시 삼각형 아이콘 + 범례 / v2.13 - 2026-11-22 작업 인원: 미배정 팀원 있으면 칸에 ! 표시·이름 / v2.12 - 2026-11-22 포장 안 된 품목 월별 구분, 참고 자료 안내 문구 / v2.11 - 2026-11-22 포장 달력 칸에 생산·포장 금액 / v2.10 - 2026-11-22 포장 완료: 금액 차이(KPI·주·품목), 포장 안 된 품목 목록 / v2.9 - 2026-11-22 포장 완료 등록 탭 신설(재고 입고 = 포장), 생산일지 창 크기 줄임, '실제 포장 수량'→'포장 수량' / v2.8 - 2026-11-22 일자 창에서 휴무일 지정(사유 문구), 달력 칸 옅은 빨강 + 문구 / v2.7 - 2026-11-22 달력 칸 최소 높이 1행(빈 주는 짧게), 기록 없는 주 합계 한 줄 / v2.6 - 2026-11-22 작업 인원에 1인 생산금액(KPI·날짜·주·파트별), 작업 구분별 생산 파트·인원 기준 설정 / v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
 //  - 품목 목록·단가: 제품단가 탭(barogaProductPriceBridge.getProductionProducts)
 //      파이 = PK로 입력 / 알생지·파베이크·제과 = 배합으로 입력 → '1배합 PK수'로 PK 환산 (실제 포장 PK를 직접 고칠 수 있음)
 //      금액 = PK × 엠즈 매입가(PK). 줄을 만들 때의 단가를 줄에 저장 → 나중에 단가가 바뀌어도 지난 기록 금액은 그대로
@@ -1418,7 +1418,14 @@
         }
       });
     });
+    const packPk = {};
+    Object.entries(packDays()).forEach(([d, day]) => { if (d < from || d > to) return; (day.items || []).forEach((it) => { packPk[String(it.code)] = (packPk[String(it.code)] || 0) + (Number(it.pk) || 0); }); });
     const dough = Object.values(doughRows).map((r) => {
+      // 실제 생산: 포장 완료 등록이 있으면 그 PK, 없으면 일자 창에서 직접 적은 포장 수량(그 줄만)
+      const pk = packPk[String(r.code)] || 0;
+      if (pk > 0) { r.src = 'PACK'; r.expC = r.expAll; r.actC = pk; r.bC = r.batches; r.unconfirmed = 0; }
+      else if (r.bC > 0) r.src = 'MANUAL';
+      else { r.src = ''; r.unconfirmed = 1; }
       const yieldPct = r.expC > 0 ? (r.actC / r.expC) * 100 : null;
       const lossMoney = r.expC > 0 ? (1 - r.actC / r.expC) * r.bC * r.matPerBatch : null;
       return { ...r, yieldPct, diff: r.actC - r.expC, lossMoney };
@@ -1470,46 +1477,47 @@
     const [y, m] = cursorMonth.split('-').map(Number);
     const prevYm = ymd(new Date(y, m - 2, 1)).slice(0, 7), nextYm = ymd(new Date(y, m, 1)).slice(0, 7);
     const pBtns = periods.map((p) => `<button type="button" onclick="Prod.setLossPeriod('${p.key}')" class="px-2.5 py-1 rounded-xl text-xs cursor-pointer ${p.key === per.key ? 'bg-amber-600 text-white font-extrabold' : 'bg-white border border-stone-200 text-stone-600 font-bold hover:bg-stone-100'}">${p.label}${p.sub ? ` <span class="${p.key === per.key ? 'text-amber-100' : 'text-stone-400'} font-semibold">${p.sub}</span>` : ''}</button>`).join('');
+    // ● 초록 점 = 생산일지·포장 완료 등록에 입력한 값을 그대로 불러온 것 (입력을 고치면 바로 바뀜)
+    const live = (html, src) => `<span class="inline-flex items-center gap-1 whitespace-nowrap" title="${src || '생산일지'}에서 실시간으로 불러온 값"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>${html}</span>`;
+    const SRC = { PACK: '포장 완료 등록', MANUAL: '일자 창 포장 수량' };
     const doughTrs = L.dough.map((r) => `<tr class="border-b border-stone-100 whitespace-nowrap">
         <td class="py-1.5 px-2 text-xs text-stone-500">${CAT_LABEL[r.cat] || ''}</td><td class="py-1.5 px-2 font-bold">${esc(r.name)}</td>
-        <td class="py-1.5 px-2 text-right tabular-nums">${num(r.batches)}</td>
-        <td class="py-1.5 px-2 text-right tabular-nums text-stone-500">${num(r.bC)}</td>
-        <td class="py-1.5 px-2 text-right tabular-nums">${r.bC ? num(r.expC) + ' ' + r.su : '-'}</td>
-        <td class="py-1.5 px-2 text-right tabular-nums font-bold">${r.bC ? num(r.actC) + ' ' + r.su : '-'}</td>
-        <td class="py-1.5 px-2 text-right tabular-nums ${r.diff < 0 ? 'text-rose-700' : 'text-emerald-700'}">${r.expC > 0 ? (r.diff > 0 ? '+' : '') + num(r.diff) : '-'}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums">${live(num(r.batches) + '배합')}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums text-stone-600">${num(r.expAll)} ${r.su}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums font-bold">${r.src ? live(num(r.actC) + ' ' + r.su, SRC[r.src]) : '<span class="text-amber-700 text-xs">포장 기록 없음</span>'}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums ${r.diff < 0 ? 'text-rose-700' : 'text-emerald-700'}">${r.src ? (r.diff > 0 ? '+' : '') + num(r.diff) : '-'}</td>
         <td class="py-1.5 px-2 text-right">${yieldCell(r.yieldPct)}</td>
         <td class="py-1.5 px-2 text-right tabular-nums ${r.lossMoney > 0 ? 'text-rose-700 font-bold' : 'text-emerald-700'}">${r.lossMoney === null ? '-' : (r.matPerBatch ? won(r.lossMoney) : '<span class="text-stone-400" title="제품단가 탭 원재료비 없음">원재료비 없음</span>')}</td>
-        <td class="py-1.5 px-2 text-right text-xs ${r.unconfirmed ? 'text-amber-700 font-bold' : 'text-stone-400'}">${r.unconfirmed ? r.unconfirmed + '건' : '-'}</td>
+        <td class="py-1.5 px-2 text-xs text-stone-500">${r.src ? SRC[r.src] : '-'}</td>
       </tr>`).join('');
     const kg = (v) => (v == null ? '-' : num(v) + 'kg');
     const moneyCell = (v) => (v == null ? '<span class="text-stone-400">-</span>' : `<span class="font-bold tabular-nums ${v > 0 ? 'text-rose-700' : 'text-emerald-700'}">${won(v)}</span>`);
-    const step = (no, title, sub, rows, foot) => `<div class="rounded-xl bg-stone-50 border border-stone-200 p-2.5 flex flex-col gap-1 min-w-0">
-        <div class="flex items-center gap-1.5"><span class="w-5 h-5 rounded-full bg-stone-900 text-white text-[11px] font-extrabold flex items-center justify-center shrink-0">${no}</span><b class="text-xs text-stone-900">${title}</b></div>
-        <div class="text-[11px] text-stone-500 truncate" title="${esc(sub)}">${esc(sub)}</div>
-        <div class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs tabular-nums">${rows.map(([l, v, cls]) => `<span class="text-stone-500">${l}</span><span class="text-right ${cls || 'font-bold'}">${v}</span>`).join('')}</div>${foot || ''}</div>`;
-    const arrow = '<div class="hidden lg:flex items-center justify-center text-stone-300 text-lg font-extrabold">→</div>';
+    const no = (n) => `<span class="inline-flex w-5 h-5 rounded-full bg-stone-900 text-white text-[11px] font-extrabold items-center justify-center mr-1.5">${n}</span>`;
+    const c1 = 'py-1.5 px-2 font-bold whitespace-nowrap', c2 = 'py-1.5 px-2 text-right tabular-nums font-extrabold whitespace-nowrap', c3 = 'py-1.5 px-2 text-xs text-stone-500 tabular-nums', c4 = 'py-1.5 px-2 text-right tabular-nums font-extrabold whitespace-nowrap', c5 = 'py-1.5 px-2 text-xs tabular-nums';
     const pieCards = L.pies.filter((g) => g.active || g.ch.ready).map((g) => {
       const ch = g.ch;
-      const pieRows = Object.values(g.pies).map((pe) => `<div class="flex justify-between gap-2 text-[11px]"><span class="truncate">${esc(pe.name)} ${num(pe.ea, 0)}개 × ${pe.gPerEa ? num(pe.gPerEa) + 'g' : '<b class="text-rose-700">g 미설정</b>'}</span><span class="tabular-nums">${num((pe.ea * pe.gPerEa) / 1000)}kg</span></div>`).join('');
-      const s1 = step(1, '믹싱', ch.baseName || ch.mixName, [
-        ['실행', `${num(g.batches)}배합`], ['만든 반죽', kg(g.mixKg)],
-        ['반죽 개수', g.mixPieces != null ? `${num(g.mixPieces)}개 <span class="text-stone-400 font-normal">(${num(ch.g, 0)}g)</span>` : '-'], ['원재료 투입', g.mixCost != null ? won(g.mixCost) : '-'],
-      ], ch.baseBatchKg != null ? `<div class="text-[11px] text-stone-400">1배합 ${num(ch.baseBatchKg)}kg${ch.piecesPerBatch != null ? ` = ${num(ch.piecesPerBatch)}개` : ''}</div>` : '');
-      const s2 = step(2, '라미네이팅', ch.butterName || ch.lamName, [
-        ['만든 카트', `${num(g.made)}카트`], ['접은 반죽', g.lamPieces != null ? `${num(g.lamPieces, 0)}개 · ${kg(g.lamBaseKg)}` : '-'],
-        ['버터 포함', kg(g.lamButterKg)],
-        ['믹싱과 차이', g.mixDiffKg != null && g.batches > 0 ? `${g.mixDiffKg > 0 ? '+' : ''}${num(g.mixDiffKg)}kg (${g.mixLossPct.toFixed(1)}%)` : '-', g.mixDiffKg > 0 ? 'font-extrabold text-amber-700' : 'font-bold text-stone-600'],
-      ], ch.ready ? `<div class="text-[11px] text-stone-500">접은 반죽 = 만든 카트 × ${ch.pieces}개 · 버터 포함 = 만든 카트 × ${num(ch.cartButterKg)}kg</div>` : '');
-      const s3 = step(3, '성형 (파이 생산)', `기준: ${g.basis}`, [
-        ['투입 반죽', ch.ready ? `${num(g.carts)}카트 × ${num(ch.cartButterKg)}kg = ${kg(g.inputKg)}` : '-'], ['생산에 쓴 반죽', kg(g.usedKg)],
-        ['차이(손실)', g.inputKg != null ? `${num(g.diffKg)}kg` : '-', g.diffKg > 0 ? 'font-extrabold text-rose-700' : 'font-extrabold text-emerald-700'],
-        ['손실 원재료비', moneyCell(g.inputKg > 0 ? g.lossMoney : null), ''],
-      ], pieRows ? `<div class="border-t border-stone-200 pt-1 flex flex-col gap-0.5">${pieRows}</div>` : '<div class="text-[11px] text-stone-400">이 기간 파이 생산 기록 없음</div>');
-      return `<div class="rounded-2xl border border-stone-200 p-3 flex flex-col gap-2">
-        <div class="flex flex-wrap items-center justify-between gap-2"><div class="flex flex-wrap items-center gap-2"><b class="text-sm">${esc(ch.short)} 반죽</b>${ch.ready ? `<span class="px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-200 text-xs font-bold text-amber-900 tabular-nums">1카트 = ${ch.pieces}개 × (반죽 ${num(ch.g, 0)}g + 버터 ${num(ch.butterPerPiece, 0)}g) = ${num(ch.cartButterKg)}kg</span>` : ''}</div>
-          ${ch.ready ? `<span class="text-xs text-stone-500">성형 손실률 ${g.carts > 0 ? lossCell(g.lossPct) : '<span class="text-stone-400">-</span>'}</span>` : `<span class="text-xs font-bold text-rose-700">기준 미설정 — ${esc(ch.why)}</span>`}</div>
-        <div class="grid grid-cols-1 lg:grid-cols-[1fr_20px_1fr_20px_1.25fr] gap-2">${s1}${arrow}${s2}${arrow}${s3}</div>
-        ${g.missingG.length ? `<div class="text-[11px] font-bold text-rose-700">1개당 반죽 g 미설정: ${esc(g.missingG.join(', '))}</div>` : ''}
+      if (!ch.ready) return `<div class="rounded-2xl border border-stone-200 p-3 flex flex-wrap items-center justify-between gap-2"><b class="text-sm">${esc(ch.short)} 반죽</b><span class="text-xs font-bold text-rose-700">기준 미설정 — ${esc(ch.why)}${g.batches || g.made ? ` (기록: 믹싱 ${num(g.batches)}배합 · 라미네이팅 ${num(g.made)}카트)` : ''}</span></div>`;
+      const pies = Object.values(g.pies);
+      const pieTrs = pies.map((pe) => `<tr class="border-b border-stone-100"><td class="py-1 px-2 pl-9 text-xs text-stone-600">${esc(pe.name)}</td><td class="py-1 px-2 text-right text-xs tabular-nums">${live(num(pe.ea, 0) + '개')}</td><td class="${c3}">× 1개당 반죽 ${pe.gPerEa ? num(pe.gPerEa) + 'g' : '<b class="text-rose-700">미설정</b>'}</td><td class="py-1 px-2 text-right text-xs tabular-nums">${kg((pe.ea * pe.gPerEa) / 1000)}</td><td></td></tr>`).join('');
+      const usedPct = g.inputKg > 0 ? Math.max(0, Math.min(100, (g.usedKg / g.inputKg) * 100)) : 0;
+      const hasResult = g.carts > 0;
+      return `<div class="rounded-2xl border border-stone-200 overflow-hidden">
+        <div class="px-3 py-2.5 bg-stone-50 border-b border-stone-200 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap items-center gap-2"><b class="text-base">${esc(ch.short)} 반죽</b><span class="px-2 py-0.5 rounded-lg bg-white border border-stone-300 text-xs font-bold text-stone-700 tabular-nums">1카트 = ${ch.pieces}개 × (반죽 ${num(ch.g, 0)}g + 버터 ${num(ch.butterPerPiece, 0)}g) = ${num(ch.cartButterKg)}kg</span></div>
+          <div class="flex items-center gap-3 text-sm">${hasResult ? `<span class="text-stone-500 text-xs">성형 손실</span><b class="tabular-nums ${g.diffKg > 0 ? 'text-rose-700' : 'text-emerald-700'}">${num(g.diffKg)}kg</b>${lossCell(g.lossPct)}${moneyCell(g.lossMoney)}` : '<span class="text-xs text-stone-400">라미네이팅 기록 없음</span>'}</div>
+        </div>
+        <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm min-w-[720px]">
+          <thead><tr class="text-[11px] font-extrabold text-stone-500 border-b border-stone-200"><th class="py-1.5 px-2">공정</th><th class="py-1.5 px-2 text-right">입력한 수량</th><th class="py-1.5 px-2">계산 기준</th><th class="py-1.5 px-2 text-right">반죽 무게</th><th class="py-1.5 px-2">비고</th></tr></thead>
+          <tbody>
+            <tr class="border-b border-stone-100"><td class="${c1}">${no(1)}믹싱</td><td class="${c2}">${live(num(g.batches) + '배합')}</td><td class="${c3}">× 1배합 ${num(ch.baseBatchKg)}kg <span class="text-stone-400">(레시피 ${esc(ch.baseName)} · ${num(ch.piecesPerBatch)}개)</span></td><td class="${c4}">${kg(g.mixKg)}</td><td class="${c5} text-stone-500">원재료 투입 ${g.mixCost != null ? won(g.mixCost) : '-'}</td></tr>
+            <tr class="border-b border-stone-100"><td class="${c1}">${no(2)}라미네이팅</td><td class="${c2}">${live(num(g.made) + '카트')}</td><td class="${c3}">× ${ch.pieces}개 × ${num(ch.g, 0)}g <span class="text-stone-400">(접은 반죽 ${num(g.lamPieces, 0)}개)</span></td><td class="${c4}">${kg(g.lamBaseKg)}</td><td class="${c5} ${g.mixDiffKg > 0 ? 'text-amber-700 font-bold' : 'text-stone-500'}">${g.batches > 0 && g.mixDiffKg != null ? `믹싱보다 ${num(Math.abs(g.mixDiffKg))}kg ${g.mixDiffKg > 0 ? '적음' : '많음'} (${Math.abs(g.mixLossPct).toFixed(1)}%)` : ''}</td></tr>
+            <tr class="border-b border-stone-200"><td class="py-1.5 px-2 pl-9 text-xs text-stone-600">+ 버터</td><td></td><td class="${c3}">${num(g.lamPieces, 0)}개 × ${num(ch.butterPerPiece, 0)}g</td><td class="py-1.5 px-2 text-right text-xs tabular-nums">+${kg(g.lamPieces != null ? (g.lamPieces * ch.butterPerPiece) / 1000 : null)}</td><td class="${c5} text-stone-500">버터 포함 ${kg(g.lamButterKg)}</td></tr>
+            <tr class="border-b border-stone-100 bg-amber-50/50"><td class="${c1}">${no(3)}성형 — 투입</td><td class="${c2}">${live(num(g.carts) + '카트')}</td><td class="${c3}">× 1카트 ${num(ch.cartButterKg)}kg <span class="text-stone-400">(${g.usedRecorded ? '사용 카트' : '만든 카트 기준 · 사용 카트 미입력'})</span></td><td class="${c4}">${kg(g.inputKg)}</td><td></td></tr>
+            <tr class="border-b border-stone-100"><td class="py-1.5 px-2 pl-9 font-bold whitespace-nowrap">성형 — 파이에 쓴 반죽</td><td></td><td class="${c3}">${pies.length ? '아래 파이 생산 합계' : '이 기간 파이 생산 기록 없음'}</td><td class="${c4}">${kg(g.usedKg)}</td><td></td></tr>
+            ${pieTrs}
+            <tr class="${hasResult ? (g.diffKg > 0 ? 'bg-rose-50' : 'bg-emerald-50') : 'bg-stone-50'}"><td class="${c1}">손실 (투입 − 쓴 반죽)</td><td></td><td class="py-1.5 px-2">${hasResult ? `<div class="h-2 rounded-full bg-rose-200 overflow-hidden max-w-[260px]" title="투입 중 파이에 쓴 비율"><div class="h-full bg-emerald-500" style="width:${usedPct.toFixed(1)}%"></div></div>` : ''}</td><td class="${c4} ${g.diffKg > 0 ? 'text-rose-700' : 'text-emerald-700'}">${hasResult ? kg(g.diffKg) : '-'}</td><td class="${c5}">${hasResult ? `${lossCell(g.lossPct)} · ${moneyCell(g.lossMoney)}` : ''}</td></tr>
+          </tbody></table></div>
+        ${g.missingG.length ? `<div class="px-3 py-1.5 text-[11px] font-bold text-rose-700 border-t border-stone-200">1개당 반죽 g 미설정: ${esc(g.missingG.join(', '))}</div>` : ''}
       </div>`;
     }).join('');
     // 주별 비교
@@ -1531,19 +1539,19 @@
         <div class="${box}"><div class="text-xs font-bold text-stone-500">파이 성형 손실률 (${esc(per.label)})</div><div class="mt-1 text-sm flex flex-col gap-0.5">${shown.filter((g) => g.carts || g.usedKg).map((g) => `<div class="flex justify-between"><span>${esc(g.ch.short)}</span>${lossCell(g.lossPct)}</div>`).join('') || '<span class="text-stone-400 text-xs">기록 없음</span>'}</div></div>
         <div class="${box}"><div class="text-xs font-bold text-stone-500">파이 반죽 손실 원재료비</div><div class="mt-1 text-xl font-extrabold tabular-nums">${L.pieHasMoney ? moneyCell(L.pieLossMoney) : '-'}</div><div class="text-xs text-stone-500">성형 단계 차이 kg × 버터 반죽 원재료비/kg</div></div>
         <div class="${box}"><div class="text-xs font-bold text-stone-500">생지 수율</div><div class="mt-1 text-xl">${yieldCell(L.doughYield)}</div><div class="text-xs text-stone-500">실제 생산 ÷ 표준(투입 배합 × 1배합 PK수)</div></div>
-        <div class="${box}"><div class="text-xs font-bold text-stone-500">생지 손실 원재료비</div><div class="mt-1 text-xl font-extrabold tabular-nums ${L.doughLossMoney > 0 ? 'text-rose-700' : 'text-emerald-700'}">${L.doughYield === null ? '-' : won(L.doughLossMoney)}</div><div class="text-xs ${L.unconfirmed ? 'text-amber-700 font-bold' : 'text-stone-500'}">확인 안 된 생지 줄 ${L.unconfirmed}건 (계산 제외)</div></div>
+        <div class="${box}"><div class="text-xs font-bold text-stone-500">생지 손실 원재료비</div><div class="mt-1 text-xl font-extrabold tabular-nums ${L.doughLossMoney > 0 ? 'text-rose-700' : 'text-emerald-700'}">${L.doughYield === null ? '-' : won(L.doughLossMoney)}</div><div class="text-xs ${L.unconfirmed ? 'text-amber-700 font-bold' : 'text-stone-500'}">포장 기록 없는 품목 ${L.unconfirmed}종 (계산 제외)</div></div>
       </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
         <h3 class="text-sm font-extrabold mb-1">파이 — 반죽 공정별 손실 (믹싱 → 라미네이팅 → 성형)</h3>
-        <div class="text-xs text-stone-500 mb-2 leading-relaxed">① <b>믹싱</b> 생산일지의 배합 횟수 × 레시피 1배합 중량 = 만든 반죽 · ② <b>라미네이팅</b> 생산일지의 만든 카트 수 × 1카트 개수 = 접은 반죽(버터가 들어가 '(버터)○○반죽'이 됨) · ③ <b>성형</b> 투입 = 카트 수 × 1카트 무게(버터 포함), 사용 = 파이 생산 개수 × 1개당 반죽 g.<br>반죽은 믹싱 후 1~2일 냉장 숙성하고, 카트를 만든 날과 성형한 날도 달라서 하루·주 단위는 앞뒤로 밀립니다. <b>월 전체</b>로 보는 것이 정확합니다. ②의 '믹싱과 차이'는 손실뿐 아니라 숙성 중인 반죽·입력 누락도 포함합니다.</div>
+        <div class="text-xs text-stone-500 mb-2 leading-relaxed"><span class="inline-flex items-center gap-1 font-bold text-stone-700"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>초록 점</span> = 생산일지(배합·카트·파이 생산)에 입력한 값을 실시간으로 불러온 것입니다. 회색 글씨는 계산 기준(레시피·1카트 기준)입니다.<br>반죽은 믹싱 후 1~2일 냉장 숙성하고 카트를 만든 날과 성형한 날도 달라서, 주 단위는 앞뒤로 밀립니다. <b>월 전체</b>로 보는 것이 정확합니다.</div>
         <div class="flex flex-col gap-3">${pieCards || '<div class="py-6 text-center text-xs text-stone-400">라미네이팅 반제품이 없습니다.</div>'}</div>
       </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
         <h3 class="text-sm font-extrabold mb-1">생지 (알생지·파베이크·제과) — 투입 배합 대비 실제 생산</h3>
-        <div class="text-xs text-stone-500 mb-2">수율은 일자 입력창에서 <b>포장 수량</b>(실제로 나온 PK)을 직접 적은 줄만 계산합니다. 비워 둔 줄은 표준값과 같다고 볼 수 없어 '확인 안 됨'으로 뺍니다.</div>
+        <div class="text-xs text-stone-500 mb-2">표준 생산 = 생산일지 투입 배합 × 제품단가 '1배합 PK수' · 실제 생산 = <b>포장 완료 등록</b>의 PK 합계(없으면 일자 창에서 직접 적은 포장 수량). 생산한 날과 포장한 날이 달라 월초·월말은 앞뒤로 밀릴 수 있습니다.</div>
         <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm">
-          <thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600 whitespace-nowrap"><th class="py-2 px-2">파트</th><th class="py-2 px-2">품목</th><th class="py-2 px-2 text-right">투입 배합</th><th class="py-2 px-2 text-right">그중 확인</th><th class="py-2 px-2 text-right">표준 생산</th><th class="py-2 px-2 text-right">실제 생산</th><th class="py-2 px-2 text-right">차이</th><th class="py-2 px-2 text-right">수율</th><th class="py-2 px-2 text-right">손실 원재료비</th><th class="py-2 px-2 text-right">미확인</th></tr></thead>
-          <tbody>${doughTrs || '<tr><td colspan="10" class="py-6 text-center text-xs text-stone-400">이 기간 생지 실행 기록이 없습니다.</td></tr>'}</tbody></table></div>
+          <thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600 whitespace-nowrap"><th class="py-2 px-2">파트</th><th class="py-2 px-2">품목</th><th class="py-2 px-2 text-right">투입 배합</th><th class="py-2 px-2 text-right">표준 생산</th><th class="py-2 px-2 text-right">실제 생산</th><th class="py-2 px-2 text-right">차이</th><th class="py-2 px-2 text-right">수율</th><th class="py-2 px-2 text-right">손실 원재료비</th><th class="py-2 px-2">실제 생산 출처</th></tr></thead>
+          <tbody>${doughTrs || '<tr><td colspan="9" class="py-6 text-center text-xs text-stone-400">이 기간 생지 실행 기록이 없습니다.</td></tr>'}</tbody></table></div>
       </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
         <h3 class="text-sm font-extrabold mb-2">${m}월 주별 비교</h3>
