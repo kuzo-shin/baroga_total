@@ -1,4 +1,4 @@
-// [VERSION: production.js v2.20 - 2026-11-23 원재료 손실(파이 보관분 대응): 기간 '최근 3개월·누적', 월말 카트 재고 입력 → 재고 반영 계산, 성형한 날 사용 카트 미입력 경고(달력·일자 창) / v2.19 - 2026-11-23 원재료 손실: 금액 표기 통일(+초록 = 초과 생산, −빨강 = 생산 부족), 파이 초과분도 금액 표시 / v2.18 - 2026-11-23 원재료 손실: 상단 카드 파이·생지 같은 양식(수율+금액), 문구 정리(투입 대비 생산 초과/부족 등), 생지 부족분 원재료 팝업 / v2.17 - 2026-11-23 원재료 손실: 투입보다 파이에 쓴 반죽이 많으면 음수 대신 '투입보다 더 씀(초과)'으로 풀어 표시, 초과분은 손실 원재료비에서 제외 / v2.16 - 2026-11-23 원재료 손실(공정 표 형태로 개편·생산일지 연동 초록 점·생지 실제 생산은 포장 완료 등록 기준): 반죽 1개당 버터 1,000g 현장 기준(설정 가능), 1카트 기준을 반죽 이름 옆에 표시, 설명 문구 수정 / v2.15 - 2026-11-23 원재료 손실 개편: 파이 공정별(믹싱→라미네이팅→성형)·1카트 기준(개수×g)·버터 포함 중량, 파이를 생지 위로, 반제품 이름 레시피 기준 통일 / v2.14 - 2026-11-22 미배정 표시 삼각형 아이콘 + 범례 / v2.13 - 2026-11-22 작업 인원: 미배정 팀원 있으면 칸에 ! 표시·이름 / v2.12 - 2026-11-22 포장 안 된 품목 월별 구분, 참고 자료 안내 문구 / v2.11 - 2026-11-22 포장 달력 칸에 생산·포장 금액 / v2.10 - 2026-11-22 포장 완료: 금액 차이(KPI·주·품목), 포장 안 된 품목 목록 / v2.9 - 2026-11-22 포장 완료 등록 탭 신설(재고 입고 = 포장), 생산일지 창 크기 줄임, '실제 포장 수량'→'포장 수량' / v2.8 - 2026-11-22 일자 창에서 휴무일 지정(사유 문구), 달력 칸 옅은 빨강 + 문구 / v2.7 - 2026-11-22 달력 칸 최소 높이 1행(빈 주는 짧게), 기록 없는 주 합계 한 줄 / v2.6 - 2026-11-22 작업 인원에 1인 생산금액(KPI·날짜·주·파트별), 작업 구분별 생산 파트·인원 기준 설정 / v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
+// [VERSION: production.js v2.21 - 2026-11-23 원재료 손실 머리: 1~12월 버튼(윗줄) + 보는 기간 버튼(아랫줄), 월말 카트 재고 입력을 생산 재고 화면으로 이동 / v2.20 - 2026-11-23 원재료 손실(파이 보관분 대응): 기간 '최근 3개월·누적', 월말 카트 재고 입력 → 재고 반영 계산, 성형한 날 사용 카트 미입력 경고(달력·일자 창) / v2.19 - 2026-11-23 원재료 손실: 금액 표기 통일(+초록 = 초과 생산, −빨강 = 생산 부족), 파이 초과분도 금액 표시 / v2.18 - 2026-11-23 원재료 손실: 상단 카드 파이·생지 같은 양식(수율+금액), 문구 정리(투입 대비 생산 초과/부족 등), 생지 부족분 원재료 팝업 / v2.17 - 2026-11-23 원재료 손실: 투입보다 파이에 쓴 반죽이 많으면 음수 대신 '투입보다 더 씀(초과)'으로 풀어 표시, 초과분은 손실 원재료비에서 제외 / v2.16 - 2026-11-23 원재료 손실(공정 표 형태로 개편·생산일지 연동 초록 점·생지 실제 생산은 포장 완료 등록 기준): 반죽 1개당 버터 1,000g 현장 기준(설정 가능), 1카트 기준을 반죽 이름 옆에 표시, 설명 문구 수정 / v2.15 - 2026-11-23 원재료 손실 개편: 파이 공정별(믹싱→라미네이팅→성형)·1카트 기준(개수×g)·버터 포함 중량, 파이를 생지 위로, 반제품 이름 레시피 기준 통일 / v2.14 - 2026-11-22 미배정 표시 삼각형 아이콘 + 범례 / v2.13 - 2026-11-22 작업 인원: 미배정 팀원 있으면 칸에 ! 표시·이름 / v2.12 - 2026-11-22 포장 안 된 품목 월별 구분, 참고 자료 안내 문구 / v2.11 - 2026-11-22 포장 달력 칸에 생산·포장 금액 / v2.10 - 2026-11-22 포장 완료: 금액 차이(KPI·주·품목), 포장 안 된 품목 목록 / v2.9 - 2026-11-22 포장 완료 등록 탭 신설(재고 입고 = 포장), 생산일지 창 크기 줄임, '실제 포장 수량'→'포장 수량' / v2.8 - 2026-11-22 일자 창에서 휴무일 지정(사유 문구), 달력 칸 옅은 빨강 + 문구 / v2.7 - 2026-11-22 달력 칸 최소 높이 1행(빈 주는 짧게), 기록 없는 주 합계 한 줄 / v2.6 - 2026-11-22 작업 인원에 1인 생산금액(KPI·날짜·주·파트별), 작업 구분별 생산 파트·인원 기준 설정 / v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
 //  - 품목 목록·단가: 제품단가 탭(barogaProductPriceBridge.getProductionProducts)
 //      파이 = PK로 입력 / 알생지·파베이크·제과 = 배합으로 입력 → '1배합 PK수'로 PK 환산 (실제 포장 PK를 직접 고칠 수 있음)
 //      금액 = PK × 엠즈 매입가(PK). 줄을 만들 때의 단가를 줄에 저장 → 나중에 단가가 바뀌어도 지난 기록 금액은 그대로
@@ -1525,7 +1525,8 @@
     const L = computeLoss(per.from, per.to, products, defs, per);
     const [y, m] = cursorMonth.split('-').map(Number);
     const prevYm = ymd(new Date(y, m - 2, 1)).slice(0, 7), nextYm = ymd(new Date(y, m, 1)).slice(0, 7);
-    const pBtns = periods.map((p) => `<button type="button" onclick="Prod.setLossPeriod('${p.key}')" class="px-2.5 py-1 rounded-xl text-xs cursor-pointer ${p.key === per.key ? 'bg-amber-600 text-white font-extrabold' : 'bg-white border border-stone-200 text-stone-600 font-bold hover:bg-stone-100'}">${p.label}${p.sub ? ` <span class="${p.key === per.key ? 'text-amber-100' : 'text-stone-400'} font-semibold">${p.sub}</span>` : ''}</button>`).join('');
+    const monthBtns = Array.from({ length: 12 }, (_, i) => { const mm = `${y}-${pad(i + 1)}`, on = mm === cursorMonth; return `<button type="button" onclick="Prod.setMonth('${mm}')" class="px-2.5 py-1 rounded-xl text-xs cursor-pointer ${on ? 'bg-amber-600 text-white font-extrabold shadow-xs' : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200 font-bold'}">${i + 1}월</button>`; }).join('');
+    const pBtns = periods.map((p) => `<button type="button" onclick="Prod.setLossPeriod('${p.key}')" class="px-2.5 py-1 rounded-xl text-xs cursor-pointer ${p.key === per.key ? 'bg-stone-900 text-white font-extrabold' : 'bg-white border border-stone-200 text-stone-600 font-bold hover:bg-stone-100'}">${p.label}${p.sub ? ` <span class="${p.key === per.key ? 'text-stone-300' : 'text-stone-400'} font-semibold">${p.sub}</span>` : ''}</button>`).join('');
     // ● 초록 점 = 생산일지·포장 완료 등록에 입력한 값을 그대로 불러온 것 (입력을 고치면 바로 바뀜)
     const live = (html, src) => `<span class="inline-flex items-center gap-1 whitespace-nowrap" title="${src || '생산일지'}에서 실시간으로 불러온 값"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>${html}</span>`;
     const SRC = { PACK: '포장 완료 등록', MANUAL: '일자 창 포장 수량' };
@@ -1582,15 +1583,17 @@
         <div class="border-t border-stone-100 pt-1.5 flex flex-col gap-0.5 text-sm">${rows.map((r) => `<div class="grid grid-cols-[1fr_auto_120px] gap-3 items-center"><span class="font-bold text-stone-700">${esc(r.name)}${r.note ? ` <span class="text-[11px] font-bold text-amber-700">${r.note}</span>` : ''}</span><span>${yieldCell(r.y)}</span><span class="text-right text-xs">${moneyCell(r.money)}</span></div>`).join('') || '<span class="text-xs text-stone-400">기록 없음</span>'}</div>
         ${warn ? `<div class="text-[11px] font-bold text-amber-700">${esc(warn)}</div>` : ''}</div>`;
     return `
-      <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4 flex flex-wrap items-center justify-between gap-2">
-        <div class="flex flex-wrap items-center gap-1.5">
-          <button type="button" onclick="Prod.setMonth('${prevYm}')" class="w-8 h-8 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">‹</button>
-          <h3 class="text-base font-extrabold px-1">${y}년 ${m}월 원재료 손실</h3>
-          <button type="button" onclick="Prod.setMonth('${nextYm}')" class="w-8 h-8 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">›</button>
-          <div class="flex flex-wrap gap-1 ml-2">${pBtns}</div>
+      <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4 flex flex-col gap-2.5">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button type="button" onclick="Prod.setMonth('${prevYm}')" class="w-8 h-8 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">‹</button>
+            <h3 class="text-base font-extrabold text-stone-900 px-1">${y}년 ${m}월 원재료 손실</h3>
+            <button type="button" onclick="Prod.setMonth('${nextYm}')" class="w-8 h-8 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50">›</button>
+            <div class="flex flex-wrap items-center gap-1 ml-2">${monthBtns}</div>
+          </div>
+          <button type="button" onclick="Prod.openLossSettings()" class="px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-bold cursor-pointer hover:bg-stone-50">손실 기준 설정 (1카트 기준 · 파이 반죽 g)</button>
         </div>
-        <div class="flex flex-wrap gap-1.5"><button type="button" onclick="Prod.openEndStock()" class="px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 text-xs font-bold text-amber-900 cursor-pointer hover:bg-amber-100">월말 카트 재고 입력</button>
-        <button type="button" onclick="Prod.openLossSettings()" class="px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-bold cursor-pointer hover:bg-stone-50">손실 기준 설정 (1카트 기준 · 파이 반죽 g)</button></div>
+        <div class="flex flex-wrap items-center gap-1 border-t border-stone-100 pt-2.5"><span class="text-xs font-extrabold text-stone-500 mr-1">보는 기간</span>${pBtns}</div>
       </div>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
         ${sumCard('파이 수율', '성형에 사용한 반죽 ÷ 생산된 라미네이팅 반죽', L.pieYield, L.pieHasMoney ? L.pieLossMoney : null, shown.filter((g) => g.carts > 0).map((g) => ({ name: g.ch.short, y: g.inputKg > 0 ? (g.usedKg / g.inputKg) * 100 : null, money: g.lossMoney, note: g.over ? '생산 초과' : '' })), '')}
@@ -1598,7 +1601,7 @@
       </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
         <h3 class="text-sm font-extrabold mb-1">파이 — 반죽 공정별 손실 (믹싱 → 라미네이팅 → 성형)</h3>
-        <div class="text-xs text-stone-500 mb-2 leading-relaxed"><span class="inline-flex items-center gap-1 font-bold text-stone-700"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>초록 점</span> = 생산일지(배합·카트·파이 생산)에 입력한 값을 실시간으로 불러온 것입니다. 회색 글씨는 계산 기준(레시피·1카트 기준)입니다.<br>라미네이팅 반죽은 최대 2주 보관했다가 쓰므로 '만든 카트' 기준은 달마다 튑니다. 정확도는 <b>① 사용 카트</b>(성형한 날 일자 창에 적기) &gt; <b>② 재고 반영</b>([월말 카트 재고 입력]) &gt; ③ 만든 카트 순이며, ③일 때는 <b>최근 3개월·누적</b>으로 보세요.</div>
+        <div class="text-xs text-stone-500 mb-2 leading-relaxed"><span class="inline-flex items-center gap-1 font-bold text-stone-700"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>초록 점</span> = 생산일지(배합·카트·파이 생산)에 입력한 값을 실시간으로 불러온 것입니다. 회색 글씨는 계산 기준(레시피·1카트 기준)입니다.<br>라미네이팅 반죽은 최대 2주 보관했다가 쓰므로 '만든 카트' 기준은 달마다 튑니다. 정확도는 <b>① 사용 카트</b>(성형한 날 일자 창에 적기) &gt; <b>② 재고 반영</b>(생산 재고 화면의 [월말 카트 재고 입력]) &gt; ③ 만든 카트 순이며, ③일 때는 <b>최근 3개월·누적</b>으로 보세요.</div>
         <div class="flex flex-col gap-3">${pieCards || '<div class="py-6 text-center text-xs text-stone-400">라미네이팅 반제품이 없습니다.</div>'}</div>
       </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
@@ -1649,13 +1652,17 @@
       <div class="p-4 max-h-[65vh] overflow-y-auto">${body}</div>
       <div class="px-5 py-3 border-t border-stone-200 flex justify-end"><button type="button" onclick="Prod.closeModal()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">닫기</button></div>`);
   }
-  function openEndStock() {
-    const [y, m] = cursorMonth.split('-').map(Number), prev = ymd(new Date(y, m - 2, 1)).slice(0, 7), es = lossCfg().endStock || {};
+  let endStockYm = '';
+  function openEndStock(ymArg) {
+    endStockYm = ymArg || endStockYm || today().slice(0, 7);
+    const [y, m] = endStockYm.split('-').map(Number), prev = ymd(new Date(y, m - 2, 1)).slice(0, 7), next = ymd(new Date(y, m, 1)).slice(0, 7), es = lossCfg().endStock || {};
     const lam = laminatingItems().filter((x) => doughChain(x.name).ready);
     const inp = (ym, name) => `<input type="number" min="0" step="any" data-es-ym="${ym}" data-es-name="${esc(name)}" value="${(es[ym] || {})[name] !== undefined ? (es[ym] || {})[name] : ''}" placeholder="미입력" class="no-spinner w-24 text-right border border-stone-300 rounded-lg px-2 py-1 font-bold tabular-nums"> 카트`;
-    modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold">월말 카트 재고 입력 (실사)</h3><div class="text-xs text-stone-500 mt-0.5">월 마지막 근무일 마감 후 냉동고에 남은 라미네이팅 카트 수입니다. 두 칸이 모두 있으면 그 달 투입 = 전월 말 재고 + 만든 카트 − 이번 달 말 재고로 계산합니다. 0카트면 0을 적고, 모르면 비워 두세요.</div></div>
+    const nav = 'w-8 h-8 rounded-lg border border-stone-200 font-bold cursor-pointer hover:bg-stone-50';
+    modal(`<div class="px-5 py-3 border-b border-stone-200"><div class="flex items-center gap-1.5"><button type="button" onclick="Prod.openEndStock('${prev}')" class="${nav}">‹</button><h3 class="text-base font-extrabold px-1">${y}년 ${m}월 말 카트 재고 (실사)</h3><button type="button" onclick="Prod.openEndStock('${next}')" class="${nav}">›</button></div>
+        <div class="text-xs text-stone-500 mt-1">월 마지막 근무일 마감 후 냉동고에 남은 라미네이팅 카트 수입니다. 생산일지 → 원재료 손실에서 그 달 투입 = 전월 말 재고 + 만든 카트 − 이번 달 말 재고로 계산하는 데 씁니다. 0카트면 0을 적고, 모르면 비워 두세요.</div></div>
       <div class="p-4"><table class="w-full text-sm"><thead><tr class="text-xs font-extrabold text-stone-500"><th class="py-1.5 px-2 text-left">반죽</th><th class="py-1.5 px-2 text-right">${Number(prev.slice(5))}월 말 (전월)</th><th class="py-1.5 px-2 text-right">${m}월 말</th></tr></thead>
-        <tbody>${lam.map((x) => `<tr class="border-b border-stone-100"><td class="py-1.5 px-2 font-bold">${esc(x.name)}</td><td class="py-1.5 px-2 text-right whitespace-nowrap">${inp(prev, x.name)}</td><td class="py-1.5 px-2 text-right whitespace-nowrap">${inp(cursorMonth, x.name)}</td></tr>`).join('')}</tbody></table></div>
+        <tbody>${lam.map((x) => `<tr class="border-b border-stone-100"><td class="py-1.5 px-2 font-bold">${esc(x.name)}</td><td class="py-1.5 px-2 text-right whitespace-nowrap">${inp(prev, x.name)}</td><td class="py-1.5 px-2 text-right whitespace-nowrap">${inp(endStockYm, x.name)}</td></tr>`).join('')}</tbody></table></div>
       <div class="px-5 py-3 border-t border-stone-200 flex justify-end gap-2"><button type="button" onclick="Prod.closeModal()" class="px-4 py-2 rounded-xl border border-stone-300 text-sm font-bold cursor-pointer">취소</button><button type="button" onclick="Prod.saveEndStock()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">저장</button></div>`);
   }
   function saveEndStock() {
@@ -1666,7 +1673,7 @@
       if (v === '' || isNaN(parseFloat(v))) delete cfg.endStock[ym][name]; else cfg.endStock[ym][name] = Math.max(0, parseFloat(v));
       if (!Object.keys(cfg.endStock[ym]).length) delete cfg.endStock[ym];
     });
-    closeModal(); markChanged(); render();
+    endStockYm = ''; closeModal(); markChanged(); render();
     toast('월말 카트 재고를 저장했습니다.', 'success');
   }
   function openLossSettings() {
@@ -1818,7 +1825,7 @@
         </table></div>
       </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
-        <div class="flex flex-wrap items-center justify-between gap-2 mb-1"><h3 class="text-sm font-extrabold text-stone-900">반제품 재고 — 라미네이팅 카트</h3><button type="button" onclick="Prod.openLossSettings()" class="px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-bold cursor-pointer hover:bg-stone-50">1카트 kg 설정</button></div>
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-1"><h3 class="text-sm font-extrabold text-stone-900">반제품 재고 — 라미네이팅 카트</h3><div class="flex flex-wrap gap-1.5"><button type="button" onclick="Prod.openEndStock()" title="월 마지막 근무일에 센 카트 수 → 생산일지 원재료 손실의 '재고 반영' 계산에 사용" class="px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 text-xs font-bold text-amber-900 cursor-pointer hover:bg-amber-100">월말 카트 재고 입력</button><button type="button" onclick="Prod.openLossSettings()" class="px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-bold cursor-pointer hover:bg-stone-50">1카트 기준 설정</button></div></div>
         <div class="text-xs text-stone-500 mb-2">현재고 = 실사 + 만든 카트 − 사용 카트 − 폐기 ± 조정. 금액 = 카트 × 1카트 반죽 kg × 반죽 원재료비/kg (레시피 기준).</div>
         <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm min-w-[900px]">
           <thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600"><th class="py-2 px-2">반제품</th><th class="py-2 px-2 text-right">실사</th><th class="py-2 px-2 text-right">+만듦</th><th class="py-2 px-2 text-right">−사용</th><th class="py-2 px-2 text-right">−폐기</th><th class="py-2 px-2 text-right">±조정</th><th class="py-2 px-2 text-right">현재고</th><th class="py-2 px-2 text-right">1카트</th><th class="py-2 px-2 text-right">원재료비/kg</th><th class="py-2 px-2 text-right">원재료비 금액</th></tr></thead>
