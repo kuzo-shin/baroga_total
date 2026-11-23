@@ -1616,7 +1616,10 @@
     return g;
   }
   // 파지 전환: 기간에 발생한 파지(2. 파지 관리) vs 파지를 쓰는 품목의 생산에 들어간 파지(레시피 기준)
-  function computeScrapConversion(from, to, products) {
+  function computeScrapConversion(from0, to, products) {
+    // 파지 기록을 시작한 날 이전의 사용분은 비교에서 뺌 (발생 기록이 없는 기간이라 전환율이 부풀려짐)
+    const first = Object.keys(scrapDays()).filter((d) => ((scrapDays()[d].items || []).some((it) => Number(it.kg) > 0))).sort()[0] || '';
+    const from = first && first > from0 ? first : from0, clamped = from !== from0;
     const made = scrapTotals(from, to), use = {};
     Object.entries(db.days).forEach(([d, day]) => { if (d < from || d > to) return; (day.lines || []).forEach((l) => {
       if (!(Number(l.actual) > 0)) return;
@@ -1630,7 +1633,7 @@
       if (batches == null) x.unknown = true; else { x.batches += batches; x.kg += (batches * g) / 1000; }
     }); });
     const rows = Object.values(use).sort((a, b) => b.kg - a.kg), usedKg = rows.reduce((s, r) => s + r.kg, 0);
-    return { made, rows, usedKg, rate: made.total > 0 ? (usedKg / made.total) * 100 : null };
+    return { made, rows, usedKg, rate: made.total > 0 ? (usedKg / made.total) * 100 : null, from, clamped };
   }
   function computeLoss(from, to, products, defs, per) {
     const doughRows = {}, pieGroups = {}, mixOf = {};
@@ -1821,7 +1824,7 @@
       </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
         <div class="flex flex-wrap items-center justify-between gap-2 mb-1"><h3 class="text-sm font-extrabold">파지 전환 — 파이에서 나온 파지 대비 파지 품목에 쓴 양</h3><div class="flex items-center gap-3 text-sm"><span class="text-xs text-stone-500">전환율</span><b class="tabular-nums">${SC.rate == null ? '-' : SC.rate.toFixed(1) + '%'}</b><span class="text-xs text-stone-500">남은 파지(발생 − 사용)</span><b class="tabular-nums ${SC.made.total - SC.usedKg < 0 ? 'text-amber-700' : ''}">${num(SC.made.total - SC.usedKg)}kg</b></div></div>
-        <div class="text-xs text-stone-500 mb-2 leading-relaxed">발생 = <b>2. 파지 관리</b>에 입력한 kg · 사용 = 파지가 들어가는 품목의 생산 배합 수 × 레시피 1배합 파지 g (PK로 입력한 품목은 생산 개수 ÷ 제품단가 '1배합 실생산'으로 배합 수 계산). 파지도 보관했다가 쓰므로 <b>최근 3개월·누적</b>으로 보는 것이 정확합니다. 레시피의 '파지'는 종류(패스츄리·몽마르트·쇼숑) 구분이 없어 합계로 비교합니다.</div>
+        <div class="text-xs text-stone-500 mb-2 leading-relaxed">발생 = <b>2. 파지 관리</b>에 입력한 kg · 사용 = 파지가 들어가는 품목의 생산 배합 수 × 레시피 1배합 파지 g (PK로 입력한 품목은 생산 개수 ÷ 제품단가 '1배합 실생산'으로 배합 수 계산). 파지도 보관했다가 쓰므로 <b>최근 3개월·누적</b>으로 보는 것이 정확합니다. 레시피의 '파지'는 종류(패스츄리·몽마르트·쇼숑) 구분이 없어 합계로 비교합니다.${SC.clamped ? ` <b class="text-amber-700">파지 기록을 ${SC.from.slice(5).replace('-', '/')}부터 시작해서, 그날 이후의 생산만 비교했습니다.</b>` : ''}</div>
         <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-3">
           <div class="rounded-xl border border-stone-200 overflow-hidden"><table class="w-full text-sm"><thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600"><th class="py-2 px-2 text-left">발생한 파지</th><th class="py-2 px-2 text-right">kg</th></tr></thead><tbody>
             ${SCRAP_TYPES.map((t) => `<tr class="border-b border-stone-100"><td class="py-1.5 px-2"><span class="border-l-[3px] ${SCRAP_STYLE[t].bar} pl-1.5 font-bold ${SCRAP_STYLE[t].text}">${t}</span></td><td class="py-1.5 px-2 text-right tabular-nums font-bold">${live(num(SC.made.byType[t] || 0) + 'kg', '2. 파지 관리')}</td></tr>`).join('')}
