@@ -1,9 +1,9 @@
-// [VERSION: production.js v2.38 - 2026-11-24 자동 저장 삭제: [DB 저장](Ctrl+S)을 눌러야 DB에 저장 · 저장 안 된 변경이 있으면 상태 배지에 표시, 새로고침 전 확인 / v2.37 - 2026-11-24 엠즈 재고 탭용 stockForMs(공장 재고 현재고) 내보내기 / v2.36 - 2026-11-24 재고 실사를 그 달 마지막 근무일(말일)에 하면 카트 수를 월말 카트 재고에도 자동 저장 · 상단 기준일 알림에서 카트 실사와 월말 카트 재고를 하나로 합침 / v2.35 - 2026-11-24 생산 재고: 재고조사 입력 버튼 3개 색 통일 · 상단에 재고 종류별 기준일 알림(생지 실사·카트 실사·월말 카트 재고·파지 재고조사) / v2.34 - 2026-11-24 생산 재고에 파지 재고 표(반제품 아래)와 [파지 재고조사 입력] 버튼, 파지 관리의 버튼은 안내로 바꿈 / v2.33 - 2026-11-24 파지 재고조사(기초 파지 재고) 입력: 남은 파지 = 조사한 재고 + 다음 날부터의 발생 − 사용 / v2.32 - 2026-11-24 파지 종류 재정리(패스츄리·퀸아망·쇼숑, 몽마르트 파지=패스츄리 파지) · 발생 종류는 품목 기준 · 사용은 레시피에 적힌 종류별로 계산(단과자 등 여러 종류) · 0 입력도 기록 / v2.31 - 2026-11-24 파지 사용 다시 켬: 믹싱에 쓰는 파지는 반제품 레시피에 등록된 파지 g × 배합 수로 계산(별도 기준 7.5kg·[파지 자동 차감 기준] 창 폐지) / v2.30 - 2026-11-23 파지 관리: 보는 기간(N월 전체·최근 3개월·누적) — 상단 카드와 아래 표에 적용 / 파지 사용 표시는 정리 전까지 끔(SCRAP_USE_ON=false, 저장값 보존) / v2.29 - 2026-11-23 파지 관리: 파지로 만드는 제품이 생산 스케쥴에 있으면 품목별 사용 kg 자동 표시(일자 창·달력·주간·월 표), 남은 파지에 반영 / v2.28 - 2026-11-23 파지 사용: 반제품 믹싱 1배합당 자동 차감(기본 패스츄리 7.5kg, 기준 설정 가능)·파지로 만드는 제품 자동 계산(레시피 기준)·직접 입력, 남은 파지 표시 / 파지·부족분 원재료 팝업 가운데 정렬 / v2.27 - 2026-11-23 파지 관리 상단 카드 글자 크기를 다른 탭과 맞춤 / v2.26 - 2026-11-23 DB 상태 UI를 다른 탭과 통일(상태 배지·DB 저장·새로고침), 파지 관리 검정 바탕 줄임 / v2.25 - 2026-11-23 파지 관리: 주간 합계 카드 개편, 상단 카드 글자 키움, 반죽별 '성형에서 빠진 양 중 파지·폐기' 표 / 원재료 손실 파지 전환율 문구 줄바꿈 / v2.24 - 2026-11-23 파지 관리: 생산 반죽 kg 대비 파지 비율(카드·달력·일자 창·표) / 원재료 손실: 파지 전환율(발생 vs 파지 품목 사용) / v2.23 - 2026-11-23 '2. 파지 관리' 탭 신설(달력·일자 창에서 파이 품목별 파지 kg 입력, 3종), 탭에 번호 표시 / v2.22 - 2026-11-23 원재료 손실: 알생지·파베이크 수율을 상단 카드·아래 표·주별 비교에서 따로 분리 / v2.21 - 2026-11-23 원재료 손실 머리: 1~12월 버튼(윗줄) + 보는 기간 버튼(아랫줄), 월말 카트 재고 입력을 생산 재고 화면으로 이동 / v2.20 - 2026-11-23 원재료 손실(파이 보관분 대응): 기간 '최근 3개월·누적', 월말 카트 재고 입력 → 재고 반영 계산, 성형한 날 사용 카트 미입력 경고(달력·일자 창) / v2.19 - 2026-11-23 원재료 손실: 금액 표기 통일(+초록 = 초과 생산, −빨강 = 생산 부족), 파이 초과분도 금액 표시 / v2.18 - 2026-11-23 원재료 손실: 상단 카드 파이·생지 같은 양식(수율+금액), 문구 정리(투입 대비 생산 초과/부족 등), 생지 부족분 원재료 팝업 / v2.17 - 2026-11-23 원재료 손실: 투입보다 파이에 쓴 반죽이 많으면 음수 대신 '투입보다 더 씀(초과)'으로 풀어 표시, 초과분은 손실 원재료비에서 제외 / v2.16 - 2026-11-23 원재료 손실(공정 표 형태로 개편·생산일지 연동 초록 점·생지 실제 생산은 포장 완료 등록 기준): 반죽 1개당 버터 1,000g 현장 기준(설정 가능), 1카트 기준을 반죽 이름 옆에 표시, 설명 문구 수정 / v2.15 - 2026-11-23 원재료 손실 개편: 파이 공정별(믹싱→라미네이팅→성형)·1카트 기준(개수×g)·버터 포함 중량, 파이를 생지 위로, 반제품 이름 레시피 기준 통일 / v2.14 - 2026-11-22 미배정 표시 삼각형 아이콘 + 범례 / v2.13 - 2026-11-22 작업 인원: 미배정 팀원 있으면 칸에 ! 표시·이름 / v2.12 - 2026-11-22 포장 안 된 품목 월별 구분, 참고 자료 안내 문구 / v2.11 - 2026-11-22 포장 달력 칸에 생산·포장 금액 / v2.10 - 2026-11-22 포장 완료: 금액 차이(KPI·주·품목), 포장 안 된 품목 목록 / v2.9 - 2026-11-22 포장 완료 등록 탭 신설(재고 입고 = 포장), 생산일지 창 크기 줄임, '실제 포장 수량'→'포장 수량' / v2.8 - 2026-11-22 일자 창에서 휴무일 지정(사유 문구), 달력 칸 옅은 빨강 + 문구 / v2.7 - 2026-11-22 달력 칸 최소 높이 1행(빈 주는 짧게), 기록 없는 주 합계 한 줄 / v2.6 - 2026-11-22 작업 인원에 1인 생산금액(KPI·날짜·주·파트별), 작업 구분별 생산 파트·인원 기준 설정 / v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
+// [VERSION: production.js v2.39 - 2026-11-25 생산 재고: 출고를 엠즈 출고와 직출고로 나눠 표시(직출고도 재고에서 차감) · '엠즈 입고' 문구를 '제품 출고'로 / v2.38 - 2026-11-24 자동 저장 삭제: [DB 저장](Ctrl+S)을 눌러야 DB에 저장 · 저장 안 된 변경이 있으면 상태 배지에 표시, 새로고침 전 확인 / v2.37 - 2026-11-24 엠즈 재고 탭용 stockForMs(공장 재고 현재고) 내보내기 / v2.36 - 2026-11-24 재고 실사를 그 달 마지막 근무일(말일)에 하면 카트 수를 월말 카트 재고에도 자동 저장 · 상단 기준일 알림에서 카트 실사와 월말 카트 재고를 하나로 합침 / v2.35 - 2026-11-24 생산 재고: 재고조사 입력 버튼 3개 색 통일 · 상단에 재고 종류별 기준일 알림(생지 실사·카트 실사·월말 카트 재고·파지 재고조사) / v2.34 - 2026-11-24 생산 재고에 파지 재고 표(반제품 아래)와 [파지 재고조사 입력] 버튼, 파지 관리의 버튼은 안내로 바꿈 / v2.33 - 2026-11-24 파지 재고조사(기초 파지 재고) 입력: 남은 파지 = 조사한 재고 + 다음 날부터의 발생 − 사용 / v2.32 - 2026-11-24 파지 종류 재정리(패스츄리·퀸아망·쇼숑, 몽마르트 파지=패스츄리 파지) · 발생 종류는 품목 기준 · 사용은 레시피에 적힌 종류별로 계산(단과자 등 여러 종류) · 0 입력도 기록 / v2.31 - 2026-11-24 파지 사용 다시 켬: 믹싱에 쓰는 파지는 반제품 레시피에 등록된 파지 g × 배합 수로 계산(별도 기준 7.5kg·[파지 자동 차감 기준] 창 폐지) / v2.30 - 2026-11-23 파지 관리: 보는 기간(N월 전체·최근 3개월·누적) — 상단 카드와 아래 표에 적용 / 파지 사용 표시는 정리 전까지 끔(SCRAP_USE_ON=false, 저장값 보존) / v2.29 - 2026-11-23 파지 관리: 파지로 만드는 제품이 생산 스케쥴에 있으면 품목별 사용 kg 자동 표시(일자 창·달력·주간·월 표), 남은 파지에 반영 / v2.28 - 2026-11-23 파지 사용: 반제품 믹싱 1배합당 자동 차감(기본 패스츄리 7.5kg, 기준 설정 가능)·파지로 만드는 제품 자동 계산(레시피 기준)·직접 입력, 남은 파지 표시 / 파지·부족분 원재료 팝업 가운데 정렬 / v2.27 - 2026-11-23 파지 관리 상단 카드 글자 크기를 다른 탭과 맞춤 / v2.26 - 2026-11-23 DB 상태 UI를 다른 탭과 통일(상태 배지·DB 저장·새로고침), 파지 관리 검정 바탕 줄임 / v2.25 - 2026-11-23 파지 관리: 주간 합계 카드 개편, 상단 카드 글자 키움, 반죽별 '성형에서 빠진 양 중 파지·폐기' 표 / 원재료 손실 파지 전환율 문구 줄바꿈 / v2.24 - 2026-11-23 파지 관리: 생산 반죽 kg 대비 파지 비율(카드·달력·일자 창·표) / 원재료 손실: 파지 전환율(발생 vs 파지 품목 사용) / v2.23 - 2026-11-23 '2. 파지 관리' 탭 신설(달력·일자 창에서 파이 품목별 파지 kg 입력, 3종), 탭에 번호 표시 / v2.22 - 2026-11-23 원재료 손실: 알생지·파베이크 수율을 상단 카드·아래 표·주별 비교에서 따로 분리 / v2.21 - 2026-11-23 원재료 손실 머리: 1~12월 버튼(윗줄) + 보는 기간 버튼(아랫줄), 월말 카트 재고 입력을 생산 재고 화면으로 이동 / v2.20 - 2026-11-23 원재료 손실(파이 보관분 대응): 기간 '최근 3개월·누적', 월말 카트 재고 입력 → 재고 반영 계산, 성형한 날 사용 카트 미입력 경고(달력·일자 창) / v2.19 - 2026-11-23 원재료 손실: 금액 표기 통일(+초록 = 초과 생산, −빨강 = 생산 부족), 파이 초과분도 금액 표시 / v2.18 - 2026-11-23 원재료 손실: 상단 카드 파이·생지 같은 양식(수율+금액), 문구 정리(투입 대비 생산 초과/부족 등), 생지 부족분 원재료 팝업 / v2.17 - 2026-11-23 원재료 손실: 투입보다 파이에 쓴 반죽이 많으면 음수 대신 '투입보다 더 씀(초과)'으로 풀어 표시, 초과분은 손실 원재료비에서 제외 / v2.16 - 2026-11-23 원재료 손실(공정 표 형태로 개편·생산일지 연동 초록 점·생지 실제 생산은 포장 완료 등록 기준): 반죽 1개당 버터 1,000g 현장 기준(설정 가능), 1카트 기준을 반죽 이름 옆에 표시, 설명 문구 수정 / v2.15 - 2026-11-23 원재료 손실 개편: 파이 공정별(믹싱→라미네이팅→성형)·1카트 기준(개수×g)·버터 포함 중량, 파이를 생지 위로, 반제품 이름 레시피 기준 통일 / v2.14 - 2026-11-22 미배정 표시 삼각형 아이콘 + 범례 / v2.13 - 2026-11-22 작업 인원: 미배정 팀원 있으면 칸에 ! 표시·이름 / v2.12 - 2026-11-22 포장 안 된 품목 월별 구분, 참고 자료 안내 문구 / v2.11 - 2026-11-22 포장 달력 칸에 생산·포장 금액 / v2.10 - 2026-11-22 포장 완료: 금액 차이(KPI·주·품목), 포장 안 된 품목 목록 / v2.9 - 2026-11-22 포장 완료 등록 탭 신설(재고 입고 = 포장), 생산일지 창 크기 줄임, '실제 포장 수량'→'포장 수량' / v2.8 - 2026-11-22 일자 창에서 휴무일 지정(사유 문구), 달력 칸 옅은 빨강 + 문구 / v2.7 - 2026-11-22 달력 칸 최소 높이 1행(빈 주는 짧게), 기록 없는 주 합계 한 줄 / v2.6 - 2026-11-22 작업 인원에 1인 생산금액(KPI·날짜·주·파트별), 작업 구분별 생산 파트·인원 기준 설정 / v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
 //  - 품목 목록·단가: 제품단가 탭(barogaProductPriceBridge.getProductionProducts)
 //      파이 = PK로 입력 / 알생지·파베이크·제과 = 배합으로 입력 → '1배합 PK수'로 PK 환산 (실제 포장 PK를 직접 고칠 수 있음)
 //      금액 = PK × 엠즈 매입가(PK). 줄을 만들 때의 단가를 줄에 저장 → 나중에 단가가 바뀌어도 지난 기록 금액은 그대로
 //  - 반제품(반죽 믹싱·라미네이팅): 수량만 기록, 금액·재고 합계 제외
-//  - 생지 재고(PK) = 재고 실사 수량 + 실사일 이후 실행 PK − 실사일 이후 엠즈 입고 PK(상품코드→품목코드 연결) ± 조정
+//  - 생지 재고(PK) = 재고 실사 수량 + 실사일 이후 실행 PK − 실사일 이후 엠즈 출고 PK(상품코드→품목코드 연결) − 직출고 PK ± 조정
 //  - 저장: 이 기기(localStorage) + 생산일지 DB(GAS 5_production.gs, 주소 설정 시) 리비전 확인 저장
 (function () {
   'use strict';
@@ -2126,7 +2126,7 @@
     const base = db.stockBase;
     const feed = typeof window.barogaMsStockFeed === 'function' ? window.barogaMsStockFeed() : { loaded: false, records: [], links: {} };
     const map = {};
-    const ensure = (code, name) => map[code] || (map[code] = { code, name, base: 0, produced: 0, shipped: 0, adjust: 0 });
+    const ensure = (code, name) => map[code] || (map[code] = { code, name, base: 0, produced: 0, shipped: 0, direct: 0, adjust: 0 }); // shipped = 엠즈 출고, direct = 직출고
     products.forEach((p) => ensure(String(p.productCode), p.productName));
     const after = (d) => !base || String(d || '') > base.date;
     if (base) Object.entries(base.counts || {}).forEach(([code, pk]) => { if (code.startsWith('SEMI:')) return; ensure(code, (productByCode(code, products) || {}).productName || code).base = Number(pk) || 0; });
@@ -2141,6 +2141,15 @@
         const pk = prod && prod.stockUnit === 'BOX' ? (Number(it.box) || 0) : (Number(it.pk) || 0); // BOX 운영 품목은 엠즈 BOX 수량
         if (code && map[code]) map[code].shipped += pk;
         else { const k = it.code + ' ' + it.name; unmapped[k] = (unmapped[k] || 0) + pk; }
+      });
+    });
+    // 직출고(제품 출고 → 5. 직출고에서 손으로 등록): 제품 품목코드로 바로 연결. 수량은 PK → 재고 단위(쇼숑 4PK=1BOX)
+    (feed.directs || []).forEach((r) => {
+      if (!after(r.date)) return;
+      (r.items || []).forEach((it) => {
+        const code = String(it.code || '').trim(), q = (Number(it.pk) || 0) / packPerStock(code, products);
+        if (code && map[code]) map[code].direct += q;
+        else { const k = '[직출고] ' + (it.code || '') + ' ' + (it.name || ''); unmapped[k] = (unmapped[k] || 0) + (Number(it.pk) || 0); }
       });
     });
     db.stockAdjusts.forEach((a) => { if (after(a.date) && !String(a.code).startsWith('SEMI:')) ensure(String(a.code), a.name).adjust += Number(a.deltaPk) || 0; });
@@ -2161,7 +2170,7 @@
     });
     const rows = Object.values(map).map((x) => {
       const p = productByCode(x.code, products);
-      const cur = r1(x.base + x.produced - x.shipped + x.adjust);
+      const cur = r1(x.base + x.produced - x.shipped - x.direct + x.adjust);
       const per = p ? p.pkPerStock || 1 : 1;
       const cost = p && p.pkTotalCost != null ? p.pkTotalCost * per : null, buy = p ? p.msBuyPricePk : 0; // 원가는 PK당 → 재고 단위(BOX)로 환산
       return { ...x, cat: p ? p.cat : '', unit: p ? p.stockUnit : 'PK', cur, cost, buy, costAmt: cost == null ? null : cur * cost, buyAmt: cur * buy };
@@ -2185,7 +2194,7 @@
         <td class="py-1.5 px-2 text-right tabular-nums text-stone-600" title="${esc(r.recipeName || '')}">${r.costPerKg == null ? '<span class="text-rose-600">레시피 없음</span>' : won(r.costPerKg)}</td>
         <td class="py-1.5 px-2 text-right tabular-nums font-bold">${r.amt == null ? '-' : won(r.amt)}</td>
       </tr>`).join('');
-    const active = rows.filter((r) => r.base || r.produced || r.shipped || r.adjust || r.cur);
+    const active = rows.filter((r) => r.base || r.produced || r.shipped || r.direct || r.adjust || r.cur);
     const totCost = active.reduce((s, r) => s + (r.costAmt > 0 ? r.costAmt : 0), 0), totBuy = active.reduce((s, r) => s + (r.buyAmt > 0 ? r.buyAmt : 0), 0);
     const noCost = active.filter((r) => r.cur > 0 && r.cost == null).length;
     const negative = active.filter((r) => r.cur < 0);
@@ -2197,6 +2206,7 @@
         <td class="py-1.5 px-2 text-right tabular-nums">${num(r.base)}</td>
         <td class="py-1.5 px-2 text-right tabular-nums text-emerald-700">${r.produced ? '+' + num(r.produced) : '-'}</td>
         <td class="py-1.5 px-2 text-right tabular-nums text-rose-700">${r.shipped ? '-' + num(r.shipped) : '-'}</td>
+        <td class="py-1.5 px-2 text-right tabular-nums text-blue-700">${r.direct ? '-' + num(r.direct) : '-'}</td>
         <td class="py-1.5 px-2 text-right tabular-nums">${r.adjust ? (r.adjust > 0 ? '+' : '') + num(r.adjust) : '-'}</td>
         <td class="py-1.5 px-2 text-right tabular-nums font-extrabold ${r.cur < 0 ? 'text-rose-700' : 'text-stone-900'}">${num(r.cur)}${r.unit !== 'PK' ? ` <span class="text-xs font-bold text-stone-500">${r.unit}</span>` : ''}</td>
         <td class="py-1.5 px-2 text-right tabular-nums text-stone-600">${r.cost == null ? '<span class="text-rose-600" title="제품단가 탭에서 PK 총생산원가가 계산되지 않음">미산출</span>' : won(r.cost)}</td>
@@ -2218,8 +2228,8 @@
       </div><div class="mt-1.5 text-[11px] text-stone-400">기준일 = 마지막으로 실제로 세어 입력한 날. 현재고는 그날 이후의 생산·출고·사용을 더하고 뺀 계산값입니다.</div></div>`;
     return `
       ${baseStrip}
-      ${!base ? `<div class="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-sm"><b>재고 실사 수량이 아직 없습니다.</b> 냉동창고 재고를 세어 [재고 실사 입력]에 넣으면, 그 날 이후의 포장 완료 등록 수량과 엠즈 입고(출고)로 재고가 자동 계산됩니다.</div>` : ''}
-      ${!feed.loaded ? `<div class="p-3 rounded-xl bg-stone-100 border border-stone-200 text-stone-700 text-xs flex flex-wrap items-center gap-2"><span>엠즈 입고 기록을 이 기기에 저장된 사본으로 계산 중입니다. 최신 출고를 반영하려면</span><button type="button" onclick="Prod.loadMs()" class="px-2.5 py-1 rounded-lg bg-stone-900 text-white font-bold cursor-pointer">엠즈 입고 불러오기</button></div>` : ''}
+      ${!base ? `<div class="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-sm"><b>재고 실사 수량이 아직 없습니다.</b> 냉동창고 재고를 세어 [재고 실사 입력]에 넣으면, 그 날 이후의 포장 완료 등록 수량과 제품 출고(엠즈 출고·직출고)로 재고가 자동 계산됩니다.</div>` : ''}
+      ${!feed.loaded ? `<div class="p-3 rounded-xl bg-stone-100 border border-stone-200 text-stone-700 text-xs flex flex-wrap items-center gap-2"><span>제품 출고 기록을 이 기기에 저장된 사본으로 계산 중입니다. 최신 출고를 반영하려면</span><button type="button" onclick="Prod.loadMs()" class="px-2.5 py-1 rounded-lg bg-stone-900 text-white font-bold cursor-pointer">제품 출고 불러오기</button></div>` : ''}
       <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">재고 실사 기준일</div><div class="mt-1 text-xl font-extrabold">${base ? esc(base.date) : '-'}</div><div class="text-xs text-stone-500">이 날 이후 생산·출고 반영</div></div>
         <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-xs"><div class="text-xs font-bold text-stone-500">재고 자산 (생산원가 기준)</div><div class="mt-1 text-xl font-extrabold tabular-nums">${won(totCost)}</div><div class="text-xs text-stone-500">PK 총생산원가 × 현재고 (음수 재고 제외)${noCost ? ` · 원가 미산출 ${noCost}개 품목 제외` : ''}</div></div>
@@ -2236,8 +2246,8 @@
           </div>
         </div>
         <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm min-w-[1100px]">
-          <thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600"><th class="py-2 px-2">파트</th><th class="py-2 px-2">코드</th><th class="py-2 px-2">품목</th><th class="py-2 px-2 text-right">실사</th><th class="py-2 px-2 text-right" title="포장 완료 등록 수량">+포장 입고</th><th class="py-2 px-2 text-right">−엠즈 출고</th><th class="py-2 px-2 text-right">±조정</th><th class="py-2 px-2 text-right">현재고</th><th class="py-2 px-2 text-right">원가/단위</th><th class="py-2 px-2 text-right">원가 금액</th><th class="py-2 px-2 text-right">매입가/단위</th><th class="py-2 px-2 text-right">매입가 금액</th></tr></thead>
-          <tbody>${trs || '<tr><td colspan="12" class="py-6 text-center text-xs text-stone-400">제품단가 탭 품목이 없습니다.</td></tr>'}</tbody>
+          <thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600"><th class="py-2 px-2">파트</th><th class="py-2 px-2">코드</th><th class="py-2 px-2">품목</th><th class="py-2 px-2 text-right">실사</th><th class="py-2 px-2 text-right" title="포장 완료 등록 수량">+포장 입고</th><th class="py-2 px-2 text-right" title="제품 출고 → 1. 엠즈 출고 내역(엠즈 입고 엑셀)">−엠즈 출고</th><th class="py-2 px-2 text-right" title="제품 출고 → 5. 직출고에 손으로 등록한 수량">−직출고</th><th class="py-2 px-2 text-right">±조정</th><th class="py-2 px-2 text-right">현재고</th><th class="py-2 px-2 text-right">원가/단위</th><th class="py-2 px-2 text-right">원가 금액</th><th class="py-2 px-2 text-right">매입가/단위</th><th class="py-2 px-2 text-right">매입가 금액</th></tr></thead>
+          <tbody>${trs || '<tr><td colspan="13" class="py-6 text-center text-xs text-stone-400">제품단가 탭 품목이 없습니다.</td></tr>'}</tbody>
         </table></div>
       </div>
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4">
@@ -2257,7 +2267,7 @@
           ${S.untyped > 0 ? `<tr class="border-b border-stone-100"><td class="py-1.5 px-2 font-bold text-stone-500">${SCRAP_NOTYPE} <span class="text-[11px] font-semibold text-stone-400">레시피에 '파지'로만 적힌 사용</span></td><td class="${td}">-</td><td class="${td}">-</td><td class="${td} text-blue-700">-${num(S.untyped)}</td><td class="${td} font-extrabold text-rose-700">-${num(S.untyped)}kg</td></tr>` : ''}
           <tr class="bg-stone-50 font-extrabold"><td class="py-1.5 px-2">합계</td><td class="${td}">${S.base ? num(S.rows.reduce((a, r) => a + r.base, 0)) + 'kg' : '-'}</td><td class="${td}">+${num(S.rows.reduce((a, r) => a + r.made, 0))}</td><td class="${td}">-${num(S.rows.reduce((a, r) => a + r.used, 0) + S.untyped)}</td><td class="${td} ${S.total < 0 ? 'text-rose-700' : ''}">${num(S.total)}kg</td></tr></tbody></table></div>
       </div>`; })()}
-      ${unmappedList.length ? `<div class="bg-white rounded-2xl border border-rose-200 p-4 text-xs"><h4 class="font-extrabold text-rose-800 mb-1">재고에서 빼지 못한 엠즈 출고 (품목코드 연결 없음)</h4><div class="text-stone-600 mb-2">엠즈 입고 → 매입가 DB 관리에서 '레시피 품목코드'를 연결하면 재고에서 빠집니다. 생산일지 품목(제품단가 탭)에 없는 상품일 수도 있습니다.</div>${unmappedList.map(([k, pk]) => `<div class="flex justify-between border-b border-stone-100 py-1"><span>${esc(k)}</span><b class="tabular-nums">${num(pk)} PK</b></div>`).join('')}</div>` : ''}
+      ${unmappedList.length ? `<div class="bg-white rounded-2xl border border-rose-200 p-4 text-xs"><h4 class="font-extrabold text-rose-800 mb-1">재고에서 빼지 못한 출고 (품목코드 연결 없음)</h4><div class="text-stone-600 mb-2">제품 출고 → 4. 매입가 DB 관리에서 '레시피 품목코드'를 연결하면 재고에서 빠집니다. 생산일지 품목(제품단가 탭)에 없는 상품일 수도 있습니다.</div>${unmappedList.map(([k, pk]) => `<div class="flex justify-between border-b border-stone-100 py-1"><span>${esc(k)}</span><b class="tabular-nums">${num(pk)} PK</b></div>`).join('')}</div>` : ''}
       <div class="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4 text-xs">
         <h4 class="text-sm font-extrabold text-stone-900 mb-2">재고 조정 기록</h4>
         ${adjRows ? `<table class="w-full"><thead><tr class="text-stone-500 border-b"><th class="py-1 px-2 text-left">날짜</th><th class="py-1 px-2 text-left">품목</th><th class="py-1 px-2 text-right">증감</th><th class="py-1 px-2 text-left">사유</th><th></th></tr></thead><tbody>${adjRows}</tbody></table>` : '<div class="text-stone-400">조정 기록이 없습니다.</div>'}
@@ -2324,7 +2334,7 @@
     const go = () => { db.stockAdjusts = db.stockAdjusts.filter((x) => x.id !== id); markChanged(); render(); };
     if (typeof window.openConfirmModal === 'function') window.openConfirmModal('재고 조정 삭제', `${a.date} ${a.name} ${a.deltaPk}PK 조정 기록을 삭제할까요?`, go); else go();
   }
-  function loadMs() { if (typeof window.mountMsInboundApp === 'function') { window.mountMsInboundApp(); toast('엠즈 입고 기록을 불러오는 중입니다. 잠시 뒤 화면이 갱신됩니다.', 'info'); setTimeout(render, 2500); setTimeout(render, 6000); } }
+  function loadMs() { if (typeof window.mountMsInboundApp === 'function') { window.mountMsInboundApp(); toast('제품 출고 기록을 불러오는 중입니다. 잠시 뒤 화면이 갱신됩니다.', 'info'); setTimeout(render, 2500); setTimeout(render, 6000); } }
 
   // ----- DB 연결 -----
   function openDbModal() {
