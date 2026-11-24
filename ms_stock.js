@@ -30,7 +30,7 @@
   const tdr = td + ' text-right tabular-nums';
   const card = 'bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4';
 
-  let data = null, dbRevision = null, loaded = false, loading = false, saving = false, statusText = 'DB 미연결', view = 'DASH';
+  let data = null, dbRevision = null, loaded = false, loading = false, saving = false, statusText = 'DB 미연결', view = 'DASH', previewOnly = false;
   const root = () => document.getElementById('msStockRoot');
   function getUrl() { let v = ''; try { v = localStorage.getItem(URL_KEY) || ''; } catch (e) {} return v || DEFAULT_URL; }
   function setStatus(t) { statusText = t; const el = document.getElementById('mssStatus'); if (el) el.textContent = t; }
@@ -51,7 +51,7 @@
       if (!json || json.ok === false) throw new Error((json && (json.message || json.error)) || '불러오기 실패');
       dbRevision = Number(json.revision) || 0; loaded = true;
       if (json.status === 'empty') { data = null; setStatus('불러옴 ' + nowHm() + ' · 저장된 자료 없음'); }
-      else { data = normalize(json.payload); setStatus('불러옴 ' + nowHm() + ' · 엠즈 기준 ' + data.asOf); if (showMsg) toast('엠즈 재고 자료를 불러왔습니다.', 'success'); }
+      else { data = normalize(json.payload); previewOnly = false; setStatus('불러옴 ' + nowHm() + ' · 엠즈 기준 ' + data.asOf); if (showMsg) toast('엠즈 재고 자료를 불러왔습니다.', 'success'); }
     } catch (e) {
       loaded = false; setStatus('불러오기 실패');
       if (showMsg || !e.unauthorized) toast('엠즈 재고 DB 불러오기 실패: ' + e.message, 'error');
@@ -69,7 +69,7 @@
     try {
       const json = await api({ action: 'replaceAll', baseRevision: dbRevision, payload: d }, 180000);
       if (!json || json.ok === false) throw new Error((json && json.conflict ? '다른 기기에서 먼저 저장했습니다. 불러온 뒤 다시 시도해 주세요.' : (json && (json.message || json.error))) || '저장 실패');
-      dbRevision = Number(json.revision) || dbRevision; data = d;
+      dbRevision = Number(json.revision) || dbRevision; data = d; previewOnly = false;
       setStatus('저장됨 ' + nowHm() + ' · 엠즈 기준 ' + d.asOf);
       toast('엠즈 재고 자료를 DB에 저장했습니다.', 'success');
       return { ok: true, revision: dbRevision, counts: { stock: d.stock.length, expiry: d.expiry.length, ledger: Object.keys(d.ledger), daily: d.daily.length, orders: d.orders.length }, warning: json.warning || '' };
@@ -78,6 +78,8 @@
       return { ok: false, message: e.message };
     } finally { saving = false; render(); }
   }
+  // 저장하지 않고 화면만 미리 보기 (자료를 읽은 직후 확인용). DB에는 아무것도 쓰지 않음
+  function preview(p) { const d = normalize(p || {}); if (!d.asOf || !d.stock.length) return { ok: false, message: 'asOf와 stock이 필요합니다' }; data = d; previewOnly = true; setStatus('미리보기 · 저장 안 됨 · 엠즈 기준 ' + d.asOf); render(); return { ok: true }; }
   function pickFile() {
     if (!getUrl()) { toast('먼저 [DB 연결]에서 엠즈 재고 DB 주소를 넣어 주세요.', 'error'); openDbModal(); return; }
     const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json';
@@ -208,7 +210,7 @@
         <button type="button" onclick="MsStock.pull(true)" class="px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-bold cursor-pointer hover:bg-stone-50">불러오기</button>
         <button type="button" onclick="MsStock.pickFile()" title="엠즈에서 읽어 만든 JSON 파일로 DB를 바꿉니다 (보통은 Claude가 자동으로 저장)" class="px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-bold cursor-pointer hover:bg-stone-50">자료 가져오기</button>
         <button type="button" onclick="MsStock.openDbModal()" class="px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-bold cursor-pointer hover:bg-stone-50">DB 연결</button></div></div>`;
-    if (!getUrl()) { el.innerHTML = `<div class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-4 flex flex-col gap-4">${head}<div class="${card} text-sm text-stone-600"><b>엠즈 재고 DB가 아직 연결되지 않았습니다.</b> 구글 시트에 <span class="font-mono">7_ms_stock.gs</span>를 배포한 뒤 [DB 연결]에 웹 앱 주소를 넣어 주세요.</div></div><div id="mssModal"></div>`; return; }
+    if (!getUrl() && !(previewOnly && data)) { el.innerHTML = `<div class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-4 flex flex-col gap-4">${head}<div class="${card} text-sm text-stone-600"><b>엠즈 재고 DB가 아직 연결되지 않았습니다.</b> 구글 시트에 <span class="font-mono">7_ms_stock.gs</span>를 배포한 뒤 [DB 연결]에 웹 앱 주소를 넣어 주세요.</div></div><div id="mssModal"></div>`; return; }
     if (!data) { el.innerHTML = `<div class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-4 flex flex-col gap-4">${head}<div class="${card} text-sm text-stone-600">${loading ? '불러오는 중입니다...' : loaded ? '<b>저장된 엠즈 재고 자료가 없습니다.</b> 엠즈 e플랫폼에 로그인한 뒤 Claude에게 "엠즈 재고 갱신해줘"라고 요청하면 자료를 읽어 저장합니다.' : 'DB를 불러오지 못했습니다. [불러오기]를 눌러 주세요.'}</div></div><div id="mssModal"></div>`; return; }
     const C = compute(), d = data;
     const urgent = C.items.filter((it) => it.grade === '긴급 발주').length, prio = C.items.filter((it) => it.grade === '우선 발주').length, rec = C.items.filter((it) => it.grade === '발주 권장').length;
@@ -239,5 +241,5 @@
   let mounted = false;
   function mount() { render(); if (!mounted) { mounted = true; pull(false); } }
   window.mountMsStockApp = mount;
-  window.MsStock = { mount, pull, pickFile, importSnapshot, openDbModal, saveDbUrl, closeModal, setView: (v) => { view = v; render(); }, _debug: () => ({ data, dbRevision, loaded, computed: data ? compute() : null }) };
+  window.MsStock = { mount, pull, pickFile, importSnapshot, preview, openDbModal, saveDbUrl, closeModal, setView: (v) => { view = v; render(); }, _debug: () => ({ data, dbRevision, loaded, computed: data ? compute() : null }) };
 })();
