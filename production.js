@@ -1380,7 +1380,7 @@
   }
   // 파이 품목 → 기본 파지 종류 (그 품목이 쓰는 반죽 기준)
   function defaultScrapType(code, defs) {
-    const p = productByCode(code, getProducts()), byName = scrapTypeOfProduct(p && p.name);
+    const p = productByCode(code, getProducts()), byName = scrapTypeOfProduct(p && p.productName);
     if (byName) return byName;                       // 품목 이름으로 정해진 종류 (파지로 만드는 크렘푀이유도 쇼숑 파지 발생 대상)
     if (madeFromScrap(code)) return '';
     const k = semiShort(pieSetting(code, defs).group);
