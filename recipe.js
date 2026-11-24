@@ -667,6 +667,7 @@ function bindRecipeFormulaTooltipEvents(containerEl) {
 function renderRecipeWorkspace() {
     const lookup = buildRawCatalogLookupMaps();
     (recipesData || []).forEach(r => ensureRecipeSchema(r, lookup));
+    markFullBatchSubRows();
     if (!selectedRecipeId && recipesData.length > 0) selectedRecipeId = recipesData[0].id;
 
     const mainEl = document.getElementById('recipeMainSection');
@@ -986,6 +987,7 @@ function renderRecipeDetailPanel() {
                             <div class="flex items-center gap-1 min-w-0">
                                 <button type="button" onclick="toggleSubNodeCollapse('${escapeHtml(nodeKey)}')" class="text-xs w-4 h-4 inline-flex items-center justify-center rounded border border-rose-300 bg-white text-rose-700 cursor-pointer shrink-0">${isCollapsed ? '+' : '-'}</button>
                                 <span onclick="selectRecipeItem('${escapeHtml(entry.subRc.id)}')" class="underline decoration-dotted cursor-pointer truncate" title="${escapeHtml(entry.subRc.productName)} (클릭 시 해당 반제품 레시피로 이동)">${escapeHtml(entry.subRc.productName)}</span>
+                                <button type="button" onclick="toggleSubFullBatch(${idx})" title="${ig.fullBatch ? '반제품 1배합 전체 사용: [반제품 변경 적용]을 누르면 최신 1배합 분량으로 갱신됩니다. 누르면 수량 고정으로 바뀝니다.' : '수량 고정: 반제품이 바뀌어도 이 투입량은 그대로입니다. 누르면 1배합 전체 사용(자동)으로 바뀝니다.'}" class="shrink-0 px-1 py-px rounded border text-[10px] font-bold cursor-pointer ${ig.fullBatch ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-stone-300 text-stone-500'}">${ig.fullBatch ? '1배합 자동' : '수량 고정'}</button>
                             </div>
                         </td>
                         <td class="fd-td py-1 px-1 text-center"><input type="text" value="${escapeHtml(ig.origin || '')}" onchange="updateRecipeIngredient(${idx}, 'origin', this.value)" class="w-full min-w-0 text-center bg-transparent focus:bg-white focus:outline-amber-500 text-xs"></td>
@@ -1830,6 +1832,7 @@ function addSubRecipeToFormula() {
         origin: '',
         unit: 'EA',
         qty: Number((subEval.baseYieldQty || 1).toFixed(2)),
+        fullBatch: true,
         seq: 0
     });
     persistRecipeChange();
@@ -1845,6 +1848,7 @@ function updateRecipeIngredient(idx, field, val) {
         const num = parseNumericCell(val);
         ig.qty = num;
         ig.weightG = num;
+        if (ig.rowType === 'SUB_RECIPE') ig.fullBatch = undefined; // 직접 고친 값이 1배합과 같으면 자동, 다르면 고정으로 다시 판정
     } else if (field === 'unitPrice' || field === 'seq') {
         ig[field] = parseNumericCell(val);
     } else if (field === 'item') {
@@ -1865,8 +1869,10 @@ function updateRecipeIngredient(idx, field, val) {
         }
     } else {
         ig[field] = val;
+        if (field === 'unit' && ig.rowType === 'SUB_RECIPE') ig.fullBatch = undefined;
     }
     rc.updatedAt = getTodayStr();
+    if (ig.rowType === 'SUB_RECIPE') markFullBatchSubRows();
     persistRecipeChange();
     renderRecipeWorkspace();
 }
@@ -2218,6 +2224,14 @@ function ensureApplyRawPriceHeaderButton() {
     btn.className = 'flex items-center gap-1.5 px-3.5 py-1.5 h-9 rounded-xl text-xs font-extrabold bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition cursor-pointer';
     btn.innerHTML = `<i data-lucide="refresh-ccw" class="w-3.5 h-3.5"></i><span>원재료 현재 단가 적용</span>`;
     badgeBtn.parentElement.insertBefore(btn, badgeBtn);
+    const subBtn = document.createElement('button');
+    subBtn.type = 'button';
+    subBtn.id = 'applySubRecipeChangesBtn';
+    subBtn.onclick = () => applySubRecipeChangesToAllRecipes();
+    subBtn.title = '반제품 레시피를 고친 뒤 누르면, 그 반제품 1배합 전체를 쓰는 모든 레시피의 투입량·중량합계·생산수량·원가를 최신 값으로 다시 계산합니다 (수량 고정 줄은 그대로)';
+    subBtn.className = 'flex items-center gap-1.5 px-3.5 py-1.5 h-9 rounded-xl text-xs font-extrabold bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition cursor-pointer';
+    subBtn.innerHTML = `<i data-lucide="layers" class="w-3.5 h-3.5"></i><span>반제품 변경 적용</span>`;
+    badgeBtn.parentElement.insertBefore(subBtn, badgeBtn);
     if (window.lucide) lucide.createIcons();
 }
 
@@ -2389,6 +2403,99 @@ function persistRecipeChange() {
 window.barogaUnsavedCheckers = window.barogaUnsavedCheckers || {};
 window.barogaUnsavedCheckers.recipe = () => Boolean(recipeSaveTimer || recipeIsSaving || recipeSavePending || readRecipeDirty());
 const recipeNowHm = () => (typeof window.barogaNowHm === 'function' ? window.barogaNowHm() : new Date().toTimeString().slice(0, 5));
+
+// ===== [반제품 변경 적용] 반제품 1배합 전체를 쓰는 줄은 반제품 레시피가 바뀌면 투입량을 다시 맞춤 =====
+// ig.fullBatch === true  : 반제품 1배합 전체 사용(자동) → [반제품 변경 적용] 때 최신 1배합 분량으로 갱신
+// ig.fullBatch === false : 수량 고정(일부만 쓰거나 여러 배합) → 건드리지 않음
+function subBatchQty(subRc, parentId) {
+    const e = evaluateRecipeBaseTotals(subRc, new Set(parentId ? [parentId] : []));
+    return Number((e.baseYieldQty || 1).toFixed(2));
+}
+// 아직 표시가 없는 반제품 줄: 지금 투입량이 반제품 1배합 분량과 같으면 '1배합 자동', 아니면 '수량 고정'으로 표시
+function markFullBatchSubRows() {
+    (recipesData || []).forEach(rc => (rc.ingredients || []).forEach(ig => {
+        if (ig.rowType !== 'SUB_RECIPE' || !ig.subRecipeId || typeof ig.fullBatch === 'boolean') return;
+        const sub = recipesData.find(r => r.id === ig.subRecipeId);
+        if (!sub) return;
+        ig.fullBatch = String(ig.unit || 'EA').toUpperCase() === 'EA' && Math.abs((parseFloat(ig.qty) || 0) - subBatchQty(sub, rc.id)) < 0.011;
+    }));
+}
+function toggleSubFullBatch(idx) {
+    const rc = recipesData.find(r => r.id === selectedRecipeId);
+    const ig = rc && rc.ingredients[idx];
+    if (!ig || ig.rowType !== 'SUB_RECIPE') return;
+    const sub = recipesData.find(r => r.id === ig.subRecipeId);
+    if (!sub) return;
+    if (ig.fullBatch) {
+        ig.fullBatch = false;
+        showToast(`[${sub.productName}] 수량 고정으로 바꿨습니다. 반제품이 바뀌어도 이 줄의 투입량은 그대로입니다.`, 'info');
+    } else {
+        const q = subBatchQty(sub, rc.id);
+        if (!confirm(`[${sub.productName}] 1배합 전체 사용(자동)으로 바꿉니다.\n투입량이 ${fmtDec(ig.qty, 2)} ${ig.unit || 'EA'} → ${fmtDec(q, 2)} EA 로 바뀝니다. 계속할까요?`)) return;
+        ig.fullBatch = true; ig.unit = 'EA'; ig.qty = q;
+    }
+    rc.updatedAt = getTodayStr();
+    persistRecipeChange();
+    renderRecipeWorkspace();
+    if (typeof window.refreshProductPriceRecipeLinks === 'function') window.refreshProductPriceRecipeLinks();
+}
+function applySubRecipeChangesToAllRecipes() {
+    markFullBatchSubRows();
+    const changed = new Map(); // rowKey → { recipe, sub, before, after, w0 }
+    const before = new Map((recipesData || []).map(rc => [rc.id, calculateRecipeMetrics(rc).weightTotalG]));
+    // 반제품 안에 반제품이 들어 있으므로 값이 더 바뀌지 않을 때까지 반복 (최대 12회)
+    for (let pass = 0; pass < 12; pass++) {
+        let moved = false;
+        (recipesData || []).forEach(rc => (rc.ingredients || []).forEach(ig => {
+            if (ig.rowType !== 'SUB_RECIPE' || ig.fullBatch !== true) return;
+            const sub = recipesData.find(r => r.id === ig.subRecipeId);
+            if (!sub) return;
+            const q = subBatchQty(sub, rc.id), cur = parseFloat(ig.qty) || 0;
+            if (Math.abs(q - cur) < 0.005) return;
+            const k = rc.id + '||' + ig.rowId;
+            if (!changed.has(k)) changed.set(k, { rcId: rc.id, recipe: rc.productName, sub: sub.productName, before: cur });
+            changed.get(k).after = q;
+            ig.qty = q; ig.unit = 'EA'; rc.updatedAt = getTodayStr(); moved = true;
+        }));
+        if (!moved) break;
+    }
+    const rows = [...changed.values()].filter(r => Math.abs(r.after - r.before) >= 0.005);
+    let autoCnt = 0, fixedCnt = 0;
+    (recipesData || []).forEach(rc => (rc.ingredients || []).forEach(ig => { if (ig.rowType === 'SUB_RECIPE' && ig.subRecipeId) { if (ig.fullBatch === true) autoCnt++; else fixedCnt++; } }));
+    if (rows.length) {
+        persistRecipeChange();
+        if (typeof window.refreshProductPriceRecipeLinks === 'function') window.refreshProductPriceRecipeLinks();
+    }
+    renderRecipeWorkspace();
+    const totals = (recipesData || []).map(rc => ({ name: rc.productName, b: before.get(rc.id) || 0, a: calculateRecipeMetrics(rc).weightTotalG })).filter(t => Math.abs(t.a - t.b) >= 0.5);
+    const old = document.getElementById('subApplyResultModal'); if (old) old.remove();
+    const wrap = document.createElement('div');
+    wrap.id = 'subApplyResultModal';
+    wrap.className = 'fixed inset-0 bg-stone-950/60 z-50 flex items-center justify-center p-4';
+    wrap.onclick = (e) => { if (e.target === wrap) wrap.remove(); };
+    const th = 'py-2 px-2.5 text-left font-extrabold text-stone-600', td = 'py-1.5 px-2.5';
+    wrap.innerHTML = `<div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+        <div class="px-5 py-3.5 border-b border-stone-200 flex items-center justify-between"><h3 class="text-sm font-extrabold text-stone-900">반제품 변경 적용 결과</h3><button type="button" onclick="document.getElementById('subApplyResultModal').remove()" class="text-stone-400 hover:text-stone-700 text-lg font-bold cursor-pointer">×</button></div>
+        <div class="px-5 py-4 overflow-y-auto text-xs text-stone-700 flex flex-col gap-3">
+            <p>반제품 줄 ${autoCnt + fixedCnt}개 중 <b class="text-emerald-700">1배합 자동 ${autoCnt}개</b>를 확인했고, <b>수량 고정 ${fixedCnt}개</b>는 그대로 두었습니다.</p>
+            ${rows.length === 0 ? `<div class="py-6 text-center text-stone-500 font-bold">바뀐 반제품이 없어 갱신할 줄이 없습니다.</div>` : `
+            <div><div class="mb-1 font-extrabold text-stone-800">투입량이 바뀐 줄 (${rows.length}개)</div>
+            <div class="border border-stone-200 rounded-xl overflow-hidden"><table class="w-full border-collapse"><thead><tr class="bg-stone-100 border-b border-stone-200"><th class="${th}">레시피</th><th class="${th}">반제품</th><th class="${th} text-right">이전</th><th class="${th} text-right">갱신</th></tr></thead><tbody>
+            ${rows.map(r => `<tr class="border-b border-stone-100"><td class="${td} font-bold">${escapeHtml(r.recipe)}</td><td class="${td}">${escapeHtml(r.sub)}</td><td class="${td} text-right tabular-nums text-stone-500">${fmtDec(r.before, 2)} EA</td><td class="${td} text-right tabular-nums font-extrabold">${fmtDec(r.after, 2)} EA</td></tr>`).join('')}
+            </tbody></table></div></div>
+            <div><div class="mb-1 font-extrabold text-stone-800">중량합계가 바뀐 레시피 (${totals.length}개)</div>
+            <div class="border border-stone-200 rounded-xl overflow-hidden"><table class="w-full border-collapse"><thead><tr class="bg-stone-100 border-b border-stone-200"><th class="${th}">레시피</th><th class="${th} text-right">이전 (g)</th><th class="${th} text-right">갱신 (g)</th></tr></thead><tbody>
+            ${totals.map(t => `<tr class="border-b border-stone-100"><td class="${td} font-bold">${escapeHtml(t.name)}</td><td class="${td} text-right tabular-nums text-stone-500">${fmtDec(t.b, 0)}</td><td class="${td} text-right tabular-nums font-extrabold">${fmtDec(t.a, 0)}</td></tr>`).join('')}
+            </tbody></table></div></div>
+            <p class="text-stone-500">자동 저장됩니다.</p>`}
+            <p class="text-stone-500">반제품 줄 이름 옆의 [1배합 자동] / [수량 고정] 표시를 누르면 줄마다 바꿀 수 있습니다.</p>
+        </div>
+        <div class="px-5 py-3 border-t border-stone-200 flex justify-end"><button type="button" onclick="document.getElementById('subApplyResultModal').remove()" class="px-4 h-9 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-extrabold cursor-pointer">확인</button></div>
+    </div>`;
+    document.body.appendChild(wrap);
+}
+window.applySubRecipeChangesToAllRecipes = applySubRecipeChangesToAllRecipes;
+window.toggleSubFullBatch = toggleSubFullBatch;
 
 function mapRecipeRowFromDb(r, lookup) {
     let parsedJson = {};
