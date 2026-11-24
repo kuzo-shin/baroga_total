@@ -11,7 +11,7 @@
 // ============================================================================
 (function () {
   'use strict';
-  const DEFAULT_URL = ''; // 거래명세서 DB (구글 시트 웹 앱 주소). 비어 있으면 [DB 설정]에서 넣음
+  const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycby9CW0wLQ6GsJR1zCVOqwkJDxOlCeiLZTaCAThpWEXw7Kw0f7MJ1fow7y47mYw2fMzL8g/exec'; // 거래명세서 DB (다른 DB를 쓸 때만 [DB 설정]에서 바꿈)
   const URL_KEY = 'baroga_invoice_gas_url', ROWS = 21;
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const toast = (m, t) => (typeof window.showToast === 'function' ? window.showToast(m, t) : alert(m));
