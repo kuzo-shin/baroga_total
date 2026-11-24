@@ -1,4 +1,4 @@
-// [VERSION: ms_stock.js v1.0 - 2026-11-24 신규: 엠즈 재고 대시보드(발주 우선순위 · 유통기한 임박 · 반품 현황 · 발주 추이). 자료는 엠즈 e플랫폼에서 읽어 전용 DB(구글 시트)에 저장한 것을 불러옴]
+// [VERSION: ms_stock.js v1.1 - 2026-11-24 바로가 품목만 보기([바로가 품목 설정]에서 고른 상품, 정하지 않은 상품은 추정 · 전체 보기 전환 가능) / v1.0 - 2026-11-24 신규: 엠즈 재고 대시보드(발주 우선순위 · 유통기한 임박 · 반품 현황 · 발주 추이). 자료는 엠즈 e플랫폼에서 읽어 전용 DB(구글 시트)에 저장한 것을 불러옴]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - 엠즈 재고 (ms_stock.js)
 //  - 엠즈 e플랫폼(재고관리·주문관리) 화면에서 읽은 자료를 통째로 DB에 넣고, 여기서 계산해 보여 줌
@@ -10,6 +10,10 @@
 //      ledger { 'YYYY-MM': [[상품코드, 기초재고, 구매입고, 기말재고]] }                         ← 위탁상품 수불부 (순출고 = 기초 + 구매입고 − 기말)
 //      daily  [[상품코드, 일자, 기초, 당일증감, 기말]]                                          ← 일자별 수불현황 (전체 센터)
 //      orders [[매장코드, 매장명, 일자, 매출구분, 상품코드, 상품명, 규격, 입고수량, 공급가, 합계, 비고]] ← 주문대비 입고현황 (판매처)
+//      cfg    { own: { 상품코드: true|false } }                                                  ← 화면에서 정한 '바로가 품목' (갱신해도 유지)
+//  - '바로가 품목만' 보기: [바로가 품목 설정]에서 고른 상품만. 정하지 않은 상품은 '엠즈 입고에 연결돼 있거나 이름에 생지가 있으면 바로가 품목'으로 추정
+//    재고·유통기한은 상품코드로, 주문·반품은 상품명에서 맨 앞 S/M과 괄호 안 글자를 뗀 이름이 바로가 품목 이름과 같은 것으로 거름
+//    (엠즈의 매입처코드는 봉투·원두·케이크까지 같은 코드라 구분에 쓸 수 없음)
 //  - 수량 단위는 엠즈 화면 그대로(PK·EA·BOX). 단위가 EA이고 규격에 'N ea'가 있으면 화면에는 PK로 환산해 보여 줌
 // ============================================================================
 (function () {
@@ -30,7 +34,7 @@
   const tdr = td + ' text-right tabular-nums';
   const card = 'bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4';
 
-  let data = null, dbRevision = null, loaded = false, loading = false, saving = false, statusText = 'DB 미연결', view = 'DASH', previewOnly = false;
+  let data = null, dbRevision = null, loaded = false, loading = false, saving = false, statusText = 'DB 미연결', view = 'DASH', previewOnly = false, ownOnly = true;
   const root = () => document.getElementById('msStockRoot');
   function getUrl() { let v = ''; try { v = localStorage.getItem(URL_KEY) || ''; } catch (e) {} return v || DEFAULT_URL; }
   function setStatus(t) { statusText = t; const el = document.getElementById('mssStatus'); if (el) el.textContent = t; }
@@ -40,7 +44,7 @@
   }
   function normalize(p) {
     const arr = (v) => (Array.isArray(v) ? v : []);
-    return { v: p.v || 1, asOf: String(p.asOf || ''), period: p.period || {}, names: p.names || {}, stock: arr(p.stock), expiry: arr(p.expiry), ledger: p.ledger && typeof p.ledger === 'object' ? p.ledger : {}, daily: arr(p.daily), orders: arr(p.orders), importedAt: p.importedAt || '' };
+    return { v: p.v || 1, asOf: String(p.asOf || ''), period: p.period || {}, names: p.names || {}, stock: arr(p.stock), expiry: arr(p.expiry), ledger: p.ledger && typeof p.ledger === 'object' ? p.ledger : {}, daily: arr(p.daily), orders: arr(p.orders), cfg: p.cfg && typeof p.cfg === 'object' ? { own: p.cfg.own && typeof p.cfg.own === 'object' ? p.cfg.own : {} } : { own: {} }, importedAt: p.importedAt || '' };
   }
   async function pull(showMsg) {
     if (!getUrl()) { setStatus('DB 미연결'); render(); return; }
@@ -64,6 +68,7 @@
     const d = normalize(p || {});
     if (!d.asOf || !d.stock.length) return { ok: false, message: 'asOf와 stock이 필요합니다' };
     if (!loaded) { await pull(false); if (!loaded) return { ok: false, message: 'DB를 불러오지 못했습니다' }; }
+    if (data && data.cfg && Object.keys(data.cfg.own || {}).length && !Object.keys(d.cfg.own).length) d.cfg = data.cfg; // 화면에서 정한 바로가 품목 설정은 갱신해도 유지
     d.importedAt = new Date().toISOString();
     saving = true; setStatus('저장 중...');
     try {
@@ -122,8 +127,39 @@
     } catch (e) { out.why = '공장 재고 계산 오류: ' + e.message; }
     return out;
   }
+  // 상품코드별 바로가 품목 여부: 설정값이 있으면 그대로, 없으면 추정(엠즈 입고의 레시피 품목코드 연결이 있거나 이름에 '생지')
+  function ownMap(d) {
+    const feed = typeof window.barogaMsStockFeed === 'function' ? window.barogaMsStockFeed() : { links: {}, records: [] };
+    const linked = new Set(Object.keys(feed.links || {}).map(String)); (feed.records || []).forEach((r) => (r.items || []).forEach((i) => { if (i.code) linked.add(String(i.code)); }));
+    const cfg = (d.cfg && d.cfg.own) || {}, out = {};
+    d.stock.forEach((r) => { const c = String(r[0]), set = typeof cfg[c] === 'boolean'; const why = linked.has(c) ? '엠즈 입고 기록 있음' : /생지/.test(String(r[1])) ? "이름에 '생지'" : ''; out[c] = { on: set ? cfg[c] : !!why, set, why }; });
+    return out;
+  }
+  function openOwnModal() {
+    if (!data) return; const own = ownMap(data);
+    const rows = data.stock.slice().sort((a, b) => Number(own[String(b[0])].on) - Number(own[String(a[0])].on) || String(a[1]).localeCompare(String(b[1]), 'ko')).map((r) => { const c = String(r[0]), o = own[c]; return `<label class="flex items-center gap-2 px-2 py-1.5 border-b border-stone-100 cursor-pointer hover:bg-stone-50"><input type="checkbox" data-own-code="${esc(c)}" ${o.on ? 'checked' : ''} class="w-4 h-4"><span class="font-mono text-xs text-stone-500">${esc(c)}</span><span class="text-sm font-bold flex-1 min-w-0 truncate">${esc(r[1])}</span><span class="text-[11px] text-stone-400 whitespace-nowrap">${o.set ? '직접 정함' : o.why ? '추정: ' + esc(o.why) : '추정: 해당 없음'}</span></label>`; }).join('');
+    modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold">바로가 품목 설정</h3><div class="text-xs text-stone-500 mt-0.5 leading-relaxed">엠즈 위탁 재고 ${data.stock.length}품목 중 바로가 공장 제품을 체크해 주세요. 처음에는 엠즈 입고 기록이 있거나 이름에 '생지'가 있는 상품을 추정해 체크해 두었습니다. 저장하면 다음 갱신 때도 유지되고, 새로 생긴 상품은 다시 추정합니다.</div></div>
+      <div class="max-h-[60vh] overflow-y-auto">${rows}</div>
+      <div class="px-5 py-3 border-t border-stone-200 flex justify-end gap-2"><button type="button" onclick="MsStock.closeModal()" class="px-4 py-2 rounded-xl border border-stone-300 text-sm font-bold cursor-pointer">취소</button><button type="button" onclick="MsStock.saveOwn()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">저장</button></div>`);
+  }
+  async function saveOwn() {
+    if (!data || saving) return; if (previewOnly || !loaded) { toast('DB를 불러온 뒤에 저장할 수 있습니다.', 'error'); return; }
+    const own = {}; document.querySelectorAll('[data-own-code]').forEach((el) => { own[el.dataset.ownCode] = !!el.checked; });
+    const next = Object.assign({}, data, { cfg: { own: Object.assign({}, (data.cfg && data.cfg.own) || {}, own) } });
+    closeModal(); saving = true; setStatus('저장 중...');
+    try {
+      const json = await api({ action: 'replaceAll', baseRevision: dbRevision, payload: next }, 180000);
+      if (!json || json.ok === false) throw new Error((json && json.conflict ? '다른 기기에서 먼저 저장했습니다. [불러오기] 후 다시 설정해 주세요.' : (json && (json.message || json.error))) || '저장 실패');
+      dbRevision = Number(json.revision) || dbRevision; data = next; setStatus('저장됨 ' + nowHm() + ' · 엠즈 기준 ' + data.asOf); toast('바로가 품목 설정을 저장했습니다.', 'success');
+    } catch (e) { setStatus('저장 실패'); toast('바로가 품목 설정 저장 실패: ' + e.message, 'error'); } finally { saving = false; render(); }
+  }
   function compute() {
-    const d = data, asOfDate = dateOf(d.asOf), asOfYm = d.asOf.slice(0, 7);
+    const d0 = data, asOfDate = dateOf(d0.asOf), asOfYm = d0.asOf.slice(0, 7);
+    // 바로가 품목만 보기: [바로가 품목 설정]에서 정한 상품 (정하지 않은 상품은 추정)
+    const own = ownMap(d0), hasOwn = true, useOwn = ownOnly;
+    const normName = (s) => String(s || '').replace(/^[SM]\s*/, '').replace(/\([^)]*\)|\[[^\]]*\]/g, '').replace(/\s+/g, '').toLowerCase();
+    const ownCodes = new Set(Object.keys(own).filter((c) => own[c].on)), ownNames = new Set(d0.stock.filter((r) => ownCodes.has(String(r[0]))).map((r) => normName(r[1])));
+    const d = useOwn ? Object.assign({}, d0, { stock: d0.stock.filter((r) => ownCodes.has(String(r[0]))), expiry: d0.expiry.filter((r) => ownCodes.has(String(r[0]))), orders: d0.orders.filter((r) => ownNames.has(normName(r[5]))) }) : d0;
     const nameOf = (code) => { const s = d.stock.find((r) => String(r[0]) === String(code)); return s ? [s[1], s[2], s[3]] : (d.names[code] || [code, '', '']); };
     // 일평균 출고: 위탁상품 수불부의 순출고(기초 + 구매입고 − 기말) 합계 ÷ 일수 (이번 달은 1일~기준일, 지난달은 한 달 전체)
     const months = Object.keys(d.ledger).sort(), outBy = {}, outThis = {};
@@ -164,7 +200,7 @@
     const weekOf = (s) => { const dt = dateOf(s), dow = (dt.getDay() + 6) % 7; return ymd(new Date(dt.getTime() - dow * dayMs)); }; // 그 주 월요일
     const weeks = [...new Set(sales.map((r) => weekOf(r[O.date])))].sort();
     const trend = (keyIdx, labelIdx) => { const m = {}; sales.forEach((r) => { const k = String(r[keyIdx]), x = m[k] || (m[k] = { key: k, label: String(r[labelIdx]), w: {}, qty: 0, amt: 0 }); const wk = weekOf(r[O.date]), c = x.w[wk] || (x.w[wk] = { qty: 0, amt: 0 }); c.qty += Number(r[O.qty]) || 0; c.amt += Number(r[O.supply]) || 0; x.qty += Number(r[O.qty]) || 0; x.amt += Number(r[O.supply]) || 0; }); return Object.values(m).sort((a, b) => b.amt - a.amt); };
-    return { items, lots, returns, sales, weeks, byItem: trend(O.code, O.name), byStore: trend(O.store, O.store), O, days, daysThis, months, fac, asOfDate };
+    return { items, lots, returns, sales, weeks, byItem: trend(O.code, O.name), byStore: trend(O.store, O.store), O, days, daysThis, months, fac, asOfDate, hasOwn, useOwn, ownGuess: Object.values(own).filter((o) => o.on && !o.set).length, stockAll: d0.stock.length, stockShown: d.stock.length, ordersAll: d0.orders.length, ordersShown: d.orders.length };
   }
 
   // ---------- 화면 ----------
@@ -225,7 +261,7 @@
           ${kpi('유통기한 30일 이내', exp30 + '개 품목', '기한 지난 재고 포함', exp30 ? 'text-rose-700' : '')}
           ${kpi('기한 전 소진 어려움', unsold + '개 품목', '지금 출고 속도 기준', unsold ? 'text-violet-800' : '')}
           ${kpi('반품 금액', won(retAmt), `${C.returns.length}건 · 조회 기간 내`, retAmt < 0 ? 'text-rose-700' : '')}
-          ${kpi('엠즈 재고 품목', d.stock.length + '개', `가맹점 발주 ${num(C.sales.length, 0)}줄 · 매장 ${C.byStore.length}곳`)}
+          ${kpi(C.useOwn ? '바로가 재고 품목' : '엠즈 재고 품목', C.stockShown + '개', `${C.useOwn ? `전체 ${C.stockAll}개 중 · ` : ''}가맹점 발주 ${num(C.sales.length, 0)}줄 · 매장 ${C.byStore.length}곳`)}
         </div>
         ${sec('발주 우선순위 — 회전일 짧은 순 10개', orderTable(C, 10), 'ORDER')}
         ${sec('유통기한 임박 — 빠른 순 10개', expiryTable(C, 10), 'EXPIRY')}
@@ -235,11 +271,12 @@
     else if (view === 'RETURN') body = sec('반품 현황', returnBlock(C));
     else if (view === 'TREND') body = sec('품목별 발주 추이 — 주(월요일 시작)별 입고수량, 공급가 큰 순', trendTable(C, C.byItem, '상품명')) + sec('가맹점별 발주 추이 — 주별 입고수량, 공급가 큰 순', trendTable(C, C.byStore, '매장'));
     el.innerHTML = `<div class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-4 flex flex-col gap-4">${head}${basis}
-        <div class="flex flex-wrap gap-1.5">${tabBtn('DASH', '대시보드')}${tabBtn('ORDER', '발주 우선순위')}${tabBtn('EXPIRY', '유통기한 임박')}${tabBtn('RETURN', '반품 현황')}${tabBtn('TREND', '발주 추이')}</div>
+        <div class="flex flex-wrap items-center justify-between gap-2"><div class="flex flex-wrap gap-1.5">${tabBtn('DASH', '대시보드')}${tabBtn('ORDER', '발주 우선순위')}${tabBtn('EXPIRY', '유통기한 임박')}${tabBtn('RETURN', '반품 현황')}${tabBtn('TREND', '발주 추이')}</div>
+          <div class="flex items-center gap-1.5 text-xs"><span class="text-stone-500">${C.useOwn ? `바로가 품목만 표시 중 (재고 ${C.stockShown}/${C.stockAll}품목 · 주문 ${num(C.ordersShown, 0)}/${num(C.ordersAll, 0)}줄)${C.ownGuess ? ` · <b class="text-amber-800">${C.ownGuess}개는 추정</b>` : ''}` : '엠즈 위탁 전체 품목 표시 중'}</span><button type="button" onclick="MsStock.toggleOwn()" class="px-3 py-1.5 rounded-lg border border-stone-300 font-bold cursor-pointer hover:bg-stone-50">${C.useOwn ? '전체 품목 보기' : '바로가 품목만 보기'}</button><button type="button" onclick="MsStock.openOwnModal()" class="px-3 py-1.5 rounded-lg border border-stone-300 font-bold cursor-pointer hover:bg-stone-50">바로가 품목 설정</button></div></div>
         ${body}</div><div id="mssModal"></div>`;
   }
   let mounted = false;
   function mount() { render(); if (!mounted) { mounted = true; pull(false); } }
   window.mountMsStockApp = mount;
-  window.MsStock = { mount, pull, pickFile, importSnapshot, preview, openDbModal, saveDbUrl, closeModal, setView: (v) => { view = v; render(); }, _debug: () => ({ data, dbRevision, loaded, computed: data ? compute() : null }) };
+  window.MsStock = { mount, pull, pickFile, importSnapshot, preview, openDbModal, saveDbUrl, closeModal, setView: (v) => { view = v; render(); }, toggleOwn: () => { ownOnly = !ownOnly; render(); }, openOwnModal, saveOwn, _debug: () => ({ data, dbRevision, loaded, computed: data ? compute() : null }) };
 })();
