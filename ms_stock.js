@@ -1,4 +1,4 @@
-// [VERSION: ms_stock.js v1.5 - 2026-11-24 [전체 품목 보기] 버튼에 색 · 발주 추이 위 합계에 (n품목)/(n점) 표기, 표 첫 줄은 '주차별 합계' · 가맹점 단위 곳→점 / v1.4 - 2026-11-24 발주 추이: 추이 그래프·칸 아래 막대 삭제(숫자 + ▲▼만) / v1.3 - 2026-11-24 발주 추이: 품목별·가맹점별 좌우 카드 · 맨 위 합계 줄 · N주차(실제 날짜 범위, 7일 미만 주 표시) · 줄마다 막대 그래프와 칸 아래 막대 / v1.2 - 2026-11-24 화면을 다른 메뉴와 같은 모양으로(상단 탭 바 + 오른쪽 DB 상태·새로고침, 버튼 모양 통일) · 기준 안내를 한 줄 요약 + [계산 기준] 펼침으로 묶음 · 구역 제목 키우고 설명은 괄호로 / v1.1 - 2026-11-24 바로가 품목만 보기([바로가 품목 설정]에서 고른 상품, 정하지 않은 상품은 추정 · 전체 보기 전환 가능) / v1.0 - 2026-11-24 신규: 엠즈 재고 대시보드(발주 우선순위 · 유통기한 임박 · 반품 현황 · 발주 추이). 자료는 엠즈 e플랫폼에서 읽어 전용 DB(구글 시트)에 저장한 것을 불러옴]
+// [VERSION: ms_stock.js v1.6 - 2026-11-24 6. 그래프 탭 신설(품목 발주금액 TOP10의 일자별 발주 수량 · 가맹점 발주 총액의 일자별 변화) · 발주 추이 표 숫자 줄 맞춤 / v1.5 - 2026-11-24 [전체 품목 보기] 버튼에 색 · 발주 추이 위 합계에 (n품목)/(n점) 표기, 표 첫 줄은 '주차별 합계' · 가맹점 단위 곳→점 / v1.4 - 2026-11-24 발주 추이: 추이 그래프·칸 아래 막대 삭제(숫자 + ▲▼만) / v1.3 - 2026-11-24 발주 추이: 품목별·가맹점별 좌우 카드 · 맨 위 합계 줄 · N주차(실제 날짜 범위, 7일 미만 주 표시) · 줄마다 막대 그래프와 칸 아래 막대 / v1.2 - 2026-11-24 화면을 다른 메뉴와 같은 모양으로(상단 탭 바 + 오른쪽 DB 상태·새로고침, 버튼 모양 통일) · 기준 안내를 한 줄 요약 + [계산 기준] 펼침으로 묶음 · 구역 제목 키우고 설명은 괄호로 / v1.1 - 2026-11-24 바로가 품목만 보기([바로가 품목 설정]에서 고른 상품, 정하지 않은 상품은 추정 · 전체 보기 전환 가능) / v1.0 - 2026-11-24 신규: 엠즈 재고 대시보드(발주 우선순위 · 유통기한 임박 · 반품 현황 · 발주 추이). 자료는 엠즈 e플랫폼에서 읽어 전용 DB(구글 시트)에 저장한 것을 불러옴]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - 엠즈 재고 (ms_stock.js)
 //  - 엠즈 e플랫폼(재고관리·주문관리) 화면에서 읽은 자료를 통째로 DB에 넣고, 여기서 계산해 보여 줌
@@ -232,6 +232,50 @@
       ${limit ? '' : `<div class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">${gTable('상품별', group(O.name))}${gTable('매장별', group(O.store))}</div>`}
       ${tableWrap(`<th class="${th}">일자</th><th class="${th}">매장</th><th class="${th}">상품명</th><th class="${th}">매출구분</th><th class="${th} text-right">수량</th><th class="${th} text-right">금액(합계)</th><th class="${th}">비고</th>`, dRows, '반품이 없습니다.', 7)}`;
   }
+  // ---------- 6. 그래프 ----------
+  // 색: 8가지(색각 이상 구분 검증된 순서). 9·10번째는 같은 색을 다시 쓰되 긴 점선 + 네모 점으로 구분
+  const G_COLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'];
+  const G_INK = '#57534e', G_GRID = '#e7e5e4';
+  let charts = [], pendingGraph = null;
+  const shortName = (t) => String(t || '').replace(/^[SM]?\s*[\(\[][^\)\]]*[\)\]]\s*/, '').replace(/^[SM](?=[가-힣])/, '').replace(/_.*$/, '').trim() || String(t || '');
+  function graphData(C) {
+    const O = C.O, dates = Array.from(new Set(C.sales.map((r) => String(r[O.date]).slice(0, 10)))).sort();
+    const top = C.byItem.slice(0, 10), idx = {}; dates.forEach((dt, i) => { idx[dt] = i; });
+    const qty = {}; top.forEach((x) => { qty[x.key] = dates.map(() => 0); });
+    const amt = dates.map(() => 0);
+    C.sales.forEach((r) => { const i = idx[String(r[O.date]).slice(0, 10)]; if (i == null) return; amt[i] += Number(r[O.supply]) || 0; const q = qty[String(r[O.code])]; if (q) q[i] += Number(r[O.qty]) || 0; });
+    const wd = ['일', '월', '화', '수', '목', '금', '토'];
+    return { dates, labels: dates.map((dt) => { const x = dateOf(dt); return `${x.getMonth() + 1}/${x.getDate()}(${wd[x.getDay()]})`; }), top, qty, amt };
+  }
+  function graphBody(C, sec) {
+    const G = graphData(C);
+    if (!G.dates.length) return `<div class="${card} text-sm text-stone-500">발주 자료가 없습니다.</div>`;
+    const total = G.amt.reduce((a, v) => a + v, 0), maxI = G.amt.indexOf(Math.max(...G.amt)), minI = G.amt.indexOf(Math.min(...G.amt));
+    const stat = (l, v) => `<span class="text-xs text-stone-500">${l} <b class="text-stone-800 tabular-nums">${v}</b></span>`;
+    return `<div class="text-xs text-stone-500 -mb-1">가로축은 발주가 있었던 날만 표시합니다(발주가 없는 날은 건너뜀). 선 위에 마우스를 올리면 그날의 값이 나오고, 아래 범례의 이름을 누르면 그 선을 숨기거나 다시 보일 수 있습니다. 마지막 날은 자료를 읽은 시각까지만 들어 있습니다.</div>
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+        ${sec('품목별 발주 수량', '발주금액 TOP 10 · 일자별 입고수량', `<div style="position:relative;height:460px"><canvas id="mssChartItem"></canvas></div>`)}
+        ${sec('가맹점 발주 총액', '일자별 공급가 합계', `<div class="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-2.5 px-3 py-2 rounded-xl bg-stone-50 border border-stone-200"><span class="text-xs font-bold text-stone-500">공급가 합계</span><span class="text-xl font-extrabold text-stone-900 tabular-nums">${won(total)}</span>${stat('하루 평균', won(total / G.dates.length))}${stat('가장 많은 날', `${G.labels[maxI]} ${won(G.amt[maxI])}`)}${stat('가장 적은 날', `${G.labels[minI]} ${won(G.amt[minI])}`)}</div><div style="position:relative;height:392px"><canvas id="mssChartStore"></canvas></div>`)}
+      </div>`;
+  }
+  function drawGraphs(C) {
+    if (typeof window.Chart !== 'function') return;
+    const G = graphData(C), a = document.getElementById('mssChartItem'), b = document.getElementById('mssChartStore');
+    if (!a || !b || !G.dates.length) return;
+    const font = { family: "'Pretendard', 'Noto Sans KR', sans-serif", size: 11 };
+    const axis = (fmt) => ({ x: { grid: { display: false }, ticks: { color: G_INK, font, maxRotation: 0, autoSkip: true, autoSkipPadding: 8 }, border: { color: G_GRID } }, y: { beginAtZero: true, grid: { color: G_GRID }, border: { display: false }, ticks: { color: G_INK, font, callback: fmt } } });
+    const tip = { backgroundColor: '#1c1917', titleFont: font, bodyFont: font, padding: 10, boxPadding: 4, usePointStyle: true };
+    charts.push(new Chart(a, { type: 'line',
+      data: { labels: G.labels, datasets: G.top.map((x, i) => { const again = i >= G_COLORS.length, col = G_COLORS[i % G_COLORS.length]; return { label: `${i + 1}. ${shortName(x.label)}`, data: G.qty[x.key], borderColor: col, backgroundColor: col, borderWidth: 2, borderDash: again ? [9, 4] : [3, 3], pointStyle: again ? 'rect' : 'circle', pointRadius: 3, pointHoverRadius: 6, pointBorderColor: '#ffffff', pointBorderWidth: 1, tension: 0 }; }) },
+      options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: axis((v) => num(v, 0)),
+        plugins: { legend: { position: 'bottom', labels: { color: G_INK, font, usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 12 } }, tooltip: Object.assign({ itemSort: (p, q) => q.parsed.y - p.parsed.y, callbacks: { title: (it) => it[0].label, label: (it) => ` ${G.top[it.datasetIndex].label}: ${num(it.parsed.y, 0)}` } }, tip) } } }));
+    const col = G_COLORS[0];
+    charts.push(new Chart(b, { type: 'line',
+      data: { labels: G.labels, datasets: [{ label: '공급가 합계', data: G.amt.map((v) => Math.round(v)), borderColor: col, backgroundColor: col, borderWidth: 2, borderDash: [3, 3], pointRadius: 4, pointHoverRadius: 7, pointBorderColor: '#ffffff', pointBorderWidth: 1, tension: 0 }] },
+      options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: axis((v) => (v >= 10000 ? num(v / 10000, 0) + '만' : num(v, 0))),
+        plugins: { legend: { display: false }, tooltip: Object.assign({ callbacks: { label: (it) => ` 공급가 합계: ${won(it.parsed.y)}` } }, tip) } } }));
+  }
+
   // 발주 추이 표: 맨 위 합계 줄 · 주차(실제 날짜 범위) · 숫자 아래 ▲▼ 증감
   function trendTable(C, list, firstLabel, limit) {
     const wk = C.weeks, P = (data && data.period) || {}, dates = C.sales.map((r) => String(r[C.O.date]).slice(0, 10)).sort();
@@ -250,21 +294,22 @@
     const tot = { w: {}, qty: 0, amt: 0 }; list.forEach((x) => { tot.qty += x.qty; tot.amt += x.amt; wk.forEach((w) => { const c = x.w[w]; if (c) { const t = tot.w[w] || (tot.w[w] = { qty: 0, amt: 0 }); t.qty += c.qty; t.amt += c.amt; } }); });
     const shown = limit ? list.slice(0, limit) : list;
     const rows = list.length ? line('주차별 합계', tot, true) + shown.map((x) => line(x.label, x)).join('') : '';
-    const table = tableWrap(`<th class="${th}">${firstLabel}</th>${W.map((w) => `<th class="${th} text-right">${w.no}주차<div class="text-[10px] font-bold ${w.part ? 'text-amber-700' : 'text-stone-400'}">${w.range}${w.part ? `<br>(${w.days}일)` : ''}</div></th>`).join('')}<th class="${th} text-right">수량 합계</th><th class="${th} text-right">공급가 합계</th>`, rows, '발주 자료가 없습니다.', wk.length + 3).replace(/py-2 px-2 /g, 'py-2 px-2 align-bottom ').replace(/py-1\.5 px-2 /g, 'py-2 px-2 whitespace-nowrap ');
+    const table = tableWrap(`<th class="${th}">${firstLabel}</th>${W.map((w) => `<th class="${th} text-right">${w.no}주차<div class="text-[10px] font-bold ${w.part ? 'text-amber-700' : 'text-stone-400'}">${w.range}${w.part ? `<br>(${w.days}일)` : ''}</div></th>`).join('')}<th class="${th} text-right">수량 합계</th><th class="${th} text-right">공급가 합계</th>`, rows, '발주 자료가 없습니다.', wk.length + 3).replace(/py-2 px-2 /g, 'py-2 px-2 align-bottom ').replace(/py-1\.5 px-2 /g, 'py-2 px-2 whitespace-nowrap align-top ');
     return `<div class="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-2.5 px-3 py-2 rounded-xl bg-stone-50 border border-stone-200"><span class="text-xs font-bold text-stone-500">공급가 합계 <span class="text-stone-800">(${list.length}${firstLabel === '매장' ? '점' : '품목'})</span></span><span class="text-xl font-extrabold text-stone-900 tabular-nums">${won(tot.amt)}</span><span class="text-xs text-stone-500">수량 <b class="text-stone-800 tabular-nums">${num(tot.qty, 0)}</b></span></div>${table}`;
   }
 
   function render() {
     const el = root(); if (!el) return;
+    charts.forEach((c) => { try { c.destroy(); } catch (e) {} }); charts = []; pendingGraph = null;
     const dbOk = !!getUrl() && loaded, dbCls = !getUrl() ? 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100' : dbOk ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100' : 'bg-stone-50 text-stone-700 border-stone-200 hover:bg-stone-100';
     const bar = `<div class="w-full bg-stone-100/90 border-b border-stone-200 no-print"><div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-2">
-        <div class="flex flex-wrap items-center gap-1.5">${tabBtn('DASH', 'layout-dashboard', '1. 대시보드')}${tabBtn('ORDER', 'clipboard-list', '2. 발주 우선순위')}${tabBtn('EXPIRY', 'calendar-days', '3. 유통기한 임박')}${tabBtn('RETURN', 'rotate-ccw', '4. 반품 현황')}${tabBtn('TREND', 'trending-up', '5. 발주 추이')}</div>
+        <div class="flex flex-wrap items-center gap-1.5">${tabBtn('DASH', 'layout-dashboard', '1. 대시보드')}${tabBtn('ORDER', 'clipboard-list', '2. 발주 우선순위')}${tabBtn('EXPIRY', 'calendar-days', '3. 유통기한 임박')}${tabBtn('RETURN', 'rotate-ccw', '4. 반품 현황')}${tabBtn('TREND', 'trending-up', '5. 발주 추이')}${tabBtn('GRAPH', 'bar-chart-3', '6. 그래프')}</div>
         <div class="flex items-center gap-1.5 ml-auto">
           <button type="button" onclick="MsStock.openDbModal()" title="DB 주소 설정" class="flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-xl text-xs font-bold border transition cursor-pointer ${dbCls}"><span class="w-2 h-2 rounded-full ${!getUrl() ? 'bg-amber-500' : dbOk ? 'bg-emerald-500' : 'bg-stone-400'}"></span><span id="mssStatusText">${esc(statusText)}</span><i data-lucide="settings" class="w-3.5 h-3.5 ml-0.5 opacity-75"></i></button>
           <button type="button" onclick="MsStock.pickFile()" title="엠즈에서 읽어 만든 JSON 파일로 DB를 바꿉니다 (보통은 Claude가 자동으로 저장)" class="${BTN}"><i data-lucide="file-up" class="w-3.5 h-3.5"></i><span>자료 가져오기</span></button>
           <button type="button" onclick="MsStock.pull(true)" title="DB에서 다시 불러오기" class="flex items-center justify-center w-9 h-9 rounded-xl border border-stone-200 bg-white hover:bg-stone-100 text-stone-700 transition cursor-pointer"><i data-lucide="refresh-cw" class="w-4 h-4"></i></button>
         </div></div></div>`;
-    const shell = (inner) => { el.innerHTML = `<div class="w-full">${bar}<div class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-4 flex flex-col gap-4">${inner}</div></div><div id="mssModal"></div>`; if (window.lucide) lucide.createIcons(); };
+    const shell = (inner) => { el.innerHTML = `<div class="w-full">${bar}<div class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-4 flex flex-col gap-4">${inner}</div></div><div id="mssModal"></div>`; if (window.lucide) lucide.createIcons(); if (pendingGraph) { const g = pendingGraph; pendingGraph = null; drawGraphs(g); } };
     if (!getUrl() && !(previewOnly && data)) { shell(`<div class="${card} text-sm text-stone-600"><b>엠즈 재고 DB가 아직 연결되지 않았습니다.</b> 구글 시트에 <span class="font-mono">7_ms_stock.gs</span>를 배포한 뒤 오른쪽 위 DB 버튼에 웹 앱 주소를 넣어 주세요.</div>`); return; }
     if (!data) { shell(`<div class="${card} text-sm text-stone-600">${loading ? '불러오는 중입니다...' : loaded ? '<b>저장된 엠즈 재고 자료가 없습니다.</b> 엠즈 e플랫폼에 로그인한 뒤 Claude에게 "엠즈 재고 갱신해줘"라고 요청하면 자료를 읽어 저장합니다.' : 'DB를 불러오지 못했습니다. 오른쪽 위 새로고침 버튼을 눌러 주세요.'}</div>`); return; }
     const C = compute(), d = data;
@@ -303,6 +348,7 @@
     else if (view === 'EXPIRY') body = sec('유통기한 임박', '100일 이내 또는 기한 전 소진이 어려운 재고 · 보라색 = 소진 불가 예상', expiryTable(C));
     else if (view === 'RETURN') body = sec('반품 현황', '', returnBlock(C));
     else if (view === 'TREND') body = `<div class="text-xs text-stone-500 -mb-1">주차는 월요일~일요일 기준이며 조회 기간 안의 날짜만 셉니다. <b class="text-amber-700">(N일)</b> 표시가 있는 주는 7일이 안 되는 주라서 증감을 표시하지 않고 않습니다. ▲▼는 바로 앞 주 대비 <b style="color:#059669">증가</b> · <b style="color:#e11d48">감소</b>입니다.</div><div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">${sec('품목별 발주 추이', '주차별 입고수량 · 공급가 큰 순', trendTable(C, C.byItem, '상품명'))}${sec('가맹점별 발주 추이', '주차별 입고수량 · 공급가 큰 순', trendTable(C, C.byStore, '매장'))}</div>`;
+    if (view === 'GRAPH') { body = graphBody(C, sec); pendingGraph = C; }
     shell(basis + body);
   }
   let mounted = false;
