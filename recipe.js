@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: v3.17 - 2026-11-24 충전합계(G) 대신 레시피중량(G) 표시(반제품 최신 1배합 기준, 중량합계와 다르면 빨간색) / v3.16 - 2026-11-24 [반제품 변경 적용] 버튼 · 반제품 줄 1배합 자동/수량 고정 표시 / v3.15 - 2026-11-20 ⚠규격 경고는 단가 있는 재료만 · 원가 캐시 키를 발주내역 지문으로 / v3.14 3~5단계 (단가 일괄적용 시 기존 연결·수동고정 보존·포장재 5원 자동보정 제거·규격 인식 경고·반제품 손실률·품목코드 중복 방지·CSV 안전 처리·원가 계산 캐시) / v3.13 2단계 보안 (DB 요청에 접속 코드 첨부) / v3.12 1단계 데이터 손실 방지 (자동 저장 · 저장 응답 확인 · 리비전 충돌 방지 · 사진 분리 저장 · 미저장 수정분 보호 · 샘플추가 버튼 제거)]
+// [VERSION: v3.18 - 2026-11-24 레시피중량(G) → 원재료 총투입(G)(반제품 속 원재료 포함·손실 전), 반제품 변경 미적용 경고는 중량합계에 표시 / v3.17 - 2026-11-24 충전합계(G) 대신 레시피중량(G) 표시(반제품 최신 1배합 기준, 중량합계와 다르면 빨간색) / v3.16 - 2026-11-24 [반제품 변경 적용] 버튼 · 반제품 줄 1배합 자동/수량 고정 표시 / v3.15 - 2026-11-20 ⚠규격 경고는 단가 있는 재료만 · 원가 캐시 키를 발주내역 지문으로 / v3.14 3~5단계 (단가 일괄적용 시 기존 연결·수동고정 보존·포장재 5원 자동보정 제거·규격 인식 경고·반제품 손실률·품목코드 중복 방지·CSV 안전 처리·원가 계산 캐시) / v3.13 2단계 보안 (DB 요청에 접속 코드 첨부) / v3.12 1단계 데이터 손실 방지 (자동 저장 · 저장 응답 확인 · 리비전 충돌 방지 · 사진 분리 저장 · 미저장 수정분 보호 · 샘플추가 버튼 제거)]
 // 바로가 공장 통합 관리 시스템 - 레시피 전용 모듈 (recipe.js)
 // ============================================================================
 
@@ -384,13 +384,14 @@ function evaluateRecipeBaseTotals(rc, visitedIds = new Set(), lookup = null, liv
     if (!lookup) lookup = buildRawCatalogLookupMaps();
     ensureRecipeSchema(rc, lookup);
     if (visitedIds.has(rc.id)) {
-        return { weightTotalG: 0, netWeightG: 0, fillingWeightG: 0, rawCostTotal: 0, baseYieldQty: 1, itemBreakdown: [] };
+        return { weightTotalG: 0, netWeightG: 0, fillingWeightG: 0, rawInputG: 0, rawCostTotal: 0, baseYieldQty: 1, itemBreakdown: [] };
     }
     const nextVisited = new Set(visitedIds);
     nextVisited.add(rc.id);
 
     let weightTotalG = 0;
     let fillingWeightG = 0;
+    let rawInputG = 0; // 원재료 총투입: 반제품 속 원재료까지, 반제품 손실을 빼기 전 무게로 합산
     let rawCostTotal = 0;
     const itemBreakdown = [];
 
@@ -421,6 +422,7 @@ function evaluateRecipeBaseTotals(rc, visitedIds = new Set(), lookup = null, liv
                 const effCost = subEval.rawCostTotal * scale;
                 const isFilling = /(충전물|필링|앙금|크림|잼)/.test(subRc.productName || ig.item || '');
                 weightTotalG += effWeightG;
+                rawInputG += (subEval.rawInputG || 0) * scale;
                 if (isFilling) fillingWeightG += effWeightG;
                 rawCostTotal += effCost;
                 itemBreakdown.push({ ig, subRc, subEval, scale, effWeightG, effCost, linkedRaw: null });
@@ -438,6 +440,7 @@ function evaluateRecipeBaseTotals(rc, visitedIds = new Set(), lookup = null, liv
             : (specG > 0 ? (uPrice / specG) * effWeightG : 0);
 
         weightTotalG += effWeightG;
+        rawInputG += effWeightG;
         if (/(충전물|필링|앙금)/.test(ig.item || '')) fillingWeightG += effWeightG;
         rawCostTotal += effCost;
         itemBreakdown.push({ ig, subRc: null, subEval: null, scale: 1, effWeightG, effCost, linkedRaw });
@@ -450,7 +453,7 @@ function evaluateRecipeBaseTotals(rc, visitedIds = new Set(), lookup = null, liv
     const customBase = parseFloat(rc.customProductionQty) || 0;
     const baseYieldQty = customBase > 0 ? (customBase * (1 - lossR / 100)) : (autoYield > 0 ? autoYield : 1);
 
-    return { weightTotalG, netWeightG, fillingWeightG, rawCostTotal, baseYieldQty, itemBreakdown };
+    return { weightTotalG, netWeightG, fillingWeightG, rawInputG, rawCostTotal, baseYieldQty, itemBreakdown };
 }
 
 // 제품단가 탭(price.js)에서 동일 품목코드(1순위) 또는 품목명(2순위)의 바로가 출고가(1ea) 조회
@@ -1262,14 +1265,19 @@ ${fmtDec(m.unitPackCost, 1)}원 × ${fmtDec(m.batchPkQty, 2)}pk = ${fmtDec(m.tot
 ${fmtDec(m.rawMaterialCost, 1)}원 + ${fmtDec(m.totalPackCost, 1)}원 = ${fmtDec(m.productionCost, 2)}원`;
     const tipWeightTotal = `[중량합계(G) 계산식] 배합 원재료·반제품(${m.itemBreakdown.length}종) 투입중량 합계
 = ${fmtDec(m.weightTotalG, 0)}g${m.lossRatio > 0 ? ` (손실 ${fmtDec(m.lossWeightG, 1)}g 제외 시 가용중량 ${fmtDec(m.netWeightG, 1)}g)` : ''}`;
-    // 레시피중량: '1배합 자동' 반제품을 최신 1배합으로 다시 계산한 중량 (중량합계와 다르면 [반제품 변경 적용] 필요)
+    // 반제품이 바뀌었는데 아직 [반제품 변경 적용]을 누르지 않았으면 중량합계에 경고
     const liveWeightG = evaluateRecipeBaseTotals(rc, new Set(), null, true).weightTotalG;
     const liveDiffG = liveWeightG - m.weightTotalG;
     const liveStale = Math.abs(liveDiffG) >= 0.5;
-    const tipLiveWeight = `[레시피중량(G)] 반제품(1배합 자동 줄)을 최신 1배합 분량으로 다시 계산한 중량
-= ${fmtDec(liveWeightG, 0)}g` + (liveStale
-        ? `\n⚠ 중량합계(${fmtDec(m.weightTotalG, 0)}g)와 ${liveDiffG > 0 ? '+' : ''}${fmtDec(liveDiffG, 0)}g 차이 → 반제품 레시피가 바뀌었습니다. [반제품 변경 적용]을 누르면 중량합계·생산수량·원가가 이 값으로 맞춰집니다.`
-        : `\n중량합계와 같습니다 (반제품 변경 반영됨). 수량 고정 줄은 입력한 양 그대로 계산합니다.`);
+    const tipStale = liveStale ? `\n⚠ 반제품 레시피가 바뀌었습니다. [반제품 변경 적용]을 누르면 ${fmtDec(liveWeightG, 0)}g (${liveDiffG > 0 ? '+' : ''}${fmtDec(liveDiffG, 0)}g)으로 맞춰집니다.` : '';
+    // 원재료 총투입: 반제품 속 원재료까지 모두 풀어서, 반제품 손실을 빼기 전 무게로 합산
+    const rawInputG = evaluateRecipeBaseTotals(rc).rawInputG || 0;
+    const directRawG = m.itemBreakdown.reduce((a, x) => a + (x.subRc ? 0 : x.effWeightG), 0);
+    const subLossG = rawInputG - m.weightTotalG;
+    const tipRawInput = `[원재료 총투입(G)] 이 배합에 들어간 원재료 무게 전체 (반제품 속 원재료 포함, 반제품 손실을 빼기 전)
+= 직접 넣는 원재료 ${fmtDec(directRawG, 0)}g + 반제품 속 원재료 ${fmtDec(rawInputG - directRawG, 0)}g = ${fmtDec(rawInputG, 0)}g` + (Math.abs(subLossG) >= 0.5
+        ? `\n중량합계(${fmtDec(m.weightTotalG, 0)}g)와의 차이 ${fmtDec(subLossG, 0)}g = 반제품을 만들 때의 손실`
+        : `\n반제품 손실이 없어 중량합계와 같습니다.`);
 
     rightEl.innerHTML = `
         <div class="bg-white rounded-xl border border-stone-300 shadow-2xs p-2.5">
@@ -1332,9 +1340,9 @@ ${fmtDec(m.rawMaterialCost, 1)}원 + ${fmtDec(m.totalPackCost, 1)}원 = ${fmtDec
                             </tr>
                             <tr>
                                 <td class="fd-kv-label" data-tip="${escapeHtml(tipWeightTotal)}">중량합계(G)</td>
-                                <td class="fd-kv-val font-extrabold text-stone-900" data-tip="${escapeHtml(tipWeightTotal)}">${fmtDec(m.weightTotalG, 0)}</td>
-                                <td class="fd-kv-label" data-tip="${escapeHtml(tipLiveWeight)}">레시피중량(G)</td>
-                                <td class="fd-kv-val font-extrabold ${liveStale ? 'text-rose-600' : 'text-stone-900'}" data-tip="${escapeHtml(tipLiveWeight)}">${fmtDec(liveWeightG, 0)}${liveStale ? ' ⚠' : ''}</td>
+                                <td class="fd-kv-val font-extrabold ${liveStale ? 'text-rose-600' : 'text-stone-900'}" data-tip="${escapeHtml(tipWeightTotal + tipStale)}">${fmtDec(m.weightTotalG, 0)}${liveStale ? ' ⚠' : ''}</td>
+                                <td class="fd-kv-label" data-tip="${escapeHtml(tipRawInput)}">원재료 총투입(G)</td>
+                                <td class="fd-kv-val font-extrabold text-stone-900" data-tip="${escapeHtml(tipRawInput)}">${fmtDec(rawInputG, 0)}</td>
                             </tr>
                         </tbody>
                     </table>
