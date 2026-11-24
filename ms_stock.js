@@ -1,4 +1,4 @@
-// [VERSION: ms_stock.js v1.4 - 2026-11-24 발주 추이: 추이 그래프·칸 아래 막대 삭제(숫자 + ▲▼만) / v1.3 - 2026-11-24 발주 추이: 품목별·가맹점별 좌우 카드 · 맨 위 합계 줄 · N주차(실제 날짜 범위, 7일 미만 주 표시) · 줄마다 막대 그래프와 칸 아래 막대 / v1.2 - 2026-11-24 화면을 다른 메뉴와 같은 모양으로(상단 탭 바 + 오른쪽 DB 상태·새로고침, 버튼 모양 통일) · 기준 안내를 한 줄 요약 + [계산 기준] 펼침으로 묶음 · 구역 제목 키우고 설명은 괄호로 / v1.1 - 2026-11-24 바로가 품목만 보기([바로가 품목 설정]에서 고른 상품, 정하지 않은 상품은 추정 · 전체 보기 전환 가능) / v1.0 - 2026-11-24 신규: 엠즈 재고 대시보드(발주 우선순위 · 유통기한 임박 · 반품 현황 · 발주 추이). 자료는 엠즈 e플랫폼에서 읽어 전용 DB(구글 시트)에 저장한 것을 불러옴]
+// [VERSION: ms_stock.js v1.5 - 2026-11-24 [전체 품목 보기] 버튼에 색 · 발주 추이 위 합계에 (n품목)/(n점) 표기, 표 첫 줄은 '주차별 합계' · 가맹점 단위 곳→점 / v1.4 - 2026-11-24 발주 추이: 추이 그래프·칸 아래 막대 삭제(숫자 + ▲▼만) / v1.3 - 2026-11-24 발주 추이: 품목별·가맹점별 좌우 카드 · 맨 위 합계 줄 · N주차(실제 날짜 범위, 7일 미만 주 표시) · 줄마다 막대 그래프와 칸 아래 막대 / v1.2 - 2026-11-24 화면을 다른 메뉴와 같은 모양으로(상단 탭 바 + 오른쪽 DB 상태·새로고침, 버튼 모양 통일) · 기준 안내를 한 줄 요약 + [계산 기준] 펼침으로 묶음 · 구역 제목 키우고 설명은 괄호로 / v1.1 - 2026-11-24 바로가 품목만 보기([바로가 품목 설정]에서 고른 상품, 정하지 않은 상품은 추정 · 전체 보기 전환 가능) / v1.0 - 2026-11-24 신규: 엠즈 재고 대시보드(발주 우선순위 · 유통기한 임박 · 반품 현황 · 발주 추이). 자료는 엠즈 e플랫폼에서 읽어 전용 DB(구글 시트)에 저장한 것을 불러옴]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - 엠즈 재고 (ms_stock.js)
 //  - 엠즈 e플랫폼(재고관리·주문관리) 화면에서 읽은 자료를 통째로 DB에 넣고, 여기서 계산해 보여 줌
@@ -249,9 +249,9 @@
     };
     const tot = { w: {}, qty: 0, amt: 0 }; list.forEach((x) => { tot.qty += x.qty; tot.amt += x.amt; wk.forEach((w) => { const c = x.w[w]; if (c) { const t = tot.w[w] || (tot.w[w] = { qty: 0, amt: 0 }); t.qty += c.qty; t.amt += c.amt; } }); });
     const shown = limit ? list.slice(0, limit) : list;
-    const rows = list.length ? line(`합계 (${list.length}${firstLabel === '매장' ? '곳' : '품목'})`, tot, true) + shown.map((x) => line(x.label, x)).join('') : '';
+    const rows = list.length ? line('주차별 합계', tot, true) + shown.map((x) => line(x.label, x)).join('') : '';
     const table = tableWrap(`<th class="${th}">${firstLabel}</th>${W.map((w) => `<th class="${th} text-right">${w.no}주차<div class="text-[10px] font-bold ${w.part ? 'text-amber-700' : 'text-stone-400'}">${w.range}${w.part ? `<br>(${w.days}일)` : ''}</div></th>`).join('')}<th class="${th} text-right">수량 합계</th><th class="${th} text-right">공급가 합계</th>`, rows, '발주 자료가 없습니다.', wk.length + 3).replace(/py-2 px-2 /g, 'py-2 px-2 align-bottom ').replace(/py-1\.5 px-2 /g, 'py-2 px-2 whitespace-nowrap ');
-    return `<div class="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-2.5 px-3 py-2 rounded-xl bg-stone-50 border border-stone-200"><span class="text-xs font-bold text-stone-500">공급가 합계</span><span class="text-xl font-extrabold text-stone-900 tabular-nums">${won(tot.amt)}</span><span class="text-xs text-stone-500">수량 <b class="text-stone-800 tabular-nums">${num(tot.qty, 0)}</b> · ${list.length}${firstLabel === '매장' ? '곳' : '품목'} · ${W.length}주</span></div>${table}`;
+    return `<div class="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-2.5 px-3 py-2 rounded-xl bg-stone-50 border border-stone-200"><span class="text-xs font-bold text-stone-500">공급가 합계 <span class="text-stone-800">(${list.length}${firstLabel === '매장' ? '점' : '품목'})</span></span><span class="text-xl font-extrabold text-stone-900 tabular-nums">${won(tot.amt)}</span><span class="text-xs text-stone-500">수량 <b class="text-stone-800 tabular-nums">${num(tot.qty, 0)}</b></span></div>${table}`;
   }
 
   function render() {
@@ -277,7 +277,7 @@
     const basis = `<div class="${card} !py-2.5">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div class="flex flex-wrap items-center gap-1.5">${infoChip('자료 기준', esc(d.asOf))}${ageDays > 0 ? infoChip('경과', ageDays + '일 전 자료', true) : ''}${infoChip('주문 조회', `${esc(md((d.period || {}).from))} ~ ${esc(md((d.period || {}).to))}`)}${C.fac.ready ? infoChip('공장 재고', esc(md(C.fac.baseDate)) + ' 실사 반영') : infoChip('공장 재고', '미반영', true)}${infoChip('표시', C.useOwn ? `바로가 품목 ${C.stockShown}/${C.stockAll}` : `전체 ${C.stockAll}품목`)}${C.useOwn && C.ownGuess ? infoChip('추정', C.ownGuess + '개', true) : ''}</div>
-          <div class="flex flex-wrap items-center gap-1.5"><button type="button" onclick="MsStock.toggleOwn()" class="${BTN}">${C.useOwn ? '전체 품목 보기' : '바로가 품목만 보기'}</button><button type="button" onclick="MsStock.openOwnModal()" class="${BTN}"><i data-lucide="settings" class="w-3.5 h-3.5"></i><span>바로가 품목 설정</span></button></div>
+          <div class="flex flex-wrap items-center gap-1.5"><button type="button" onclick="MsStock.toggleOwn()" title="바로가 품목만 / 엠즈 위탁 전체 품목 전환" class="flex items-center gap-1.5 px-3.5 h-9 rounded-xl text-xs font-extrabold bg-amber-500 hover:bg-amber-600 text-stone-950 shadow-xs transition cursor-pointer whitespace-nowrap"><i data-lucide="layers" class="w-3.5 h-3.5"></i>${C.useOwn ? '전체 품목 보기' : '바로가 품목만 보기'}</button><button type="button" onclick="MsStock.openOwnModal()" class="${BTN}"><i data-lucide="settings" class="w-3.5 h-3.5"></i><span>바로가 품목 설정</span></button></div>
         </div>
         <details class="mt-2"><summary class="text-xs font-bold text-stone-500 cursor-pointer hover:text-stone-800 select-none">계산 기준 보기</summary>
           <ul class="mt-1.5 text-xs text-stone-600 leading-relaxed list-disc pl-5 space-y-0.5">
@@ -294,7 +294,7 @@
           ${kpi('유통기한 30일 이내', exp30 + '개 품목', '기한 지난 재고 포함', exp30 ? 'text-rose-700' : '')}
           ${kpi('기한 전 소진 어려움', unsold + '개 품목', '지금 출고 속도 기준', unsold ? 'text-violet-800' : '')}
           ${kpi('반품 금액', won(retAmt), `${C.returns.length}건 · 조회 기간 내`, retAmt < 0 ? 'text-rose-700' : '')}
-          ${kpi(C.useOwn ? '바로가 재고 품목' : '엠즈 재고 품목', C.stockShown + '개', `${C.useOwn ? `전체 ${C.stockAll}개 중 · ` : ''}가맹점 발주 ${num(C.sales.length, 0)}줄 · 매장 ${C.byStore.length}곳`)}
+          ${kpi(C.useOwn ? '바로가 재고 품목' : '엠즈 재고 품목', C.stockShown + '개', `${C.useOwn ? `전체 ${C.stockAll}개 중 · ` : ''}가맹점 발주 ${num(C.sales.length, 0)}줄 · 매장 ${C.byStore.length}점`)}
         </div>
         ${sec('발주 우선순위', '회전일 짧은 순 10개', orderTable(C, 10), 'ORDER')}
         ${sec('유통기한 임박', '빠른 순 10개', expiryTable(C, 10), 'EXPIRY')}
