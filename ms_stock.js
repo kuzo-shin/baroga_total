@@ -37,7 +37,7 @@
   let data = null, dbRevision = null, loaded = false, loading = false, saving = false, statusText = 'DB 미연결', view = 'DASH', previewOnly = false, ownOnly = true;
   const root = () => document.getElementById('msStockRoot');
   function getUrl() { let v = ''; try { v = localStorage.getItem(URL_KEY) || ''; } catch (e) {} return v || DEFAULT_URL; }
-  function setStatus(t) { statusText = t; const el = document.getElementById('mssStatusText'); if (el) el.textContent = t; }
+  function setStatus(t) { statusText = String(t).replace(/ · 엠즈 기준 .*$/, ''); const el = document.getElementById('mssStatusText'); if (el) el.textContent = statusText; } // 엠즈 기준 시각은 본문 '자료 기준'에 따로 표시
   async function api(body, ms) {
     if (typeof window.barogaApi !== 'function') throw new Error('접속 도구를 찾을 수 없습니다');
     return window.barogaApi(getUrl(), body, ms || 60000);
@@ -54,8 +54,8 @@
       const json = await api({ action: 'getAll' });
       if (!json || json.ok === false) throw new Error((json && (json.message || json.error)) || '불러오기 실패');
       dbRevision = Number(json.revision) || 0; loaded = true;
-      if (json.status === 'empty') { data = null; setStatus('불러옴 ' + nowHm() + ' · 저장된 자료 없음'); }
-      else { data = normalize(json.payload); previewOnly = false; setStatus('불러옴 ' + nowHm() + ' · 엠즈 기준 ' + data.asOf); if (showMsg) toast('엠즈 재고 자료를 불러왔습니다.', 'success'); }
+      if (json.status === 'empty') { data = null; setStatus('DB 연동됨 · ' + nowHm() + ' 불러옴' + ' · 저장된 자료 없음'); }
+      else { data = normalize(json.payload); previewOnly = false; setStatus('DB 연동됨 · ' + nowHm() + ' 불러옴' + ' · 엠즈 기준 ' + data.asOf); if (showMsg) toast('엠즈 재고 자료를 불러왔습니다.', 'success'); }
     } catch (e) {
       loaded = false; setStatus('불러오기 실패');
       if (showMsg || !e.unauthorized) toast('엠즈 재고 DB 불러오기 실패: ' + e.message, 'error');
@@ -75,7 +75,7 @@
       const json = await api({ action: 'replaceAll', baseRevision: dbRevision, payload: d }, 180000);
       if (!json || json.ok === false) throw new Error((json && json.conflict ? '다른 기기에서 먼저 저장했습니다. 불러온 뒤 다시 시도해 주세요.' : (json && (json.message || json.error))) || '저장 실패');
       dbRevision = Number(json.revision) || dbRevision; data = d; previewOnly = false;
-      setStatus('저장됨 ' + nowHm() + ' · 엠즈 기준 ' + d.asOf);
+      setStatus('DB 연동됨 · ' + nowHm() + ' 저장' + ' · 엠즈 기준 ' + d.asOf);
       toast('엠즈 재고 자료를 DB에 저장했습니다.', 'success');
       return { ok: true, revision: dbRevision, counts: { stock: d.stock.length, expiry: d.expiry.length, ledger: Object.keys(d.ledger), daily: d.daily.length, orders: d.orders.length }, warning: json.warning || '' };
     } catch (e) {
@@ -150,7 +150,7 @@
     try {
       const json = await api({ action: 'replaceAll', baseRevision: dbRevision, payload: next }, 180000);
       if (!json || json.ok === false) throw new Error((json && json.conflict ? '다른 기기에서 먼저 저장했습니다. [불러오기] 후 다시 설정해 주세요.' : (json && (json.message || json.error))) || '저장 실패');
-      dbRevision = Number(json.revision) || dbRevision; data = next; setStatus('저장됨 ' + nowHm() + ' · 엠즈 기준 ' + data.asOf); toast('바로가 품목 설정을 저장했습니다.', 'success');
+      dbRevision = Number(json.revision) || dbRevision; data = next; setStatus('DB 연동됨 · ' + nowHm() + ' 저장' + ' · 엠즈 기준 ' + data.asOf); toast('바로가 품목 설정을 저장했습니다.', 'success');
     } catch (e) { setStatus('저장 실패'); toast('바로가 품목 설정 저장 실패: ' + e.message, 'error'); } finally { saving = false; render(); }
   }
   function compute() {
