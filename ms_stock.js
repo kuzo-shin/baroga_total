@@ -14,7 +14,7 @@
 // ============================================================================
 (function () {
   'use strict';
-  const DEFAULT_URL = ''; // 엠즈 재고 DB 주소 (배포 후 여기에 넣으면 모든 기기에 기본 적용)
+  const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbwspl12U2V776l9lT2gDbvdb84FndSETHy20MR5-1vNsq6_Tvgd725xx3FSMWvFf6h_jQ/exec'; // 엠즈 재고 DB (다른 DB를 쓸 때만 [DB 연결]에서 바꿈)
   const URL_KEY = 'baroga_ms_stock_gas_url';
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const toast = (m, t) => (typeof window.showToast === 'function' ? window.showToast(m, t) : alert(m));
@@ -87,7 +87,7 @@
     inp.click();
   }
   function openDbModal() {
-    modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold">엠즈 재고 DB 연결</h3><div class="text-xs text-stone-500 mt-0.5">구글 시트에 7_ms_stock.gs를 배포해 받은 웹 앱 주소(…/exec)를 넣어 주세요. 접속 코드는 다른 DB와 같습니다.</div></div>
+    modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold">엠즈 재고 DB 연결</h3><div class="text-xs text-stone-500 mt-0.5">기본 주소(바로가 엠즈 재고 DB)가 들어 있습니다. 다른 DB를 쓸 때만 바꾸세요. 접속 코드는 다른 DB와 같습니다.</div></div>
       <div class="p-4"><input id="mssUrlInput" type="text" value="${esc(getUrl())}" placeholder="https://script.google.com/macros/s/.../exec" class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm font-mono"></div>
       <div class="px-5 py-3 border-t border-stone-200 flex justify-end gap-2"><button type="button" onclick="MsStock.closeModal()" class="px-4 py-2 rounded-xl border border-stone-300 text-sm font-bold cursor-pointer">취소</button><button type="button" onclick="MsStock.saveDbUrl()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">저장 후 불러오기</button></div>`);
   }
