@@ -1,4 +1,4 @@
-// [VERSION: ms_stock.js v1.1 - 2026-11-24 바로가 품목만 보기([바로가 품목 설정]에서 고른 상품, 정하지 않은 상품은 추정 · 전체 보기 전환 가능) / v1.0 - 2026-11-24 신규: 엠즈 재고 대시보드(발주 우선순위 · 유통기한 임박 · 반품 현황 · 발주 추이). 자료는 엠즈 e플랫폼에서 읽어 전용 DB(구글 시트)에 저장한 것을 불러옴]
+// [VERSION: ms_stock.js v1.2 - 2026-11-24 화면을 다른 메뉴와 같은 모양으로(상단 탭 바 + 오른쪽 DB 상태·새로고침, 버튼 모양 통일) · 기준 안내를 한 줄 요약 + [계산 기준] 펼침으로 묶음 · 구역 제목 키우고 설명은 괄호로 / v1.1 - 2026-11-24 바로가 품목만 보기([바로가 품목 설정]에서 고른 상품, 정하지 않은 상품은 추정 · 전체 보기 전환 가능) / v1.0 - 2026-11-24 신규: 엠즈 재고 대시보드(발주 우선순위 · 유통기한 임박 · 반품 현황 · 발주 추이). 자료는 엠즈 e플랫폼에서 읽어 전용 DB(구글 시트)에 저장한 것을 불러옴]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - 엠즈 재고 (ms_stock.js)
 //  - 엠즈 e플랫폼(재고관리·주문관리) 화면에서 읽은 자료를 통째로 DB에 넣고, 여기서 계산해 보여 줌
@@ -37,7 +37,7 @@
   let data = null, dbRevision = null, loaded = false, loading = false, saving = false, statusText = 'DB 미연결', view = 'DASH', previewOnly = false, ownOnly = true;
   const root = () => document.getElementById('msStockRoot');
   function getUrl() { let v = ''; try { v = localStorage.getItem(URL_KEY) || ''; } catch (e) {} return v || DEFAULT_URL; }
-  function setStatus(t) { statusText = t; const el = document.getElementById('mssStatus'); if (el) el.textContent = t; }
+  function setStatus(t) { statusText = String(t).replace(/ · 엠즈 기준 .*$/, ''); const el = document.getElementById('mssStatusText'); if (el) el.textContent = statusText; } // 엠즈 기준 시각은 본문 '자료 기준'에 따로 표시
   async function api(body, ms) {
     if (typeof window.barogaApi !== 'function') throw new Error('접속 도구를 찾을 수 없습니다');
     return window.barogaApi(getUrl(), body, ms || 60000);
@@ -54,8 +54,8 @@
       const json = await api({ action: 'getAll' });
       if (!json || json.ok === false) throw new Error((json && (json.message || json.error)) || '불러오기 실패');
       dbRevision = Number(json.revision) || 0; loaded = true;
-      if (json.status === 'empty') { data = null; setStatus('불러옴 ' + nowHm() + ' · 저장된 자료 없음'); }
-      else { data = normalize(json.payload); previewOnly = false; setStatus('불러옴 ' + nowHm() + ' · 엠즈 기준 ' + data.asOf); if (showMsg) toast('엠즈 재고 자료를 불러왔습니다.', 'success'); }
+      if (json.status === 'empty') { data = null; setStatus('DB 연동됨 · ' + nowHm() + ' 불러옴' + ' · 저장된 자료 없음'); }
+      else { data = normalize(json.payload); previewOnly = false; setStatus('DB 연동됨 · ' + nowHm() + ' 불러옴' + ' · 엠즈 기준 ' + data.asOf); if (showMsg) toast('엠즈 재고 자료를 불러왔습니다.', 'success'); }
     } catch (e) {
       loaded = false; setStatus('불러오기 실패');
       if (showMsg || !e.unauthorized) toast('엠즈 재고 DB 불러오기 실패: ' + e.message, 'error');
@@ -75,7 +75,7 @@
       const json = await api({ action: 'replaceAll', baseRevision: dbRevision, payload: d }, 180000);
       if (!json || json.ok === false) throw new Error((json && json.conflict ? '다른 기기에서 먼저 저장했습니다. 불러온 뒤 다시 시도해 주세요.' : (json && (json.message || json.error))) || '저장 실패');
       dbRevision = Number(json.revision) || dbRevision; data = d; previewOnly = false;
-      setStatus('저장됨 ' + nowHm() + ' · 엠즈 기준 ' + d.asOf);
+      setStatus('DB 연동됨 · ' + nowHm() + ' 저장' + ' · 엠즈 기준 ' + d.asOf);
       toast('엠즈 재고 자료를 DB에 저장했습니다.', 'success');
       return { ok: true, revision: dbRevision, counts: { stock: d.stock.length, expiry: d.expiry.length, ledger: Object.keys(d.ledger), daily: d.daily.length, orders: d.orders.length }, warning: json.warning || '' };
     } catch (e) {
@@ -92,9 +92,9 @@
     inp.click();
   }
   function openDbModal() {
-    modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold">엠즈 재고 DB 연결</h3><div class="text-xs text-stone-500 mt-0.5">기본 주소(바로가 엠즈 재고 DB)가 들어 있습니다. 다른 DB를 쓸 때만 바꾸세요. 접속 코드는 다른 DB와 같습니다.</div></div>
-      <div class="p-4"><input id="mssUrlInput" type="text" value="${esc(getUrl())}" placeholder="https://script.google.com/macros/s/.../exec" class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm font-mono"></div>
-      <div class="px-5 py-3 border-t border-stone-200 flex justify-end gap-2"><button type="button" onclick="MsStock.closeModal()" class="px-4 py-2 rounded-xl border border-stone-300 text-sm font-bold cursor-pointer">취소</button><button type="button" onclick="MsStock.saveDbUrl()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">저장 후 불러오기</button></div>`);
+    modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold text-stone-900">엠즈 재고 구글 스프레드시트 DB 설정</h3><div class="text-xs text-stone-500 mt-0.5">기본 주소(바로가 엠즈 재고 DB)가 들어 있습니다. 다른 DB를 쓸 때만 바꾸세요. 접속 코드는 다른 DB와 같습니다.</div></div>
+      <div class="p-4"><label class="text-xs font-bold text-stone-700 block mb-1">Google Apps Script 웹 앱 URL</label><input id="mssUrlInput" type="url" value="${esc(getUrl())}" placeholder="https://script.google.com/macros/s/.../exec" class="w-full border border-stone-300 focus:border-emerald-600 focus:outline-none rounded-xl px-3 py-2 text-xs font-mono bg-stone-50 focus:bg-white text-stone-900"></div>
+      <div class="px-5 py-3 border-t border-stone-200 flex justify-end gap-2"><button type="button" onclick="MsStock.closeModal()" class="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold cursor-pointer">취소</button><button type="button" onclick="MsStock.saveDbUrl()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer">URL 저장 및 불러오기</button></div>`);
   }
   function saveDbUrl() {
     const v = (document.getElementById('mssUrlInput').value || '').trim();
@@ -140,7 +140,7 @@
     const rows = data.stock.slice().sort((a, b) => Number(own[String(b[0])].on) - Number(own[String(a[0])].on) || String(a[1]).localeCompare(String(b[1]), 'ko')).map((r) => { const c = String(r[0]), o = own[c]; return `<label class="flex items-center gap-2 px-2 py-1.5 border-b border-stone-100 cursor-pointer hover:bg-stone-50"><input type="checkbox" data-own-code="${esc(c)}" ${o.on ? 'checked' : ''} class="w-4 h-4"><span class="font-mono text-xs text-stone-500">${esc(c)}</span><span class="text-sm font-bold flex-1 min-w-0 truncate">${esc(r[1])}</span><span class="text-[11px] text-stone-400 whitespace-nowrap">${o.set ? '직접 정함' : o.why ? '추정: ' + esc(o.why) : '추정: 해당 없음'}</span></label>`; }).join('');
     modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold">바로가 품목 설정</h3><div class="text-xs text-stone-500 mt-0.5 leading-relaxed">엠즈 위탁 재고 ${data.stock.length}품목 중 바로가 공장 제품을 체크해 주세요. 처음에는 엠즈 입고 기록이 있거나 이름에 '생지'가 있는 상품을 추정해 체크해 두었습니다. 저장하면 다음 갱신 때도 유지되고, 새로 생긴 상품은 다시 추정합니다.</div></div>
       <div class="max-h-[60vh] overflow-y-auto">${rows}</div>
-      <div class="px-5 py-3 border-t border-stone-200 flex justify-end gap-2"><button type="button" onclick="MsStock.closeModal()" class="px-4 py-2 rounded-xl border border-stone-300 text-sm font-bold cursor-pointer">취소</button><button type="button" onclick="MsStock.saveOwn()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">저장</button></div>`);
+      <div class="px-5 py-3 border-t border-stone-200 flex justify-end gap-2"><button type="button" onclick="MsStock.closeModal()" class="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold cursor-pointer">취소</button><button type="button" onclick="MsStock.saveOwn()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer">저장</button></div>`);
   }
   async function saveOwn() {
     if (!data || saving) return; if (previewOnly || !loaded) { toast('DB를 불러온 뒤에 저장할 수 있습니다.', 'error'); return; }
@@ -150,7 +150,7 @@
     try {
       const json = await api({ action: 'replaceAll', baseRevision: dbRevision, payload: next }, 180000);
       if (!json || json.ok === false) throw new Error((json && json.conflict ? '다른 기기에서 먼저 저장했습니다. [불러오기] 후 다시 설정해 주세요.' : (json && (json.message || json.error))) || '저장 실패');
-      dbRevision = Number(json.revision) || dbRevision; data = next; setStatus('저장됨 ' + nowHm() + ' · 엠즈 기준 ' + data.asOf); toast('바로가 품목 설정을 저장했습니다.', 'success');
+      dbRevision = Number(json.revision) || dbRevision; data = next; setStatus('DB 연동됨 · ' + nowHm() + ' 저장' + ' · 엠즈 기준 ' + data.asOf); toast('바로가 품목 설정을 저장했습니다.', 'success');
     } catch (e) { setStatus('저장 실패'); toast('바로가 품목 설정 저장 실패: ' + e.message, 'error'); } finally { saving = false; render(); }
   }
   function compute() {
@@ -206,7 +206,9 @@
   // ---------- 화면 ----------
   const GRADE_CLS = { '긴급 발주': 'bg-rose-100 text-rose-800 border-rose-200', '우선 발주': 'bg-orange-100 text-orange-800 border-orange-200', '발주 권장': 'bg-amber-100 text-amber-900 border-amber-200', '모니터링': 'bg-stone-100 text-stone-600 border-stone-200', '출고 없음': 'bg-white text-stone-400 border-stone-200', '30일 이하 긴급': 'bg-rose-100 text-rose-800 border-rose-200', '기한 지남': 'bg-rose-600 text-white border-rose-600', '60일 이하 주의': 'bg-orange-100 text-orange-800 border-orange-200', '100일 이하 확인': 'bg-amber-100 text-amber-900 border-amber-200' };
   const chip = (g) => (g ? `<span class="px-1.5 py-0.5 rounded border text-[11px] font-bold whitespace-nowrap ${GRADE_CLS[g] || 'bg-stone-100 text-stone-600 border-stone-200'}">${esc(g)}</span>` : '');
-  const tabBtn = (k, label) => `<button type="button" onclick="MsStock.setView('${k}')" class="px-3.5 py-1.5 rounded-xl text-xs font-extrabold cursor-pointer ${view === k ? 'bg-stone-900 text-white' : 'bg-white border border-stone-200 text-stone-600 hover:bg-stone-50'}">${label}</button>`;
+  const tabBtn = (k, icon, label) => `<button type="button" onclick="MsStock.setView('${k}')" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-extrabold transition cursor-pointer ${view === k ? 'bg-stone-900 text-white shadow-xs' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'}"><i data-lucide="${icon}" class="w-4 h-4"></i><span>${label}</span></button>`;
+  const BTN = 'flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-bold bg-white border border-stone-200 text-stone-700 hover:bg-stone-50 transition cursor-pointer whitespace-nowrap';
+  const infoChip = (label, val, warn) => `<span class="inline-flex items-center gap-1.5 px-2.5 h-7 rounded-lg border text-xs whitespace-nowrap ${warn ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-stone-50 border-stone-200 text-stone-600'}"><span class="font-semibold ${warn ? '' : 'text-stone-400'}">${label}</span><b class="${warn ? '' : 'text-stone-800'} tabular-nums">${val}</b></span>`;
   const kpi = (label, val, sub, cls) => `<div class="${card}"><div class="text-xs font-bold text-stone-500">${label}</div><div class="mt-1 text-xl font-extrabold tabular-nums ${cls || 'text-stone-900'}">${val}</div><div class="text-xs text-stone-500 mt-0.5">${sub || ''}</div></div>`;
   const tableWrap = (head, rows, empty, cols) => `<div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm"><thead><tr>${head}</tr></thead><tbody>${rows || `<tr><td colspan="${cols}" class="py-6 text-center text-xs text-stone-400">${empty}</td></tr>`}</tbody></table></div>`;
 
@@ -241,20 +243,38 @@
 
   function render() {
     const el = root(); if (!el) return;
-    const head = `<div class="flex flex-wrap items-center justify-between gap-2"><div class="flex items-center gap-2"><h2 class="text-base font-extrabold text-stone-900">엠즈 재고 <span class="text-xs font-bold text-stone-500">엠즈 물류센터 위탁 재고 · 가맹점 발주</span></h2></div>
-        <div class="flex flex-wrap items-center gap-1.5"><span id="mssStatus" class="px-2.5 py-1 rounded-lg bg-stone-100 text-xs font-bold text-stone-700">${esc(statusText)}</span>
-        <button type="button" onclick="MsStock.pull(true)" class="px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-bold cursor-pointer hover:bg-stone-50">불러오기</button>
-        <button type="button" onclick="MsStock.pickFile()" title="엠즈에서 읽어 만든 JSON 파일로 DB를 바꿉니다 (보통은 Claude가 자동으로 저장)" class="px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-bold cursor-pointer hover:bg-stone-50">자료 가져오기</button>
-        <button type="button" onclick="MsStock.openDbModal()" class="px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-bold cursor-pointer hover:bg-stone-50">DB 연결</button></div></div>`;
-    if (!getUrl() && !(previewOnly && data)) { el.innerHTML = `<div class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-4 flex flex-col gap-4">${head}<div class="${card} text-sm text-stone-600"><b>엠즈 재고 DB가 아직 연결되지 않았습니다.</b> 구글 시트에 <span class="font-mono">7_ms_stock.gs</span>를 배포한 뒤 [DB 연결]에 웹 앱 주소를 넣어 주세요.</div></div><div id="mssModal"></div>`; return; }
-    if (!data) { el.innerHTML = `<div class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-4 flex flex-col gap-4">${head}<div class="${card} text-sm text-stone-600">${loading ? '불러오는 중입니다...' : loaded ? '<b>저장된 엠즈 재고 자료가 없습니다.</b> 엠즈 e플랫폼에 로그인한 뒤 Claude에게 "엠즈 재고 갱신해줘"라고 요청하면 자료를 읽어 저장합니다.' : 'DB를 불러오지 못했습니다. [불러오기]를 눌러 주세요.'}</div></div><div id="mssModal"></div>`; return; }
+    const dbOk = !!getUrl() && loaded, dbCls = !getUrl() ? 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100' : dbOk ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100' : 'bg-stone-50 text-stone-700 border-stone-200 hover:bg-stone-100';
+    const bar = `<div class="w-full bg-stone-100/90 border-b border-stone-200 no-print"><div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-1.5">${tabBtn('DASH', 'layout-dashboard', '1. 대시보드')}${tabBtn('ORDER', 'clipboard-list', '2. 발주 우선순위')}${tabBtn('EXPIRY', 'calendar-days', '3. 유통기한 임박')}${tabBtn('RETURN', 'rotate-ccw', '4. 반품 현황')}${tabBtn('TREND', 'trending-up', '5. 발주 추이')}</div>
+        <div class="flex items-center gap-1.5 ml-auto">
+          <button type="button" onclick="MsStock.openDbModal()" title="DB 주소 설정" class="flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-xl text-xs font-bold border transition cursor-pointer ${dbCls}"><span class="w-2 h-2 rounded-full ${!getUrl() ? 'bg-amber-500' : dbOk ? 'bg-emerald-500' : 'bg-stone-400'}"></span><span id="mssStatusText">${esc(statusText)}</span><i data-lucide="settings" class="w-3.5 h-3.5 ml-0.5 opacity-75"></i></button>
+          <button type="button" onclick="MsStock.pickFile()" title="엠즈에서 읽어 만든 JSON 파일로 DB를 바꿉니다 (보통은 Claude가 자동으로 저장)" class="${BTN}"><i data-lucide="file-up" class="w-3.5 h-3.5"></i><span>자료 가져오기</span></button>
+          <button type="button" onclick="MsStock.pull(true)" title="DB에서 다시 불러오기" class="flex items-center justify-center w-9 h-9 rounded-xl border border-stone-200 bg-white hover:bg-stone-100 text-stone-700 transition cursor-pointer"><i data-lucide="refresh-cw" class="w-4 h-4"></i></button>
+        </div></div></div>`;
+    const shell = (inner) => { el.innerHTML = `<div class="w-full">${bar}<div class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-4 flex flex-col gap-4">${inner}</div></div><div id="mssModal"></div>`; if (window.lucide) lucide.createIcons(); };
+    if (!getUrl() && !(previewOnly && data)) { shell(`<div class="${card} text-sm text-stone-600"><b>엠즈 재고 DB가 아직 연결되지 않았습니다.</b> 구글 시트에 <span class="font-mono">7_ms_stock.gs</span>를 배포한 뒤 오른쪽 위 DB 버튼에 웹 앱 주소를 넣어 주세요.</div>`); return; }
+    if (!data) { shell(`<div class="${card} text-sm text-stone-600">${loading ? '불러오는 중입니다...' : loaded ? '<b>저장된 엠즈 재고 자료가 없습니다.</b> 엠즈 e플랫폼에 로그인한 뒤 Claude에게 "엠즈 재고 갱신해줘"라고 요청하면 자료를 읽어 저장합니다.' : 'DB를 불러오지 못했습니다. 오른쪽 위 새로고침 버튼을 눌러 주세요.'}</div>`); return; }
     const C = compute(), d = data;
     const urgent = C.items.filter((it) => it.grade === '긴급 발주').length, prio = C.items.filter((it) => it.grade === '우선 발주').length, rec = C.items.filter((it) => it.grade === '발주 권장').length;
     const exp30 = new Set(C.lots.filter((l) => l.left <= 30).map((l) => l.code)).size, unsold = new Set(C.lots.filter((l) => l.unsold > 0.01).map((l) => l.code)).size;
     const retAmt = C.returns.reduce((a, r) => a + (Number(r[C.O.total]) || 0), 0);
     const ageDays = Math.round((dateOf(ymd(new Date())) - C.asOfDate) / dayMs);
-    const basis = `<div class="text-xs text-stone-500 leading-relaxed">엠즈 자료 기준 <b class="text-stone-800">${esc(d.asOf)}</b>${ageDays > 0 ? ` <span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 font-bold">${ageDays}일 전 자료</span>` : ''} · 주문 조회 기간 ${esc((d.period || {}).from || '')} ~ ${esc((d.period || {}).to || '')} · 일평균 출고 = 위탁상품 수불부(${C.months.map((m) => Number(m.slice(5)) + '월').join('·')}, ${C.days}일)의 순출고 ÷ 일수 · 회전일 = 가용 합계 ÷ 일평균 출고 (7일 이하 긴급 / 14일 이하 우선 / 30일 이하 권장)${C.fac.ready ? ` · 공장 재고 = 생산 재고 현재고(${esc(C.fac.baseDate)} 실사 기준)` : ` · <span class="text-amber-800 font-bold">공장 재고 미반영: ${esc(C.fac.why)}</span>`}</div>`;
-    const sec = (title, body, more) => `<div class="${card}"><div class="flex items-center justify-between gap-2 mb-2"><h3 class="text-sm font-extrabold text-stone-900">${title}</h3>${more ? `<button type="button" onclick="MsStock.setView('${more}')" class="text-xs font-bold text-amber-800 hover:underline cursor-pointer">전체 보기 →</button>` : ''}</div>${body}</div>`;
+    const md = (t) => String(t || '').slice(5).replace('-', '/');
+    const monthsTxt = C.months.map((m) => Number(m.slice(5)) + '월').join('·');
+    const basis = `<div class="${card} !py-2.5">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap items-center gap-1.5">${infoChip('자료 기준', esc(d.asOf))}${ageDays > 0 ? infoChip('경과', ageDays + '일 전 자료', true) : ''}${infoChip('주문 조회', `${esc(md((d.period || {}).from))} ~ ${esc(md((d.period || {}).to))}`)}${C.fac.ready ? infoChip('공장 재고', esc(md(C.fac.baseDate)) + ' 실사 반영') : infoChip('공장 재고', '미반영', true)}${infoChip('표시', C.useOwn ? `바로가 품목 ${C.stockShown}/${C.stockAll}` : `전체 ${C.stockAll}품목`)}${C.useOwn && C.ownGuess ? infoChip('추정', C.ownGuess + '개', true) : ''}</div>
+          <div class="flex flex-wrap items-center gap-1.5"><button type="button" onclick="MsStock.toggleOwn()" class="${BTN}">${C.useOwn ? '전체 품목 보기' : '바로가 품목만 보기'}</button><button type="button" onclick="MsStock.openOwnModal()" class="${BTN}"><i data-lucide="settings" class="w-3.5 h-3.5"></i><span>바로가 품목 설정</span></button></div>
+        </div>
+        <details class="mt-2"><summary class="text-xs font-bold text-stone-500 cursor-pointer hover:text-stone-800 select-none">계산 기준 보기</summary>
+          <ul class="mt-1.5 text-xs text-stone-600 leading-relaxed list-disc pl-5 space-y-0.5">
+            <li><b>일평균 출고</b> = 위탁상품 수불부(${monthsTxt}, ${C.days}일)의 순출고 ÷ 일수</li>
+            <li><b>회전일</b> = 가용 합계(엠즈 재고 + 공장 재고) ÷ 일평균 출고</li>
+            <li><b>조치</b> = 회전일 7일 이하 긴급 발주 / 14일 이하 우선 발주 / 30일 이하 발주 권장</li>
+            <li><b>공장 재고</b> = ${C.fac.ready ? `생산 재고 현재고 (${esc(C.fac.baseDate)} 실사 기준)` : `<span class="text-amber-800 font-bold">미반영 — ${esc(C.fac.why)}</span>`}</li>
+            <li><b>주문 조회 기간</b> = ${esc((d.period || {}).from || '')} ~ ${esc((d.period || {}).to || '')}${C.useOwn ? ` · 바로가 품목만 (주문 ${num(C.ordersShown, 0)}/${num(C.ordersAll, 0)}줄)` : ''}</li>
+          </ul></details></div>`;
+    const sec = (title, sub, body, more) => `<div class="${card}"><div class="flex items-center justify-between gap-2 mb-2.5"><h3 class="text-base font-extrabold text-stone-900">${title}${sub ? ` <span class="text-xs font-bold text-stone-500">(${sub})</span>` : ''}</h3>${more ? `<button type="button" onclick="MsStock.setView('${more}')" class="${BTN} !h-8">전체 보기 →</button>` : ''}</div>${body}</div>`;
     let body = '';
     if (view === 'DASH') body = `<div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
           ${kpi('긴급 발주 (7일 이하)', urgent + '개', `우선 ${prio}개 · 권장 ${rec}개`, urgent ? 'text-rose-700' : '')}
@@ -263,17 +283,14 @@
           ${kpi('반품 금액', won(retAmt), `${C.returns.length}건 · 조회 기간 내`, retAmt < 0 ? 'text-rose-700' : '')}
           ${kpi(C.useOwn ? '바로가 재고 품목' : '엠즈 재고 품목', C.stockShown + '개', `${C.useOwn ? `전체 ${C.stockAll}개 중 · ` : ''}가맹점 발주 ${num(C.sales.length, 0)}줄 · 매장 ${C.byStore.length}곳`)}
         </div>
-        ${sec('발주 우선순위 — 회전일 짧은 순 10개', orderTable(C, 10), 'ORDER')}
-        ${sec('유통기한 임박 — 빠른 순 10개', expiryTable(C, 10), 'EXPIRY')}
-        ${sec('반품 현황 — 금액 큰 순 10건', returnBlock(C, 10), 'RETURN')}`;
-    else if (view === 'ORDER') body = sec('발주 우선순위 — 회전일 짧은 순 (출고가 없는 품목 제외)', orderTable(C)) + sec('출고가 없는 품목 (조회한 달 기준)', tableWrap(`<th class="${th}">코드</th><th class="${th}">상품명</th><th class="${th} text-right">엠즈 재고</th>`, C.items.filter((it) => it.rot == null && it.qty > 0).map((it) => `<tr><td class="${td} font-mono text-xs">${esc(it.code)}</td><td class="${td} font-bold">${esc(it.name)}</td><td class="${tdr}">${num(it.qty)} <span class="text-[11px] text-stone-400">${esc(it.unit)}</span></td></tr>`).join(''), '해당 품목이 없습니다.', 3));
-    else if (view === 'EXPIRY') body = sec('유통기한 임박 — 100일 이내 또는 기한 전 소진이 어려운 재고 (보라색 = 소진 불가 예상)', expiryTable(C));
-    else if (view === 'RETURN') body = sec('반품 현황', returnBlock(C));
-    else if (view === 'TREND') body = sec('품목별 발주 추이 — 주(월요일 시작)별 입고수량, 공급가 큰 순', trendTable(C, C.byItem, '상품명')) + sec('가맹점별 발주 추이 — 주별 입고수량, 공급가 큰 순', trendTable(C, C.byStore, '매장'));
-    el.innerHTML = `<div class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-4 flex flex-col gap-4">${head}${basis}
-        <div class="flex flex-wrap items-center justify-between gap-2"><div class="flex flex-wrap gap-1.5">${tabBtn('DASH', '대시보드')}${tabBtn('ORDER', '발주 우선순위')}${tabBtn('EXPIRY', '유통기한 임박')}${tabBtn('RETURN', '반품 현황')}${tabBtn('TREND', '발주 추이')}</div>
-          <div class="flex items-center gap-1.5 text-xs"><span class="text-stone-500">${C.useOwn ? `바로가 품목만 표시 중 (재고 ${C.stockShown}/${C.stockAll}품목 · 주문 ${num(C.ordersShown, 0)}/${num(C.ordersAll, 0)}줄)${C.ownGuess ? ` · <b class="text-amber-800">${C.ownGuess}개는 추정</b>` : ''}` : '엠즈 위탁 전체 품목 표시 중'}</span><button type="button" onclick="MsStock.toggleOwn()" class="px-3 py-1.5 rounded-lg border border-stone-300 font-bold cursor-pointer hover:bg-stone-50">${C.useOwn ? '전체 품목 보기' : '바로가 품목만 보기'}</button><button type="button" onclick="MsStock.openOwnModal()" class="px-3 py-1.5 rounded-lg border border-stone-300 font-bold cursor-pointer hover:bg-stone-50">바로가 품목 설정</button></div></div>
-        ${body}</div><div id="mssModal"></div>`;
+        ${sec('발주 우선순위', '회전일 짧은 순 10개', orderTable(C, 10), 'ORDER')}
+        ${sec('유통기한 임박', '빠른 순 10개', expiryTable(C, 10), 'EXPIRY')}
+        ${sec('반품 현황', '금액 큰 순 10건', returnBlock(C, 10), 'RETURN')}`;
+    else if (view === 'ORDER') body = sec('발주 우선순위', '회전일 짧은 순 · 출고가 없는 품목 제외', orderTable(C)) + sec('출고가 없는 품목', '조회한 달 기준', tableWrap(`<th class="${th}">코드</th><th class="${th}">상품명</th><th class="${th} text-right">엠즈 재고</th>`, C.items.filter((it) => it.rot == null && it.qty > 0).map((it) => `<tr><td class="${td} font-mono text-xs">${esc(it.code)}</td><td class="${td} font-bold">${esc(it.name)}</td><td class="${tdr}">${num(it.qty)} <span class="text-[11px] text-stone-400">${esc(it.unit)}</span></td></tr>`).join(''), '해당 품목이 없습니다.', 3));
+    else if (view === 'EXPIRY') body = sec('유통기한 임박', '100일 이내 또는 기한 전 소진이 어려운 재고 · 보라색 = 소진 불가 예상', expiryTable(C));
+    else if (view === 'RETURN') body = sec('반품 현황', '', returnBlock(C));
+    else if (view === 'TREND') body = sec('품목별 발주 추이', '주(월요일 시작)별 입고수량 · 공급가 큰 순', trendTable(C, C.byItem, '상품명')) + sec('가맹점별 발주 추이', '주별 입고수량 · 공급가 큰 순', trendTable(C, C.byStore, '매장'));
+    shell(basis + body);
   }
   let mounted = false;
   function mount() { render(); if (!mounted) { mounted = true; pull(false); } }
