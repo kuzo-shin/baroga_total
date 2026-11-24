@@ -1,4 +1,4 @@
-// [VERSION: ms_stock.js v1.6 - 2026-11-24 6. 그래프 탭 신설(품목 발주금액 TOP10의 일자별 발주 수량 · 가맹점 발주 총액의 일자별 변화) · 발주 추이 표 숫자 줄 맞춤 / v1.5 - 2026-11-24 [전체 품목 보기] 버튼에 색 · 발주 추이 위 합계에 (n품목)/(n점) 표기, 표 첫 줄은 '주차별 합계' · 가맹점 단위 곳→점 / v1.4 - 2026-11-24 발주 추이: 추이 그래프·칸 아래 막대 삭제(숫자 + ▲▼만) / v1.3 - 2026-11-24 발주 추이: 품목별·가맹점별 좌우 카드 · 맨 위 합계 줄 · N주차(실제 날짜 범위, 7일 미만 주 표시) · 줄마다 막대 그래프와 칸 아래 막대 / v1.2 - 2026-11-24 화면을 다른 메뉴와 같은 모양으로(상단 탭 바 + 오른쪽 DB 상태·새로고침, 버튼 모양 통일) · 기준 안내를 한 줄 요약 + [계산 기준] 펼침으로 묶음 · 구역 제목 키우고 설명은 괄호로 / v1.1 - 2026-11-24 바로가 품목만 보기([바로가 품목 설정]에서 고른 상품, 정하지 않은 상품은 추정 · 전체 보기 전환 가능) / v1.0 - 2026-11-24 신규: 엠즈 재고 대시보드(발주 우선순위 · 유통기한 임박 · 반품 현황 · 발주 추이). 자료는 엠즈 e플랫폼에서 읽어 전용 DB(구글 시트)에 저장한 것을 불러옴]
+// [VERSION: ms_stock.js v1.7 - 2026-11-24 그래프를 점선에서 실선(점을 선으로 이음)으로 / v1.6 - 2026-11-24 6. 그래프 탭 신설(품목 발주금액 TOP10의 일자별 발주 수량 · 가맹점 발주 총액의 일자별 변화) · 발주 추이 표 숫자 줄 맞춤 / v1.5 - 2026-11-24 [전체 품목 보기] 버튼에 색 · 발주 추이 위 합계에 (n품목)/(n점) 표기, 표 첫 줄은 '주차별 합계' · 가맹점 단위 곳→점 / v1.4 - 2026-11-24 발주 추이: 추이 그래프·칸 아래 막대 삭제(숫자 + ▲▼만) / v1.3 - 2026-11-24 발주 추이: 품목별·가맹점별 좌우 카드 · 맨 위 합계 줄 · N주차(실제 날짜 범위, 7일 미만 주 표시) · 줄마다 막대 그래프와 칸 아래 막대 / v1.2 - 2026-11-24 화면을 다른 메뉴와 같은 모양으로(상단 탭 바 + 오른쪽 DB 상태·새로고침, 버튼 모양 통일) · 기준 안내를 한 줄 요약 + [계산 기준] 펼침으로 묶음 · 구역 제목 키우고 설명은 괄호로 / v1.1 - 2026-11-24 바로가 품목만 보기([바로가 품목 설정]에서 고른 상품, 정하지 않은 상품은 추정 · 전체 보기 전환 가능) / v1.0 - 2026-11-24 신규: 엠즈 재고 대시보드(발주 우선순위 · 유통기한 임박 · 반품 현황 · 발주 추이). 자료는 엠즈 e플랫폼에서 읽어 전용 DB(구글 시트)에 저장한 것을 불러옴]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - 엠즈 재고 (ms_stock.js)
 //  - 엠즈 e플랫폼(재고관리·주문관리) 화면에서 읽은 자료를 통째로 DB에 넣고, 여기서 계산해 보여 줌
@@ -233,7 +233,7 @@
       ${tableWrap(`<th class="${th}">일자</th><th class="${th}">매장</th><th class="${th}">상품명</th><th class="${th}">매출구분</th><th class="${th} text-right">수량</th><th class="${th} text-right">금액(합계)</th><th class="${th}">비고</th>`, dRows, '반품이 없습니다.', 7)}`;
   }
   // ---------- 6. 그래프 ----------
-  // 색: 8가지(색각 이상 구분 검증된 순서). 9·10번째는 같은 색을 다시 쓰되 긴 점선 + 네모 점으로 구분
+  // 색: 8가지(색각 이상 구분 검증된 순서). 선은 실선. 9·10번째는 같은 색을 다시 쓰므로 끊긴 선 + 네모 점으로 구분
   const G_COLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'];
   const G_INK = '#57534e', G_GRID = '#e7e5e4';
   let charts = [], pendingGraph = null;
@@ -266,12 +266,12 @@
     const axis = (fmt) => ({ x: { grid: { display: false }, ticks: { color: G_INK, font, maxRotation: 0, autoSkip: true, autoSkipPadding: 8 }, border: { color: G_GRID } }, y: { beginAtZero: true, grid: { color: G_GRID }, border: { display: false }, ticks: { color: G_INK, font, callback: fmt } } });
     const tip = { backgroundColor: '#1c1917', titleFont: font, bodyFont: font, padding: 10, boxPadding: 4, usePointStyle: true };
     charts.push(new Chart(a, { type: 'line',
-      data: { labels: G.labels, datasets: G.top.map((x, i) => { const again = i >= G_COLORS.length, col = G_COLORS[i % G_COLORS.length]; return { label: `${i + 1}. ${shortName(x.label)}`, data: G.qty[x.key], borderColor: col, backgroundColor: col, borderWidth: 2, borderDash: again ? [9, 4] : [3, 3], pointStyle: again ? 'rect' : 'circle', pointRadius: 3, pointHoverRadius: 6, pointBorderColor: '#ffffff', pointBorderWidth: 1, tension: 0 }; }) },
+      data: { labels: G.labels, datasets: G.top.map((x, i) => { const again = i >= G_COLORS.length, col = G_COLORS[i % G_COLORS.length]; return { label: `${i + 1}. ${shortName(x.label)}`, data: G.qty[x.key], borderColor: col, backgroundColor: col, borderWidth: 2, borderDash: again ? [9, 4] : [], pointStyle: again ? 'rect' : 'circle', pointRadius: 3, pointHoverRadius: 6, pointBorderColor: '#ffffff', pointBorderWidth: 1, tension: 0 }; }) },
       options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: axis((v) => num(v, 0)),
         plugins: { legend: { position: 'bottom', labels: { color: G_INK, font, usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 12 } }, tooltip: Object.assign({ itemSort: (p, q) => q.parsed.y - p.parsed.y, callbacks: { title: (it) => it[0].label, label: (it) => ` ${G.top[it.datasetIndex].label}: ${num(it.parsed.y, 0)}` } }, tip) } } }));
     const col = G_COLORS[0];
     charts.push(new Chart(b, { type: 'line',
-      data: { labels: G.labels, datasets: [{ label: '공급가 합계', data: G.amt.map((v) => Math.round(v)), borderColor: col, backgroundColor: col, borderWidth: 2, borderDash: [3, 3], pointRadius: 4, pointHoverRadius: 7, pointBorderColor: '#ffffff', pointBorderWidth: 1, tension: 0 }] },
+      data: { labels: G.labels, datasets: [{ label: '공급가 합계', data: G.amt.map((v) => Math.round(v)), borderColor: col, backgroundColor: col, borderWidth: 2, pointRadius: 4, pointHoverRadius: 7, pointBorderColor: '#ffffff', pointBorderWidth: 1, tension: 0 }] },
       options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: axis((v) => (v >= 10000 ? num(v / 10000, 0) + '만' : num(v, 0))),
         plugins: { legend: { display: false }, tooltip: Object.assign({ callbacks: { label: (it) => ` 공급가 합계: ${won(it.parsed.y)}` } }, tip) } } }));
   }
