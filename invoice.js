@@ -121,7 +121,7 @@
   function touch() { const t = document.getElementById('invStatusText'); if (t && getUrl() && loaded && isDirty() && !saving) t.textContent = UNSAVED; paintBadge(); }
   // 명세서 한 장. edit=true면 입력 칸, false면 글자만(인쇄·PDF용)
   function sheetHtml(d, edit) {
-    const T = totals(d), B = 'border:1px solid #1c1917', lab = `${B};background:#f5f5f4;text-align:center;padding:0 4px;white-space:nowrap`, val = `${B};padding:0 6px;text-align:left`;
+    const T = totals(d), B = 'border:1px solid #1c1917', lab = `${B};text-align:center;padding:0 4px;white-space:nowrap`, val = `${B};padding:0 6px;text-align:left`;
     const inp = (f, v, opt) => (edit ? `<input ${opt && opt.type ? `type="${opt.type}"` : 'type="text"'} value="${esc(v)}" ${opt && opt.list ? `list="${opt.list}"` : ''} oninput="Invoice.setField('${f}', this.value)" class="inv-in" style="text-align:${(opt && opt.align) || 'left'}">` : `<span>${esc(v)}</span>`);
     const cell = (i, f, v, align, extra) => (edit ? `<input type="text" value="${esc(v)}" ${extra || ''} data-inv="${i}:${f}" ${f === 'name' ? `list="invProducts" onchange="Invoice.pickName(${i}, this.value)"` : ''} oninput="Invoice.setItem(${i}, '${f}', this.value)" ${f === 'qty' || f === 'price' ? 'inputmode="numeric" onblur="Invoice.fmtNum(this)"' : ''} class="inv-in" style="text-align:${align}">` : `<span>${esc(f === 'qty' || f === 'price' ? (v === '' ? '' : won(numOf(v))) : v)}</span>`);
     const rows = d.items.map((it, i) => `<tr style="height:6.9mm">
@@ -155,7 +155,7 @@
         <tr style="height:6.4mm"><td style="${lab};border-bottom-width:2px">번호</td><td style="${lab};border-bottom-width:2px">품명</td><td style="${lab};border-bottom-width:2px">규격</td><td style="${lab};border-bottom-width:2px">단위</td><td style="${lab};border-bottom-width:2px">수량</td><td style="${lab};border-bottom-width:2px">단가</td><td style="${lab};border-bottom-width:2px">공급가액</td><td style="${lab};border-bottom-width:2px">비고</td></tr>
         ${rows}
         ${sumRow('합&ensp;&ensp;계', 'sum', T.sum)}${sumRow('부가세', 'vat', T.vat)}${sumRow('총합계', 'total', T.total, true)}
-        <tr style="height:6.4mm"><td colspan="8" style="${lab}">참고사항</td></tr>
+        <tr style="height:6.4mm"><td colspan="8" style="${lab};background:#ececec">참고사항</td></tr>
         <tr style="height:21mm"><td colspan="8" style="${B};padding:0 6px;vertical-align:middle">${memo}</td></tr>
       </table>
     </div>`;
@@ -205,7 +205,7 @@
         </div>
         <div class="flex-1 min-w-0 w-full">
           <div class="mb-2 flex flex-wrap items-center gap-2 text-xs no-print"><span class="px-2.5 h-7 inline-flex items-center rounded-lg border ${isNew ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-stone-50 border-stone-200 text-stone-600'} font-bold">${isNew ? '새 명세서 (아직 저장 안 됨)' : '저장된 명세서 수정 중'}</span><span class="text-stone-500">발주번호 <b class="text-stone-800">${esc(docNo(cur))}</b></span></div>
-          <div id="invStage" class="overflow-auto rounded-2xl border border-stone-200 bg-stone-200/60 p-3"><div id="invWrap" class="inv-wrap shadow-lg" style="width:210mm">${sheetHtml(cur, true)}</div></div>
+          <div id="invStage" class="overflow-auto rounded-2xl border border-stone-200 bg-stone-200/60 p-3"><div id="invWrap" class="inv-wrap shadow-lg" style="width:210mm;margin-left:auto;margin-right:auto">${sheetHtml(cur, true)}</div></div>
         </div>
       </div>
       <datalist id="invProducts">${prods.map((p) => `<option value="${esc(p.name)}">${p.price ? won(p.price) + '원' : '판매가 없음'}</option>`).join('')}</datalist>
@@ -214,7 +214,7 @@
     if (window.lucide) lucide.createIcons();
   }
   // 화면이 좁으면 A4를 줄여서 보여 줌
-  function fit() { const st = document.getElementById('invStage'), w = document.getElementById('invWrap'); if (!st || !w) return; const avail = st.clientWidth - 24, full = w.offsetWidth, s = Math.min(1, avail / full); w.style.transform = s < 1 ? `scale(${s})` : ''; w.style.marginBottom = s < 1 ? `${-(1 - s) * w.offsetHeight}px` : ''; w.style.marginRight = s < 1 ? `${-(1 - s) * full}px` : ''; }
+  function fit() { const st = document.getElementById('invStage'), w = document.getElementById('invWrap'); if (!st || !w) return; const avail = st.clientWidth - 24, full = w.offsetWidth, s = Math.min(1, avail / full); w.style.transform = s < 1 ? `scale(${s})` : ''; w.style.marginBottom = s < 1 ? `${-(1 - s) * w.offsetHeight}px` : ''; w.style.marginLeft = s < 1 ? '0' : 'auto'; w.style.marginRight = s < 1 ? `${-(1 - s) * full}px` : 'auto'; }
   function refreshCalc() {
     const T = totals(cur);
     T.amt.forEach((a, i) => { const c = document.querySelector(`[data-inv-amt="${i}"]`); if (c) c.textContent = a === null ? '' : won(a); });
