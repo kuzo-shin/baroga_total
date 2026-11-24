@@ -780,13 +780,22 @@
       renderAll();
     }
 
-    function getFilteredRecords() {
-      const q = (document.getElementById('msi_searchInput')?.value || '').toLowerCase();
-      return records.filter(r => {
-        const matchFilter = currentFilter === 'ALL' || r.date.startsWith(currentFilter);
-        const matchQuery = !q || r.date.includes(q) || r.title.toLowerCase().includes(q) || r.driver.toLowerCase().includes(q) || (r.memo && r.memo.toLowerCase().includes(q)) || r.items.some(i => i.name.toLowerCase().includes(q) || (i.code && i.code.includes(q)));
-        return matchFilter && matchQuery;
+    // 검색: 날짜·제목·기사·메모가 맞으면 그 입고 건 전체, 품목명·품목코드만 맞으면 그 입고 건에서 '맞는 품목 줄만' 보여줌
+    //  whole=true(정산 엑셀)면 예전처럼 맞는 입고 건을 통째로 돌려줌
+    function getFilteredRecords(whole) {
+      const q = (document.getElementById('msi_searchInput')?.value || '').trim().toLowerCase();
+      const out = [];
+      records.forEach(r => {
+        if (!(currentFilter === 'ALL' || r.date.startsWith(currentFilter))) return;
+        if (!q) { out.push(r); return; }
+        const recHit = r.date.includes(q) || String(r.title || '').toLowerCase().includes(q) || String(r.driver || '').toLowerCase().includes(q) || (r.memo && r.memo.toLowerCase().includes(q));
+        const hitItems = (r.items || []).filter(i => String(i.name || '').toLowerCase().includes(q) || (i.code && String(i.code).includes(q)));
+        if (recHit || (whole && hitItems.length)) { out.push(r); return; }
+        if (!hitItems.length) return;
+        // 맞는 품목만 담은 사본 (원본 기록은 건드리지 않음). 박스·PK 합계도 맞는 품목만
+        out.push(Object.assign({}, r, { items: hitItems, totalBoxes: hitItems.reduce((a, i) => a + (Number(i.box) || 0), 0), totalPks: hitItems.reduce((a, i) => a + (Number(i.pk) || 0), 0), _itemFiltered: true, _allItemCount: (r.items || []).length }));
       });
+      return out;
     }
 
     function getFilteredReturns() {
@@ -1064,7 +1073,9 @@
         return;
       }
 
-      container.innerHTML = filtered.map(rec => {
+      const itemFilteredCnt = filtered.filter(r => r._itemFiltered).length;
+      const itemSearchBanner = itemFilteredCnt ? `<div class="px-3.5 py-2 rounded-xl border border-amber-200 bg-amber-50 text-xs font-bold text-amber-900">품목 검색 중 — 검색어에 맞는 품목만 표시합니다 (입고 ${itemFilteredCnt}건). 상단 합계·순위도 맞는 품목 기준입니다. 검색어를 지우면 전체가 보입니다.</div>` : '';
+      container.innerHTML = itemSearchBanner + filtered.map(rec => {
         const displayItems = getDisplayItems(rec.items);
         const isCollapsed = !!collapsedMap[rec.id];
         const dailyPurchaseTotal = displayItems.reduce((sum, it) => sum + (it.pk * getItemUnitPrice(it)), 0);
@@ -1077,7 +1088,7 @@
               <button onclick="window.MSInbound.toggleCard('${rec.id}')" class="p-1 rounded hover:bg-stone-200/70 text-stone-500 transition" title="접기/펼치기">
                 <i data-lucide="${isCollapsed ? 'chevron-right' : 'chevron-down'}" class="w-4 h-4"></i>
               </button>
-              <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-stone-900 text-white cursor-pointer" onclick="window.MSInbound.toggleCard('${rec.id}')">${escapeHtml(rec.date)}</span>
+              <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-stone-900 text-white cursor-pointer" onclick="window.MSInbound.toggleCard('${rec.id}')">${escapeHtml(rec.date)}</span>${rec._itemFiltered ? `<span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-200">${rec._allItemCount}품목 중 ${rec.items.length}품목 표시</span>` : ''}
               <span class="px-2 py-0.5 rounded text-xs font-semibold ${rec.type === '입고' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}">${escapeHtml(rec.type)}</span>
               <button onclick="window.MSInbound.toggleRecordStatus('${rec.id}')" class="px-2 py-0.5 rounded text-xs font-semibold cursor-pointer transition ${rec.status === '입고 완료' ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}" title="클릭하여 완료/예정 전환">
                 ${escapeHtml(rec.status)} ↻
@@ -1501,7 +1512,7 @@
 
     // 월말 정산용 4-시트 엑셀(.xlsx) 자동 생성 및 다운로드 (매입단가 및 매입금액 포함)
     function downloadSettlementExcel() {
-      const filtered = getFilteredRecords();
+      const filtered = getFilteredRecords(true); // 정산 엑셀은 입고 건 전체 기준 (품목 검색으로 일부만 빠지지 않게)
       const filteredReturns = getFilteredReturns();
       if (filtered.length === 0 && filteredReturns.length === 0) {
         showToast('다운로드할 내역이 없습니다.');
