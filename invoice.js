@@ -1,4 +1,4 @@
-// [VERSION: invoice.js v1.1 - 2026-11-25 납기일 기본값 = 발주일(따로 고르기 전에는 발주일을 따라감) · 글꼴 굵게 · 기본 정보(등록번호·대표자명·주소·업태/종목·연락처·참고사항)는 DB에서 자동 채움 / v1.0 - 2026-11-25 신규: 거래명세서 작성(A4) · PDF 다운로드 · 인쇄 · DB 저장]
+// [VERSION: invoice.js v1.2 - 2026-11-25 품목 칸 뒤에 로고 워터마크 / v1.1 - 2026-11-25 납기일 기본값 = 발주일(따로 고르기 전에는 발주일을 따라감) · 글꼴 굵게 · 기본 정보(등록번호·대표자명·주소·업태/종목·연락처·참고사항)는 DB에서 자동 채움 / v1.0 - 2026-11-25 신규: 거래명세서 작성(A4) · PDF 다운로드 · 인쇄 · DB 저장]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - 거래명세서 (invoice.js)
 //  - A4 거래명세서를 화면에서 바로 작성하고 PDF로 내려받거나 인쇄
@@ -25,6 +25,8 @@
   // 코드에 두는 기본값은 공개돼도 되는 문구뿐. 등록번호·대표자명·주소·연락처·계좌는 [기본 정보]에서 넣어 DB에 보관
   const BASE_DEFAULTS = { ref: '', pay: '당사 정기 결제일', regNo: '', company: '유한회사 바로가', ceo: '', addr: '', biz: '', tel: '', notice: '아래와 같이 주문하오니 기일내 납기 바랍니다.', memo: '' };
   const DEF_KEYS = Object.keys(BASE_DEFAULTS);
+  // 품목 칸 뒤에 흐리게 까는 로고(워터마크). PDF용 빈 창에서도 보이도록 전체 주소로 둠
+  const LOGO_URL = (() => { try { const b = /^https?:/.test(location.href) ? location.href : 'https://kuzo-shin.github.io/baroga_total/'; return new URL('logo_baroga.png', b).href; } catch (e) { return 'https://kuzo-shin.github.io/baroga_total/logo_baroga.png'; } })();
 
   let db = { v: 1, docs: [], cfg: { defaults: {} } }, dbRevision = null, loaded = false, loading = false, saving = false, statusText = 'DB 미연결';
   let cur = null, curSaved = '', dbDirty = false, search = '';
@@ -150,7 +152,9 @@
         <tr style="height:6.4mm"><td style="${lab}">지불조건</td><td style="${val}">${inp('pay', d.pay)}</td><td style="${lab}">연&ensp;락&ensp;처</td><td style="${val}">${inp('tel', d.tel)}</td></tr>
         <tr style="height:6.4mm"><td colspan="4" style="${B};text-align:center;padding:0 6px">${inp('notice', d.notice, { align: 'center' })}</td></tr>
       </table>
-      <table style="width:100%;border-collapse:collapse;table-layout:fixed;margin-top:-1px">
+      <div style="position:relative;margin-top:-1px">
+      <img src="${LOGO_URL}" alt="" crossorigin="anonymous" style="position:absolute;left:50%;top:78.5mm;width:112mm;height:auto;transform:translate(-50%,-50%);opacity:0.09;pointer-events:none;z-index:0">
+      <table style="position:relative;z-index:1;width:100%;border-collapse:collapse;table-layout:fixed">
         <colgroup><col style="width:7.5%"><col style="width:25%"><col style="width:13%"><col style="width:9%"><col style="width:9.5%"><col style="width:12.5%"><col style="width:14.5%"><col style="width:9%"></colgroup>
         <tr style="height:6.4mm"><td style="${lab};border-bottom-width:2px">번호</td><td style="${lab};border-bottom-width:2px">품명</td><td style="${lab};border-bottom-width:2px">규격</td><td style="${lab};border-bottom-width:2px">단위</td><td style="${lab};border-bottom-width:2px">수량</td><td style="${lab};border-bottom-width:2px">단가</td><td style="${lab};border-bottom-width:2px">공급가액</td><td style="${lab};border-bottom-width:2px">비고</td></tr>
         ${rows}
@@ -158,6 +162,7 @@
         <tr style="height:6.4mm"><td colspan="8" style="${lab};background:#ececec">참고사항</td></tr>
         <tr style="height:21mm"><td colspan="8" style="${B};padding:0 6px;vertical-align:middle">${memo}</td></tr>
       </table>
+      </div>
     </div>`;
   }
   function render() {
@@ -261,6 +266,7 @@
       const fd = fr.contentDocument;
       fd.open(); fd.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"><style>html,body{margin:0;padding:0;background:#fff}.baroga-serif{font-family:Georgia,'Times New Roman',Batang,serif}</style></head><body>${sheetHtml(cur, false)}</body></html>`); fd.close();
       await new Promise((r) => setTimeout(r, 150));
+      await Promise.all([...fd.images].map((im) => (im.complete ? null : new Promise((r) => { im.onload = im.onerror = r; setTimeout(r, 4000); }))));
       try { await Promise.all(['700', '800', '900'].map((wgt) => fd.fonts.load(`${wgt} 10pt Pretendard`, '거래명세서 0123'))); await fd.fonts.ready; } catch (e) {}
       // html2canvas는 글자 기준선을 이 페이지에서 재는데, 사이트 기본 스타일(img가 block)이 있으면 글자가 아래로 밀림 → 변환하는 동안만 되돌림
       const fix = document.createElement('style'); fix.textContent = 'img{display:inline-block!important}'; document.head.appendChild(fix);
