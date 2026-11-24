@@ -1,4 +1,4 @@
-// [VERSION: invoice.js v1.0 - 2026-11-25 신규: 거래명세서 작성(A4) · PDF 다운로드 · 인쇄 · DB 저장]
+// [VERSION: invoice.js v1.1 - 2026-11-25 납기일 기본값 = 발주일(따로 고르기 전에는 발주일을 따라감) · 글꼴 굵게 · 기본 정보(등록번호·대표자명·주소·업태/종목·연락처·참고사항)는 DB에서 자동 채움 / v1.0 - 2026-11-25 신규: 거래명세서 작성(A4) · PDF 다운로드 · 인쇄 · DB 저장]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - 거래명세서 (invoice.js)
 //  - A4 거래명세서를 화면에서 바로 작성하고 PDF로 내려받거나 인쇄
@@ -49,7 +49,7 @@
   function nextSeq(prefix, exceptId) { let n = 0; db.docs.forEach((d) => { if (d.id !== exceptId && d.noPrefix === prefix) n = Math.max(n, Number(d.noSeq) || 0); }); return pad(n + 1); }
   function blankDoc() {
     const today = ymd(new Date()), D = defaults(), prefix = noPrefix(today);
-    return { id: 'inv_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), created: today, noPrefix: prefix, noSeq: nextSeq(prefix), to: '', ref: D.ref, orderDate: today, dueDate: '', pay: D.pay, regNo: D.regNo, company: D.company, ceo: D.ceo, addr: D.addr, biz: D.biz, tel: D.tel, notice: D.notice, memo: D.memo, items: Array.from({ length: ROWS }, () => ({ name: '', spec: '', unit: '', qty: '', price: '', note: '' })) };
+    return { id: 'inv_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), created: today, noPrefix: prefix, noSeq: nextSeq(prefix), to: '', ref: D.ref, orderDate: today, dueDate: today, pay: D.pay, regNo: D.regNo, company: D.company, ceo: D.ceo, addr: D.addr, biz: D.biz, tel: D.tel, notice: D.notice, memo: D.memo, items: Array.from({ length: ROWS }, () => ({ name: '', spec: '', unit: '', qty: '', price: '', note: '' })) };
   }
   function fixDoc(d) { const b = blankDoc(), x = Object.assign({}, b, d); x.items = Array.from({ length: ROWS }, (_, i) => Object.assign({ name: '', spec: '', unit: '', qty: '', price: '', note: '' }, (d.items || [])[i] || {})); return x; }
   const docNo = (d) => `${d.noPrefix}-${d.noSeq}`;
@@ -78,7 +78,7 @@
       if (!json || json.ok === false) throw new Error((json && (json.message || json.error)) || '불러오기 실패');
       db = normalize(json.payload || {}); dbRevision = Number(json.revision) || 0; loaded = true; dbDirty = false;
       const keep = cur && db.docs.find((d) => d.id === cur.id);
-      setCur(keep || blankDoc());
+      setCur(keep || blankDoc()); // 새 명세서는 방금 불러온 기본 정보(등록번호·주소·연락처·참고사항 등)로 채움
       setStatus(`불러옴 ${nowHm()} · ${db.docs.length}건`);
       if (showMsg) toast('거래명세서 DB를 불러왔습니다.', 'success');
     } catch (e) { setStatus('불러오기 실패'); if (showMsg) toast('거래명세서 DB 불러오기 실패: ' + e.message, 'error'); }
@@ -122,7 +122,7 @@
   // 명세서 한 장. edit=true면 입력 칸, false면 글자만(인쇄·PDF용)
   function sheetHtml(d, edit) {
     const T = totals(d), B = 'border:1px solid #1c1917', lab = `${B};text-align:center;padding:0 4px;white-space:nowrap`, val = `${B};padding:0 6px;text-align:left`;
-    const inp = (f, v, opt) => (edit ? `<input ${opt && opt.type ? `type="${opt.type}"` : 'type="text"'} value="${esc(v)}" ${opt && opt.list ? `list="${opt.list}"` : ''} oninput="Invoice.setField('${f}', this.value)" class="inv-in" style="text-align:${(opt && opt.align) || 'left'}">` : `<span>${esc(v)}</span>`);
+    const inp = (f, v, opt) => (edit ? `<input ${opt && opt.type ? `type="${opt.type}"` : 'type="text"'} value="${esc(v)}" ${opt && opt.list ? `list="${opt.list}"` : ''} data-inv-f="${f}" oninput="Invoice.setField('${f}', this.value)" class="inv-in" style="text-align:${(opt && opt.align) || 'left'}">` : `<span>${esc(v)}</span>`);
     const cell = (i, f, v, align, extra) => (edit ? `<input type="text" value="${esc(v)}" ${extra || ''} data-inv="${i}:${f}" ${f === 'name' ? `list="invProducts" onchange="Invoice.pickName(${i}, this.value)"` : ''} oninput="Invoice.setItem(${i}, '${f}', this.value)" ${f === 'qty' || f === 'price' ? 'inputmode="numeric" onblur="Invoice.fmtNum(this)"' : ''} class="inv-in" style="text-align:${align}">` : `<span>${esc(f === 'qty' || f === 'price' ? (v === '' ? '' : won(numOf(v))) : v)}</span>`);
     const rows = d.items.map((it, i) => `<tr style="height:6.9mm">
         <td style="${B};text-align:center;border-top:none;border-bottom:none">${i + 1}</td>
@@ -133,12 +133,12 @@
         <td style="${B};text-align:right;border-top:none;border-bottom:none;padding:0 5px">${cell(i, 'price', it.price === '' ? '' : won(numOf(it.price)), 'right')}</td>
         <td style="${B};text-align:right;border-top:none;border-bottom:none;padding:0 6px" data-inv-amt="${i}">${T.amt[i] === null ? '' : won(T.amt[i])}</td>
         <td style="${B};text-align:center;border-top:none;border-bottom:none;padding:0 3px">${cell(i, 'note', it.note, 'center')}</td></tr>`).join('');
-    const sumRow = (label, key, v, bold) => `<tr style="height:6.9mm"><td colspan="6" style="${B};text-align:center">${label}</td><td style="${B};text-align:right;padding:0 6px;${bold ? 'font-weight:800' : ''}" data-inv-sum="${key}">${won(v)}</td><td style="${B}"></td></tr>`;
+    const sumRow = (label, key, v, bold) => `<tr style="height:6.9mm"><td colspan="6" style="${B};text-align:center">${label}</td><td style="${B};text-align:right;padding:0 6px;${bold ? 'font-weight:900' : ''}" data-inv-sum="${key}">${won(v)}</td><td style="${B}"></td></tr>`;
     const memo = edit ? `<textarea oninput="Invoice.setField('memo', this.value)" class="inv-in" style="text-align:center;height:100%;resize:none;line-height:1.7;padding-top:6mm">${esc(d.memo)}</textarea>` : `<div style="white-space:pre-wrap;text-align:center;line-height:1.7">${esc(d.memo)}</div>`;
-    return `<div class="inv-sheet" style="width:210mm;height:297mm;box-sizing:border-box;padding:14mm 15mm 12mm;background:#fff;color:#1c1917;font-size:10pt;line-height:1.35;${edit ? '' : 'letter-spacing:0.01px;'}font-family:'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">
+    return `<div class="inv-sheet" style="width:210mm;height:297mm;box-sizing:border-box;padding:14mm 15mm 12mm;background:#fff;color:#1c1917;font-size:10pt;font-weight:700;line-height:1.35;${edit ? '' : 'letter-spacing:0.01px;'}font-family:'Pretendard',-apple-system,BlinkMacSystemFont,system-ui,sans-serif">
       <div style="position:relative;height:13mm;display:flex;align-items:center;justify-content:center">
         <div style="position:absolute;left:1mm;top:1.5mm;display:flex;flex-direction:column;align-items:center;line-height:1"><span class="baroga-serif" style="font-size:17pt;font-weight:700;color:#3B2A1A;letter-spacing:0.14em">BAROGA</span><span style="font-size:5pt;font-weight:700;color:#3B2A1A;letter-spacing:0.16em;margin-top:1mm">BAKERY MANUFACTURING</span></div>
-        <div style="font-size:24pt;letter-spacing:0.28em;font-weight:500">거래명세서</div>
+        <div style="font-size:24pt;letter-spacing:0.28em;font-weight:800">거래명세서</div>
       </div>
       <table style="width:100%;border-collapse:collapse;table-layout:fixed;margin-top:1.5mm">
         <colgroup><col style="width:16.5%"><col style="width:35%"><col style="width:16%"><col style="width:32.5%"></colgroup>
@@ -221,7 +221,11 @@
     [['sum', T.sum], ['vat', T.vat], ['total', T.total]].forEach(([k, v]) => { const c = document.querySelector(`[data-inv-sum="${k}"]`); if (c) c.textContent = won(v); });
     touch();
   }
-  function setField(f, v) { if (!cur) return; cur[f] = f === 'noSeq' ? String(v).replace(/[^0-9]/g, '').slice(0, 3) : v; touch(); }
+  function setField(f, v) {
+    if (!cur) return;
+    if (f === 'orderDate' && (!cur.dueDate || cur.dueDate === cur.orderDate)) { cur.dueDate = v; const el = document.querySelector('#invoiceRoot input[data-inv-f="dueDate"]'); if (el) el.value = v; } // 납기일을 따로 고르지 않았으면 발주일을 따라감
+    cur[f] = f === 'noSeq' ? String(v).replace(/[^0-9]/g, '').slice(0, 3) : v; touch();
+  }
   function setItem(i, f, v) { if (!cur || !cur.items[i]) return; cur.items[i][f] = f === 'qty' || f === 'price' ? (String(v).trim() === '' ? '' : numOf(v)) : v; refreshCalc(); }
   function fmtNum(el) { const v = String(el.value).trim(); el.value = v === '' ? '' : won(numOf(v)); }
   function setCell(i, f, v) { const el = document.querySelector(`[data-inv="${i}:${f}"]`); if (el) el.value = v; }
@@ -237,7 +241,7 @@
   }
   function guardLeave() { return !curDirty() || window.confirm('작성 중인 명세서가 아직 저장되지 않았습니다.\n저장하지 않고 넘어가면 그 내용은 사라집니다. 계속할까요?'); }
   function newDoc() { if (!guardLeave()) return; setCur(blankDoc()); render(); }
-  function copyDoc() { if (!cur) return; const b = blankDoc(), src = JSON.parse(JSON.stringify(cur)); const d = Object.assign({}, src, { id: b.id, created: b.created, noPrefix: b.noPrefix, noSeq: b.noSeq, orderDate: b.orderDate, dueDate: '' }); cur = fixDoc(d); curSaved = ''; render(); toast('내용을 복사해 새 명세서를 만들었습니다. 발주일·납기일을 확인해 주세요.', 'info'); }
+  function copyDoc() { if (!cur) return; const b = blankDoc(), src = JSON.parse(JSON.stringify(cur)); const d = Object.assign({}, src, { id: b.id, created: b.created, noPrefix: b.noPrefix, noSeq: b.noSeq, orderDate: b.orderDate, dueDate: b.dueDate }); cur = fixDoc(d); curSaved = ''; render(); toast('내용을 복사해 새 명세서를 만들었습니다. 발주일·납기일은 오늘로 바뀌었으니 확인해 주세요.', 'info'); }
   function open(id) { const d = db.docs.find((x) => x.id === id); if (!d) return; if (cur && cur.id !== id && !guardLeave()) return; setCur(d); render(); }
   function remove(id) { const d = db.docs.find((x) => x.id === id); if (!d) return; if (!window.confirm(`거래명세서 ${docNo(d)}${d.to ? ' (' + d.to + ')' : ''}를 삭제할까요?\n[DB 저장]을 눌러야 DB에서도 지워집니다.`)) return; db.docs = db.docs.filter((x) => x.id !== id); dbDirty = true; if (cur && cur.id === id) setCur(blankDoc()); render(); }
   function saveDefaults() { const d = {}; DEF_KEYS.forEach((k) => { d[k] = cur[k] || ''; }); db.cfg = { defaults: d }; dbDirty = true; render(); toast('지금 내용을 새 명세서의 기본 정보로 두었습니다. [DB 저장]을 눌러야 DB에 올라갑니다.', 'success'); }
