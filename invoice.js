@@ -258,7 +258,9 @@
       fd.open(); fd.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"><style>html,body{margin:0;padding:0;background:#fff}.baroga-serif{font-family:Georgia,'Times New Roman',Batang,serif}</style></head><body>${sheetHtml(cur, false)}</body></html>`); fd.close();
       await new Promise((r) => setTimeout(r, 150));
       try { await Promise.all(['400', '500', '700', '800'].map((wgt) => fd.fonts.load(`${wgt} 10pt Pretendard`, '거래명세서 0123'))); await fd.fonts.ready; } catch (e) {}
-      const canvas = await window.html2canvas(fd.body.firstElementChild, { scale: 3, backgroundColor: '#ffffff', useCORS: true });
+      // html2canvas는 글자 기준선을 이 페이지에서 재는데, 사이트 기본 스타일(img가 block)이 있으면 글자가 아래로 밀림 → 변환하는 동안만 되돌림
+      const fix = document.createElement('style'); fix.textContent = 'img{display:inline-block!important}'; document.head.appendChild(fix);
+      let canvas; try { canvas = await window.html2canvas(fd.body.firstElementChild, { scale: 3, backgroundColor: '#ffffff', useCORS: true }); } finally { fix.remove(); }
       const doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
       doc.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 210, 297);
       doc.save(fileName());
