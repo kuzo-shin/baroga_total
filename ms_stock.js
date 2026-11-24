@@ -1,4 +1,4 @@
-// [VERSION: ms_stock.js v1.0 - 2026-11-24 신규: 엠즈 재고 대시보드(발주 우선순위 · 유통기한 임박 · 반품 현황 · 발주 추이). 자료는 엠즈 e플랫폼에서 읽어 전용 DB(구글 시트)에 저장한 것을 불러옴]
+// [VERSION: ms_stock.js v1.1 - 2026-11-24 바로가 품목만 보기(위탁상품 보관일의 바로가 매입처 상품 기준, 전체 보기 전환 가능) / v1.0 - 2026-11-24 신규: 엠즈 재고 대시보드(발주 우선순위 · 유통기한 임박 · 반품 현황 · 발주 추이). 자료는 엠즈 e플랫폼에서 읽어 전용 DB(구글 시트)에 저장한 것을 불러옴]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - 엠즈 재고 (ms_stock.js)
 //  - 엠즈 e플랫폼(재고관리·주문관리) 화면에서 읽은 자료를 통째로 DB에 넣고, 여기서 계산해 보여 줌
@@ -10,6 +10,8 @@
 //      ledger { 'YYYY-MM': [[상품코드, 기초재고, 구매입고, 기말재고]] }                         ← 위탁상품 수불부 (순출고 = 기초 + 구매입고 − 기말)
 //      daily  [[상품코드, 일자, 기초, 당일증감, 기말]]                                          ← 일자별 수불현황 (전체 센터)
 //      orders [[매장코드, 매장명, 일자, 매출구분, 상품코드, 상품명, 규격, 입고수량, 공급가, 합계, 비고]] ← 주문대비 입고현황 (판매처)
+//      own    { supplier: 매입처코드, items: { 상품코드: 상품명 } }                              ← 위탁상품 보관일 (매입처코드가 바로가인 상품 = 바로가 품목)
+//  - '바로가 품목만' 보기: 재고·유통기한은 상품코드가 own에 있는 것, 주문·반품은 상품명에서 맨 앞 S/M과 괄호 안 글자를 뗀 이름이 own의 상품명과 같은 것
 //  - 수량 단위는 엠즈 화면 그대로(PK·EA·BOX). 단위가 EA이고 규격에 'N ea'가 있으면 화면에는 PK로 환산해 보여 줌
 // ============================================================================
 (function () {
@@ -30,7 +32,7 @@
   const tdr = td + ' text-right tabular-nums';
   const card = 'bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4';
 
-  let data = null, dbRevision = null, loaded = false, loading = false, saving = false, statusText = 'DB 미연결', view = 'DASH', previewOnly = false;
+  let data = null, dbRevision = null, loaded = false, loading = false, saving = false, statusText = 'DB 미연결', view = 'DASH', previewOnly = false, ownOnly = true;
   const root = () => document.getElementById('msStockRoot');
   function getUrl() { let v = ''; try { v = localStorage.getItem(URL_KEY) || ''; } catch (e) {} return v || DEFAULT_URL; }
   function setStatus(t) { statusText = t; const el = document.getElementById('mssStatus'); if (el) el.textContent = t; }
@@ -40,7 +42,7 @@
   }
   function normalize(p) {
     const arr = (v) => (Array.isArray(v) ? v : []);
-    return { v: p.v || 1, asOf: String(p.asOf || ''), period: p.period || {}, names: p.names || {}, stock: arr(p.stock), expiry: arr(p.expiry), ledger: p.ledger && typeof p.ledger === 'object' ? p.ledger : {}, daily: arr(p.daily), orders: arr(p.orders), importedAt: p.importedAt || '' };
+    return { v: p.v || 1, asOf: String(p.asOf || ''), period: p.period || {}, names: p.names || {}, stock: arr(p.stock), expiry: arr(p.expiry), ledger: p.ledger && typeof p.ledger === 'object' ? p.ledger : {}, daily: arr(p.daily), orders: arr(p.orders), own: p.own && p.own.items && typeof p.own.items === 'object' ? { supplier: String(p.own.supplier || ''), items: p.own.items } : null, importedAt: p.importedAt || '' };
   }
   async function pull(showMsg) {
     if (!getUrl()) { setStatus('DB 미연결'); render(); return; }
@@ -123,7 +125,12 @@
     return out;
   }
   function compute() {
-    const d = data, asOfDate = dateOf(d.asOf), asOfYm = d.asOf.slice(0, 7);
+    const d0 = data, asOfDate = dateOf(d0.asOf), asOfYm = d0.asOf.slice(0, 7);
+    // 바로가 품목만 보기: 위탁상품 보관일에서 읽은 바로가 매입처 상품 기준 (자료에 없으면 전체)
+    const hasOwn = !!(d0.own && Object.keys(d0.own.items).length), useOwn = hasOwn && ownOnly;
+    const normName = (s) => String(s || '').replace(/^[SM]\s*/, '').replace(/\([^)]*\)|\[[^\]]*\]/g, '').replace(/\s+/g, '').toLowerCase();
+    const ownCodes = hasOwn ? new Set(Object.keys(d0.own.items).map(String)) : null, ownNames = hasOwn ? new Set(Object.values(d0.own.items).map(normName)) : null;
+    const d = useOwn ? Object.assign({}, d0, { stock: d0.stock.filter((r) => ownCodes.has(String(r[0]))), expiry: d0.expiry.filter((r) => ownCodes.has(String(r[0]))), orders: d0.orders.filter((r) => ownNames.has(normName(r[5]))) }) : d0;
     const nameOf = (code) => { const s = d.stock.find((r) => String(r[0]) === String(code)); return s ? [s[1], s[2], s[3]] : (d.names[code] || [code, '', '']); };
     // 일평균 출고: 위탁상품 수불부의 순출고(기초 + 구매입고 − 기말) 합계 ÷ 일수 (이번 달은 1일~기준일, 지난달은 한 달 전체)
     const months = Object.keys(d.ledger).sort(), outBy = {}, outThis = {};
@@ -164,7 +171,7 @@
     const weekOf = (s) => { const dt = dateOf(s), dow = (dt.getDay() + 6) % 7; return ymd(new Date(dt.getTime() - dow * dayMs)); }; // 그 주 월요일
     const weeks = [...new Set(sales.map((r) => weekOf(r[O.date])))].sort();
     const trend = (keyIdx, labelIdx) => { const m = {}; sales.forEach((r) => { const k = String(r[keyIdx]), x = m[k] || (m[k] = { key: k, label: String(r[labelIdx]), w: {}, qty: 0, amt: 0 }); const wk = weekOf(r[O.date]), c = x.w[wk] || (x.w[wk] = { qty: 0, amt: 0 }); c.qty += Number(r[O.qty]) || 0; c.amt += Number(r[O.supply]) || 0; x.qty += Number(r[O.qty]) || 0; x.amt += Number(r[O.supply]) || 0; }); return Object.values(m).sort((a, b) => b.amt - a.amt); };
-    return { items, lots, returns, sales, weeks, byItem: trend(O.code, O.name), byStore: trend(O.store, O.store), O, days, daysThis, months, fac, asOfDate };
+    return { items, lots, returns, sales, weeks, byItem: trend(O.code, O.name), byStore: trend(O.store, O.store), O, days, daysThis, months, fac, asOfDate, hasOwn, useOwn, stockAll: d0.stock.length, stockShown: d.stock.length, ordersAll: d0.orders.length, ordersShown: d.orders.length };
   }
 
   // ---------- 화면 ----------
@@ -225,7 +232,7 @@
           ${kpi('유통기한 30일 이내', exp30 + '개 품목', '기한 지난 재고 포함', exp30 ? 'text-rose-700' : '')}
           ${kpi('기한 전 소진 어려움', unsold + '개 품목', '지금 출고 속도 기준', unsold ? 'text-violet-800' : '')}
           ${kpi('반품 금액', won(retAmt), `${C.returns.length}건 · 조회 기간 내`, retAmt < 0 ? 'text-rose-700' : '')}
-          ${kpi('엠즈 재고 품목', d.stock.length + '개', `가맹점 발주 ${num(C.sales.length, 0)}줄 · 매장 ${C.byStore.length}곳`)}
+          ${kpi(C.useOwn ? '바로가 재고 품목' : '엠즈 재고 품목', C.stockShown + '개', `${C.useOwn ? `전체 ${C.stockAll}개 중 · ` : ''}가맹점 발주 ${num(C.sales.length, 0)}줄 · 매장 ${C.byStore.length}곳`)}
         </div>
         ${sec('발주 우선순위 — 회전일 짧은 순 10개', orderTable(C, 10), 'ORDER')}
         ${sec('유통기한 임박 — 빠른 순 10개', expiryTable(C, 10), 'EXPIRY')}
@@ -235,11 +242,12 @@
     else if (view === 'RETURN') body = sec('반품 현황', returnBlock(C));
     else if (view === 'TREND') body = sec('품목별 발주 추이 — 주(월요일 시작)별 입고수량, 공급가 큰 순', trendTable(C, C.byItem, '상품명')) + sec('가맹점별 발주 추이 — 주별 입고수량, 공급가 큰 순', trendTable(C, C.byStore, '매장'));
     el.innerHTML = `<div class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-4 flex flex-col gap-4">${head}${basis}
-        <div class="flex flex-wrap gap-1.5">${tabBtn('DASH', '대시보드')}${tabBtn('ORDER', '발주 우선순위')}${tabBtn('EXPIRY', '유통기한 임박')}${tabBtn('RETURN', '반품 현황')}${tabBtn('TREND', '발주 추이')}</div>
+        <div class="flex flex-wrap items-center justify-between gap-2"><div class="flex flex-wrap gap-1.5">${tabBtn('DASH', '대시보드')}${tabBtn('ORDER', '발주 우선순위')}${tabBtn('EXPIRY', '유통기한 임박')}${tabBtn('RETURN', '반품 현황')}${tabBtn('TREND', '발주 추이')}</div>
+          ${C.hasOwn ? `<div class="flex items-center gap-1.5 text-xs"><span class="text-stone-500">${C.useOwn ? `바로가 품목만 표시 중 (재고 ${C.stockShown}/${C.stockAll}품목 · 주문 ${num(C.ordersShown, 0)}/${num(C.ordersAll, 0)}줄)` : '엠즈 위탁 전체 품목 표시 중'}</span><button type="button" onclick="MsStock.toggleOwn()" class="px-3 py-1.5 rounded-lg border border-stone-300 font-bold cursor-pointer hover:bg-stone-50">${C.useOwn ? '전체 품목 보기' : '바로가 품목만 보기'}</button></div>` : '<span class="text-xs text-amber-800 font-bold">바로가 품목 구분 자료가 없어 전체 품목을 표시합니다 (다음 갱신부터 구분)</span>'}</div>
         ${body}</div><div id="mssModal"></div>`;
   }
   let mounted = false;
   function mount() { render(); if (!mounted) { mounted = true; pull(false); } }
   window.mountMsStockApp = mount;
-  window.MsStock = { mount, pull, pickFile, importSnapshot, preview, openDbModal, saveDbUrl, closeModal, setView: (v) => { view = v; render(); }, _debug: () => ({ data, dbRevision, loaded, computed: data ? compute() : null }) };
+  window.MsStock = { mount, pull, pickFile, importSnapshot, preview, openDbModal, saveDbUrl, closeModal, setView: (v) => { view = v; render(); }, toggleOwn: () => { ownOnly = !ownOnly; render(); }, _debug: () => ({ data, dbRevision, loaded, computed: data ? compute() : null }) };
 })();
