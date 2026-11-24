@@ -135,7 +135,7 @@
         <td style="${B};text-align:center;border-top:none;border-bottom:none;padding:0 3px">${cell(i, 'note', it.note, 'center')}</td></tr>`).join('');
     const sumRow = (label, key, v, bold) => `<tr style="height:6.9mm"><td colspan="6" style="${B};text-align:center">${label}</td><td style="${B};text-align:right;padding:0 6px;${bold ? 'font-weight:800' : ''}" data-inv-sum="${key}">${won(v)}</td><td style="${B}"></td></tr>`;
     const memo = edit ? `<textarea oninput="Invoice.setField('memo', this.value)" class="inv-in" style="text-align:center;height:100%;resize:none;line-height:1.7;padding-top:6mm">${esc(d.memo)}</textarea>` : `<div style="white-space:pre-wrap;text-align:center;line-height:1.7">${esc(d.memo)}</div>`;
-    return `<div class="inv-sheet" style="width:210mm;height:297mm;box-sizing:border-box;padding:14mm 15mm 12mm;background:#fff;color:#1c1917;font-size:10pt;line-height:1.35;font-family:'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">
+    return `<div class="inv-sheet" style="width:210mm;height:297mm;box-sizing:border-box;padding:14mm 15mm 12mm;background:#fff;color:#1c1917;font-size:10pt;line-height:1.35;${edit ? '' : 'letter-spacing:0.01px;'}font-family:'Pretendard','Noto Sans KR','Malgun Gothic',sans-serif">
       <div style="position:relative;height:13mm;display:flex;align-items:center;justify-content:center">
         <div style="position:absolute;left:1mm;top:1.5mm;display:flex;flex-direction:column;align-items:center;line-height:1"><span class="baroga-serif" style="font-size:17pt;font-weight:700;color:#3B2A1A;letter-spacing:0.14em">BAROGA</span><span style="font-size:5pt;font-weight:700;color:#3B2A1A;letter-spacing:0.16em;margin-top:1mm">BAKERY MANUFACTURING</span></div>
         <div style="font-size:24pt;letter-spacing:0.28em;font-weight:500">거래명세서</div>
@@ -249,18 +249,22 @@
   async function pdf() {
     if (!cur) return;
     toast('PDF를 만드는 중입니다...', 'info');
-    const box = document.createElement('div'); box.style.cssText = 'position:fixed;left:-10000px;top:0;background:#fff'; box.innerHTML = sheetHtml(cur, false); document.body.appendChild(box);
+    // 사이트 전체가 아니라 명세서 한 장만 든 빈 창에서 그림으로 바꿈 (빠르고, 글자 위치가 어긋나지 않음)
+    const fr = document.createElement('iframe'); fr.style.cssText = 'position:fixed;left:-10000px;top:0;width:230mm;height:320mm;border:0'; document.body.appendChild(fr);
     try {
       if (typeof window.html2canvas !== 'function') await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
       if (!window.jspdf) await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
-      if (document.fonts && document.fonts.ready) await document.fonts.ready;
-      const canvas = await window.html2canvas(box.firstElementChild, { scale: 3, backgroundColor: '#ffffff', useCORS: true });
+      const fd = fr.contentDocument;
+      fd.open(); fd.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"><style>html,body{margin:0;padding:0;background:#fff}.baroga-serif{font-family:Georgia,'Times New Roman',Batang,serif}</style></head><body>${sheetHtml(cur, false)}</body></html>`); fd.close();
+      await new Promise((r) => setTimeout(r, 150));
+      try { await Promise.all(['400', '500', '700', '800'].map((wgt) => fd.fonts.load(`${wgt} 10pt Pretendard`, '거래명세서 0123'))); await fd.fonts.ready; } catch (e) {}
+      const canvas = await window.html2canvas(fd.body.firstElementChild, { scale: 3, backgroundColor: '#ffffff', useCORS: true });
       const doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
       doc.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 210, 297);
       doc.save(fileName());
       toast('PDF를 내려받았습니다: ' + fileName(), 'success');
     } catch (e) { toast('PDF 만들기 실패: ' + e.message + ' — [인쇄]에서 "PDF로 저장"을 선택해도 됩니다.', 'error'); }
-    finally { box.remove(); }
+    finally { fr.remove(); }
   }
   function print() {
     if (!cur) return;
@@ -293,5 +297,5 @@
   window.mountInvoiceApp = mount;
   window.barogaUnsavedCheckers = window.barogaUnsavedCheckers || {};
   window.barogaUnsavedCheckers.invoice = () => !!getUrl() && loaded && (saving || isDirty());
-  window.Invoice = { mount, pull, saveNow, newDoc, copyDoc, open, remove, setField, setItem, fmtNum, pickName, reloadPrices, saveDefaults, setSearch, pdf, print, openDbModal, saveDbUrl, closeModal, _debug: () => ({ db, cur, dbRevision, loaded, dirty: isDirty(), totals: cur ? totals(cur) : null, products: products() }) };
+  window.Invoice = { _sheet: (edit) => sheetHtml(cur, !!edit), mount, pull, saveNow, newDoc, copyDoc, open, remove, setField, setItem, fmtNum, pickName, reloadPrices, saveDefaults, setSearch, pdf, print, openDbModal, saveDbUrl, closeModal, _debug: () => ({ db, cur, dbRevision, loaded, dirty: isDirty(), totals: cur ? totals(cur) : null, products: products() }) };
 })();
