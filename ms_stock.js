@@ -137,13 +137,13 @@
     const feed = typeof window.barogaMsStockFeed === 'function' ? window.barogaMsStockFeed() : { links: {}, records: [] };
     const linked = new Set(Object.keys(feed.links || {}).map(String)); (feed.records || []).forEach((r) => (r.items || []).forEach((i) => { if (i.code) linked.add(String(i.code)); }));
     const cfg = (d.cfg && d.cfg.own) || {}, out = {};
-    d.stock.forEach((r) => { const c = String(r[0]), set = typeof cfg[c] === 'boolean'; const why = linked.has(c) ? '엠즈 입고 기록 있음' : /생지/.test(String(r[1])) ? "이름에 '생지'" : ''; out[c] = { on: set ? cfg[c] : !!why, set, why }; });
+    d.stock.forEach((r) => { const c = String(r[0]), set = typeof cfg[c] === 'boolean'; const why = linked.has(c) ? '엠즈 출고 기록 있음' : /생지/.test(String(r[1])) ? "이름에 '생지'" : ''; out[c] = { on: set ? cfg[c] : !!why, set, why }; });
     return out;
   }
   function openOwnModal() {
     if (!data) return; const own = ownMap(data);
     const rows = data.stock.slice().sort((a, b) => Number(own[String(b[0])].on) - Number(own[String(a[0])].on) || String(a[1]).localeCompare(String(b[1]), 'ko')).map((r) => { const c = String(r[0]), o = own[c]; return `<label class="flex items-center gap-2 px-2 py-1.5 border-b border-stone-100 cursor-pointer hover:bg-stone-50"><input type="checkbox" data-own-code="${esc(c)}" ${o.on ? 'checked' : ''} class="w-4 h-4"><span class="font-mono text-xs text-stone-500">${esc(c)}</span><span class="text-sm font-bold flex-1 min-w-0 truncate">${esc(r[1])}</span><span class="text-[11px] text-stone-400 whitespace-nowrap">${o.set ? '직접 정함' : o.why ? '추정: ' + esc(o.why) : '추정: 해당 없음'}</span></label>`; }).join('');
-    modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold">바로가 품목 설정</h3><div class="text-xs text-stone-500 mt-0.5 leading-relaxed">엠즈 위탁 재고 ${data.stock.length}품목 중 바로가 공장 제품을 체크해 주세요. 처음에는 엠즈 입고 기록이 있거나 이름에 '생지'가 있는 상품을 추정해 체크해 두었습니다. 저장하면 다음 갱신 때도 유지되고, 새로 생긴 상품은 다시 추정합니다.</div></div>
+    modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold">바로가 품목 설정</h3><div class="text-xs text-stone-500 mt-0.5 leading-relaxed">엠즈 위탁 재고 ${data.stock.length}품목 중 바로가 공장 제품을 체크해 주세요. 처음에는 제품 출고(엠즈 출고) 기록이 있거나 이름에 '생지'가 있는 상품을 추정해 체크해 두었습니다. 저장하면 다음 갱신 때도 유지되고, 새로 생긴 상품은 다시 추정합니다.</div></div>
       <div class="max-h-[60vh] overflow-y-auto">${rows}</div>
       <div class="px-5 py-3 border-t border-stone-200 flex justify-end gap-2"><button type="button" onclick="MsStock.closeModal()" class="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold cursor-pointer">취소</button><button type="button" onclick="MsStock.saveOwn()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer">저장</button></div>`);
   }
