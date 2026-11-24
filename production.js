@@ -35,6 +35,8 @@
     d.semiItems.forEach((x) => { x.name = nn(x.name); });
     Object.values(d.days).forEach((day) => (day.semi || []).forEach((l) => { l.name = nn(l.name); }));
     Object.values(d.scrap || {}).forEach((day) => { [...(day.items || []), ...(day.uses || [])].forEach((x) => { if (x && x.type === '몽마르트 파지') x.type = '패스츄리 파지'; }); }); // 몽마르트 파지 = 패스츄리 파지 (2026-11-24)
+    // 이미 입력한 발생 기록도 새 기준(품목 이름)으로 종류를 맞춤: 퀸아망 → 퀸아망 파지, 쇼숑·크렘푀이유 → 쇼숑 파지, 크로와상·뺑오쇼콜라·몽마르트·보스톤 → 패스츄리 파지
+    Object.values(d.scrap || {}).forEach((day) => (day.items || []).forEach((x) => { if (!x || !x.code) return; const t = String(x.name || '').replace(/\s/g, ''); const nt = /퀸아망/.test(t) ? '퀸아망 파지' : /쇼숑|크렘푀이유/.test(t) ? '쇼숑 파지' : /크로와상|크루아상|쇼콜라|몽마르트|보스톤/.test(t) ? '패스츄리 파지' : ''; if (nt && x.type !== nt) x.type = nt; }));
     const L = d.loss || {};
     if (L.scrapMix !== undefined) delete L.scrapMix; // 믹싱 파지 별도 기준(7.5kg) 폐지 → 레시피 기준
     ['cartKg', 'cart'].forEach((k) => { if (L[k]) Object.keys(L[k]).forEach((old) => { if (SEMI_RENAME[old]) { if (L[k][SEMI_RENAME[old]] === undefined) L[k][SEMI_RENAME[old]] = L[k][old]; delete L[k][old]; n++; } }); });
