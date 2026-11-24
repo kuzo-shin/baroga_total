@@ -1,4 +1,4 @@
-// [VERSION: production.js v2.37 - 2026-11-24 엠즈 재고 탭용 stockForMs(공장 재고 현재고) 내보내기 / v2.36 - 2026-11-24 재고 실사를 그 달 마지막 근무일(말일)에 하면 카트 수를 월말 카트 재고에도 자동 저장 · 상단 기준일 알림에서 카트 실사와 월말 카트 재고를 하나로 합침 / v2.35 - 2026-11-24 생산 재고: 재고조사 입력 버튼 3개 색 통일 · 상단에 재고 종류별 기준일 알림(생지 실사·카트 실사·월말 카트 재고·파지 재고조사) / v2.34 - 2026-11-24 생산 재고에 파지 재고 표(반제품 아래)와 [파지 재고조사 입력] 버튼, 파지 관리의 버튼은 안내로 바꿈 / v2.33 - 2026-11-24 파지 재고조사(기초 파지 재고) 입력: 남은 파지 = 조사한 재고 + 다음 날부터의 발생 − 사용 / v2.32 - 2026-11-24 파지 종류 재정리(패스츄리·퀸아망·쇼숑, 몽마르트 파지=패스츄리 파지) · 발생 종류는 품목 기준 · 사용은 레시피에 적힌 종류별로 계산(단과자 등 여러 종류) · 0 입력도 기록 / v2.31 - 2026-11-24 파지 사용 다시 켬: 믹싱에 쓰는 파지는 반제품 레시피에 등록된 파지 g × 배합 수로 계산(별도 기준 7.5kg·[파지 자동 차감 기준] 창 폐지) / v2.30 - 2026-11-23 파지 관리: 보는 기간(N월 전체·최근 3개월·누적) — 상단 카드와 아래 표에 적용 / 파지 사용 표시는 정리 전까지 끔(SCRAP_USE_ON=false, 저장값 보존) / v2.29 - 2026-11-23 파지 관리: 파지로 만드는 제품이 생산 스케쥴에 있으면 품목별 사용 kg 자동 표시(일자 창·달력·주간·월 표), 남은 파지에 반영 / v2.28 - 2026-11-23 파지 사용: 반제품 믹싱 1배합당 자동 차감(기본 패스츄리 7.5kg, 기준 설정 가능)·파지로 만드는 제품 자동 계산(레시피 기준)·직접 입력, 남은 파지 표시 / 파지·부족분 원재료 팝업 가운데 정렬 / v2.27 - 2026-11-23 파지 관리 상단 카드 글자 크기를 다른 탭과 맞춤 / v2.26 - 2026-11-23 DB 상태 UI를 다른 탭과 통일(상태 배지·DB 저장·새로고침), 파지 관리 검정 바탕 줄임 / v2.25 - 2026-11-23 파지 관리: 주간 합계 카드 개편, 상단 카드 글자 키움, 반죽별 '성형에서 빠진 양 중 파지·폐기' 표 / 원재료 손실 파지 전환율 문구 줄바꿈 / v2.24 - 2026-11-23 파지 관리: 생산 반죽 kg 대비 파지 비율(카드·달력·일자 창·표) / 원재료 손실: 파지 전환율(발생 vs 파지 품목 사용) / v2.23 - 2026-11-23 '2. 파지 관리' 탭 신설(달력·일자 창에서 파이 품목별 파지 kg 입력, 3종), 탭에 번호 표시 / v2.22 - 2026-11-23 원재료 손실: 알생지·파베이크 수율을 상단 카드·아래 표·주별 비교에서 따로 분리 / v2.21 - 2026-11-23 원재료 손실 머리: 1~12월 버튼(윗줄) + 보는 기간 버튼(아랫줄), 월말 카트 재고 입력을 생산 재고 화면으로 이동 / v2.20 - 2026-11-23 원재료 손실(파이 보관분 대응): 기간 '최근 3개월·누적', 월말 카트 재고 입력 → 재고 반영 계산, 성형한 날 사용 카트 미입력 경고(달력·일자 창) / v2.19 - 2026-11-23 원재료 손실: 금액 표기 통일(+초록 = 초과 생산, −빨강 = 생산 부족), 파이 초과분도 금액 표시 / v2.18 - 2026-11-23 원재료 손실: 상단 카드 파이·생지 같은 양식(수율+금액), 문구 정리(투입 대비 생산 초과/부족 등), 생지 부족분 원재료 팝업 / v2.17 - 2026-11-23 원재료 손실: 투입보다 파이에 쓴 반죽이 많으면 음수 대신 '투입보다 더 씀(초과)'으로 풀어 표시, 초과분은 손실 원재료비에서 제외 / v2.16 - 2026-11-23 원재료 손실(공정 표 형태로 개편·생산일지 연동 초록 점·생지 실제 생산은 포장 완료 등록 기준): 반죽 1개당 버터 1,000g 현장 기준(설정 가능), 1카트 기준을 반죽 이름 옆에 표시, 설명 문구 수정 / v2.15 - 2026-11-23 원재료 손실 개편: 파이 공정별(믹싱→라미네이팅→성형)·1카트 기준(개수×g)·버터 포함 중량, 파이를 생지 위로, 반제품 이름 레시피 기준 통일 / v2.14 - 2026-11-22 미배정 표시 삼각형 아이콘 + 범례 / v2.13 - 2026-11-22 작업 인원: 미배정 팀원 있으면 칸에 ! 표시·이름 / v2.12 - 2026-11-22 포장 안 된 품목 월별 구분, 참고 자료 안내 문구 / v2.11 - 2026-11-22 포장 달력 칸에 생산·포장 금액 / v2.10 - 2026-11-22 포장 완료: 금액 차이(KPI·주·품목), 포장 안 된 품목 목록 / v2.9 - 2026-11-22 포장 완료 등록 탭 신설(재고 입고 = 포장), 생산일지 창 크기 줄임, '실제 포장 수량'→'포장 수량' / v2.8 - 2026-11-22 일자 창에서 휴무일 지정(사유 문구), 달력 칸 옅은 빨강 + 문구 / v2.7 - 2026-11-22 달력 칸 최소 높이 1행(빈 주는 짧게), 기록 없는 주 합계 한 줄 / v2.6 - 2026-11-22 작업 인원에 1인 생산금액(KPI·날짜·주·파트별), 작업 구분별 생산 파트·인원 기준 설정 / v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
+// [VERSION: production.js v2.38 - 2026-11-24 자동 저장 삭제: [DB 저장](Ctrl+S)을 눌러야 DB에 저장 · 저장 안 된 변경이 있으면 상태 배지에 표시, 새로고침 전 확인 / v2.37 - 2026-11-24 엠즈 재고 탭용 stockForMs(공장 재고 현재고) 내보내기 / v2.36 - 2026-11-24 재고 실사를 그 달 마지막 근무일(말일)에 하면 카트 수를 월말 카트 재고에도 자동 저장 · 상단 기준일 알림에서 카트 실사와 월말 카트 재고를 하나로 합침 / v2.35 - 2026-11-24 생산 재고: 재고조사 입력 버튼 3개 색 통일 · 상단에 재고 종류별 기준일 알림(생지 실사·카트 실사·월말 카트 재고·파지 재고조사) / v2.34 - 2026-11-24 생산 재고에 파지 재고 표(반제품 아래)와 [파지 재고조사 입력] 버튼, 파지 관리의 버튼은 안내로 바꿈 / v2.33 - 2026-11-24 파지 재고조사(기초 파지 재고) 입력: 남은 파지 = 조사한 재고 + 다음 날부터의 발생 − 사용 / v2.32 - 2026-11-24 파지 종류 재정리(패스츄리·퀸아망·쇼숑, 몽마르트 파지=패스츄리 파지) · 발생 종류는 품목 기준 · 사용은 레시피에 적힌 종류별로 계산(단과자 등 여러 종류) · 0 입력도 기록 / v2.31 - 2026-11-24 파지 사용 다시 켬: 믹싱에 쓰는 파지는 반제품 레시피에 등록된 파지 g × 배합 수로 계산(별도 기준 7.5kg·[파지 자동 차감 기준] 창 폐지) / v2.30 - 2026-11-23 파지 관리: 보는 기간(N월 전체·최근 3개월·누적) — 상단 카드와 아래 표에 적용 / 파지 사용 표시는 정리 전까지 끔(SCRAP_USE_ON=false, 저장값 보존) / v2.29 - 2026-11-23 파지 관리: 파지로 만드는 제품이 생산 스케쥴에 있으면 품목별 사용 kg 자동 표시(일자 창·달력·주간·월 표), 남은 파지에 반영 / v2.28 - 2026-11-23 파지 사용: 반제품 믹싱 1배합당 자동 차감(기본 패스츄리 7.5kg, 기준 설정 가능)·파지로 만드는 제품 자동 계산(레시피 기준)·직접 입력, 남은 파지 표시 / 파지·부족분 원재료 팝업 가운데 정렬 / v2.27 - 2026-11-23 파지 관리 상단 카드 글자 크기를 다른 탭과 맞춤 / v2.26 - 2026-11-23 DB 상태 UI를 다른 탭과 통일(상태 배지·DB 저장·새로고침), 파지 관리 검정 바탕 줄임 / v2.25 - 2026-11-23 파지 관리: 주간 합계 카드 개편, 상단 카드 글자 키움, 반죽별 '성형에서 빠진 양 중 파지·폐기' 표 / 원재료 손실 파지 전환율 문구 줄바꿈 / v2.24 - 2026-11-23 파지 관리: 생산 반죽 kg 대비 파지 비율(카드·달력·일자 창·표) / 원재료 손실: 파지 전환율(발생 vs 파지 품목 사용) / v2.23 - 2026-11-23 '2. 파지 관리' 탭 신설(달력·일자 창에서 파이 품목별 파지 kg 입력, 3종), 탭에 번호 표시 / v2.22 - 2026-11-23 원재료 손실: 알생지·파베이크 수율을 상단 카드·아래 표·주별 비교에서 따로 분리 / v2.21 - 2026-11-23 원재료 손실 머리: 1~12월 버튼(윗줄) + 보는 기간 버튼(아랫줄), 월말 카트 재고 입력을 생산 재고 화면으로 이동 / v2.20 - 2026-11-23 원재료 손실(파이 보관분 대응): 기간 '최근 3개월·누적', 월말 카트 재고 입력 → 재고 반영 계산, 성형한 날 사용 카트 미입력 경고(달력·일자 창) / v2.19 - 2026-11-23 원재료 손실: 금액 표기 통일(+초록 = 초과 생산, −빨강 = 생산 부족), 파이 초과분도 금액 표시 / v2.18 - 2026-11-23 원재료 손실: 상단 카드 파이·생지 같은 양식(수율+금액), 문구 정리(투입 대비 생산 초과/부족 등), 생지 부족분 원재료 팝업 / v2.17 - 2026-11-23 원재료 손실: 투입보다 파이에 쓴 반죽이 많으면 음수 대신 '투입보다 더 씀(초과)'으로 풀어 표시, 초과분은 손실 원재료비에서 제외 / v2.16 - 2026-11-23 원재료 손실(공정 표 형태로 개편·생산일지 연동 초록 점·생지 실제 생산은 포장 완료 등록 기준): 반죽 1개당 버터 1,000g 현장 기준(설정 가능), 1카트 기준을 반죽 이름 옆에 표시, 설명 문구 수정 / v2.15 - 2026-11-23 원재료 손실 개편: 파이 공정별(믹싱→라미네이팅→성형)·1카트 기준(개수×g)·버터 포함 중량, 파이를 생지 위로, 반제품 이름 레시피 기준 통일 / v2.14 - 2026-11-22 미배정 표시 삼각형 아이콘 + 범례 / v2.13 - 2026-11-22 작업 인원: 미배정 팀원 있으면 칸에 ! 표시·이름 / v2.12 - 2026-11-22 포장 안 된 품목 월별 구분, 참고 자료 안내 문구 / v2.11 - 2026-11-22 포장 달력 칸에 생산·포장 금액 / v2.10 - 2026-11-22 포장 완료: 금액 차이(KPI·주·품목), 포장 안 된 품목 목록 / v2.9 - 2026-11-22 포장 완료 등록 탭 신설(재고 입고 = 포장), 생산일지 창 크기 줄임, '실제 포장 수량'→'포장 수량' / v2.8 - 2026-11-22 일자 창에서 휴무일 지정(사유 문구), 달력 칸 옅은 빨강 + 문구 / v2.7 - 2026-11-22 달력 칸 최소 높이 1행(빈 주는 짧게), 기록 없는 주 합계 한 줄 / v2.6 - 2026-11-22 작업 인원에 1인 생산금액(KPI·날짜·주·파트별), 작업 구분별 생산 파트·인원 기준 설정 / v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
 //  - 품목 목록·단가: 제품단가 탭(barogaProductPriceBridge.getProductionProducts)
 //      파이 = PK로 입력 / 알생지·파베이크·제과 = 배합으로 입력 → '1배합 PK수'로 PK 환산 (실제 포장 PK를 직접 고칠 수 있음)
 //      금액 = PK × 엠즈 매입가(PK). 줄을 만들 때의 단가를 줄에 저장 → 나중에 단가가 바뀌어도 지난 기록 금액은 그대로
@@ -163,6 +163,7 @@
     const badge = document.getElementById('prodStatusBadge'), dot = document.getElementById('prodStatusDot');
     if (badge) badge.className = badgeCls(st); if (dot) dot.className = 'w-2 h-2 rounded-full ' + STATUS_DOT[st];
   }
+  const UNSAVED_TEXT = '저장 안 됨 · DB 저장 필요';
   function saveNow() {
     if (!getUrl()) { openDbModal(); return; }
     if (!cloudLoaded) { toast('DB를 먼저 불러와 주세요 (오른쪽 새로고침 버튼).', 'error'); return; }
@@ -176,9 +177,7 @@
     unsaved = true;
     if (!getUrl()) { setStatus('이 기기에만 저장됨 (DB 미연결)'); return; }
     if (!cloudLoaded) { setStatus(cloudBlocked ? '저장 중지: ' + cloudBlocked : 'DB를 불러온 뒤 저장됩니다'); return; }
-    setStatus('저장 대기...');
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => { saveTimer = null; pushCloud(); }, 1500);
+    setStatus(UNSAVED_TEXT); // 자동 저장 없음: [DB 저장](또는 Ctrl+S)을 눌러야 DB에 올라감
   }
   async function api(body) {
     if (typeof window.barogaApi !== 'function') throw new Error('접속 도구를 찾을 수 없습니다');
@@ -188,6 +187,7 @@
     const url = getUrl();
     if (!url) { setStatus('이 기기에만 저장됨 (DB 미연결)'); return; }
     if (saving || saveTimer) { if (showMsg) toast('저장이 끝난 뒤 다시 불러와 주세요.', 'error'); return; }
+    if (unsaved && cloudLoaded) { if (!showMsg) return; if (!window.confirm('DB에 저장하지 않은 생산일지 변경이 있습니다.\n새로고침하면 그 변경은 사라집니다. 계속할까요?')) return; }
     setStatus('불러오는 중...');
     try {
       const json = await api({ action: 'getAll' });
@@ -196,7 +196,7 @@
       if (json.status === 'empty') {
         dbRevision = Number(json.revision) || 0;
         cloudLoaded = true; cloudBlocked = '';
-        if (localHasData) { setStatus('DB 비어 있음 → 이 기기 기록을 DB에 올립니다'); unsaved = true; pushCloud(); }
+        if (localHasData) { unsaved = true; setStatus('DB 비어 있음 · 이 기기 기록을 올리려면 DB 저장 필요'); }
         else { setStatus('불러옴 ' + nowHm() + ' · 기록 없음'); unsaved = false; }
       } else {
         db = normalizeDb(json.payload);
@@ -205,7 +205,7 @@
         saveLocal();
         setStatus('불러옴 ' + nowHm() + ' · ' + Object.keys(db.days).length + '일');
         if (showMsg) toast('생산일지 DB를 불러왔습니다.', 'success');
-        if (renamedOnLoad) { renamedOnLoad = false; markChanged(); toast('반제품 이름을 레시피 기준으로 바꿔 저장합니다.', 'info'); }
+        if (renamedOnLoad) { renamedOnLoad = false; markChanged(); toast('반제품 이름을 레시피 기준으로 바꿨습니다. [DB 저장]을 눌러야 DB에 반영됩니다.', 'info'); }
       }
       render();
     } catch (e) {
@@ -223,7 +223,7 @@
       const json = await api({ action: 'replaceAll', baseRevision: dbRevision, payload: JSON.parse(snapshot) });
       if (!json || json.ok === false) {
         if (json && json.conflict) { cloudLoaded = false; cloudBlocked = '다른 기기에서 먼저 저장함'; setStatus('저장 중지: 다른 기기에서 먼저 저장됨 — [불러오기] 후 다시 입력'); toast('다른 기기에서 생산일지를 먼저 저장했습니다. [불러오기]로 최신 내용을 받은 뒤 다시 입력해 주세요. (이 기기 입력분은 이 기기에 남아 있습니다)', 'error'); }
-        else { setStatus('저장 실패 — 다시 시도하려면 내용을 한 번 더 저장'); toast('생산일지 저장 실패: ' + ((json && (json.message || json.error)) || ''), 'error'); }
+        else { setStatus('저장 실패 — [DB 저장]을 다시 눌러 주세요'); toast('생산일지 저장 실패: ' + ((json && (json.message || json.error)) || ''), 'error'); }
         return;
       }
       dbRevision = Number(json.revision) || dbRevision;
@@ -231,10 +231,10 @@
       if (JSON.stringify(db) === snapshot) unsaved = false;
       setStatus('저장됨 ' + lastSavedHm + ' · ' + Object.keys(db.days).length + '일');
     } catch (e) {
-      setStatus('저장 실패 (' + e.message + ')');
+      setStatus('저장 실패 (' + e.message + ') — [DB 저장]을 다시 눌러 주세요');
     } finally {
       saving = false;
-      if (unsaved && cloudLoaded && !saveTimer) { saveTimer = setTimeout(() => { saveTimer = null; pushCloud(); }, 1500); }
+      if (unsaved && cloudLoaded && /^저장됨/.test(statusText)) setStatus(UNSAVED_TEXT); // 저장하는 사이에 또 바뀐 내용은 다시 [DB 저장]
     }
   }
   window.barogaUnsavedCheckers = window.barogaUnsavedCheckers || {};
@@ -263,7 +263,7 @@
               <span id="prodStatus">${esc(stText)}</span>
               <i data-lucide="settings" class="w-3.5 h-3.5 ml-0.5 opacity-75"></i>
             </button>
-            <button type="button" onclick="Prod.saveNow()" class="flex items-center gap-1.5 px-3.5 py-1.5 h-9 rounded-xl text-xs font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition cursor-pointer">
+            <button type="button" onclick="Prod.saveNow()" data-save-key="production" class="flex items-center gap-1.5 px-3.5 py-1.5 h-9 rounded-xl text-xs font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition cursor-pointer">
               <i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i><span>DB 저장</span>
             </button>
             <button type="button" onclick="Prod.pull()" title="DB 새로고침" class="flex items-center justify-center w-9 h-9 rounded-xl border border-stone-200 bg-white hover:bg-stone-100 text-stone-700 transition cursor-pointer"><i data-lucide="refresh-cw" class="w-4 h-4"></i></button>
@@ -1121,7 +1121,7 @@
     if (dup) { toast(`재직 팀원 이름이 겹칩니다: ${dup}`, 'error'); return; }
     c.leaveTypes = c.leaveTypes.filter((t) => String(t.name || '').trim()).map((t) => ({ name: String(t.name).trim(), weight: Number(t.weight) === 0.5 ? 0.5 : 1 }));
     db.crewCfg = c; crewCfgDraft = null; closeModal(); markChanged(); render();
-    toast('인원 설정을 저장했습니다.', 'success');
+    toast('인원 설정을 입력했습니다. [DB 저장]을 눌러야 DB에 올라갑니다.', 'success');
   }
 
   // ===================== 포장 완료 등록 =====================
@@ -1635,7 +1635,7 @@
     const uses = d.uses.filter((u) => u.kg > 0).map((u) => ({ type: u.type, name: String(u.name || '').trim(), kg: u.kg }));
     if (items.length || uses.length || memo) sd[d.date] = { items, uses, memo }; else delete sd[d.date];
     scrapDraft = null; closeModal(); markChanged(); render();
-    toast('파지 발생량을 저장했습니다.', 'success');
+    toast('파지 발생량을 입력했습니다. [DB 저장]을 눌러야 DB에 올라갑니다.', 'success');
   }
 
   // ----- 원재료 손실 (수율) 분석 -----
@@ -2078,7 +2078,7 @@
       if (!Object.keys(cfg.endStock[ym]).length) delete cfg.endStock[ym];
     });
     endStockYm = ''; closeModal(); markChanged(); render();
-    toast('월말 카트 재고를 저장했습니다.', 'success');
+    toast('월말 카트 재고를 입력했습니다. [DB 저장]을 눌러야 DB에 올라갑니다.', 'success');
   }
   function openLossSettings() {
     const products = getProducts(), defs = pieDoughDefaults(products), cfg = lossCfg();
@@ -2117,7 +2117,7 @@
       if (Object.keys(entry).length) cfg.pie[code] = entry; else delete cfg.pie[code];
     });
     closeModal(); markChanged(); render();
-    toast('손실 기준을 저장했습니다.', 'success');
+    toast('손실 기준을 입력했습니다. [DB 저장]을 눌러야 DB에 올라갑니다.', 'success');
   }
 
   // ----- 생지 재고 -----

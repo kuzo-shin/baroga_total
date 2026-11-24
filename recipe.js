@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: v3.18 - 2026-11-24 레시피중량(G) → 원재료 총투입(G)(반제품 속 원재료 포함·손실 전), 반제품 변경 미적용 경고는 중량합계에 표시 / v3.17 - 2026-11-24 충전합계(G) 대신 레시피중량(G) 표시(반제품 최신 1배합 기준, 중량합계와 다르면 빨간색) / v3.16 - 2026-11-24 [반제품 변경 적용] 버튼 · 반제품 줄 1배합 자동/수량 고정 표시 / v3.15 - 2026-11-20 ⚠규격 경고는 단가 있는 재료만 · 원가 캐시 키를 발주내역 지문으로 / v3.14 3~5단계 (단가 일괄적용 시 기존 연결·수동고정 보존·포장재 5원 자동보정 제거·규격 인식 경고·반제품 손실률·품목코드 중복 방지·CSV 안전 처리·원가 계산 캐시) / v3.13 2단계 보안 (DB 요청에 접속 코드 첨부) / v3.12 1단계 데이터 손실 방지 (자동 저장 · 저장 응답 확인 · 리비전 충돌 방지 · 사진 분리 저장 · 미저장 수정분 보호 · 샘플추가 버튼 제거)]
+// [VERSION: v3.19 - 2026-11-24 자동 저장 삭제: [DB 저장](Ctrl+S)을 눌러야 DB에 저장 · 저장 안 된 변경은 상태 배지에 표시, 새로고침 전 확인 / v3.18 - 2026-11-24 레시피중량(G) → 원재료 총투입(G)(반제품 속 원재료 포함·손실 전), 반제품 변경 미적용 경고는 중량합계에 표시 / v3.17 - 2026-11-24 충전합계(G) 대신 레시피중량(G) 표시(반제품 최신 1배합 기준, 중량합계와 다르면 빨간색) / v3.16 - 2026-11-24 [반제품 변경 적용] 버튼 · 반제품 줄 1배합 자동/수량 고정 표시 / v3.15 - 2026-11-20 ⚠규격 경고는 단가 있는 재료만 · 원가 캐시 키를 발주내역 지문으로 / v3.14 3~5단계 (단가 일괄적용 시 기존 연결·수동고정 보존·포장재 5원 자동보정 제거·규격 인식 경고·반제품 손실률·품목코드 중복 방지·CSV 안전 처리·원가 계산 캐시) / v3.13 2단계 보안 (DB 요청에 접속 코드 첨부) / v3.12 1단계 데이터 손실 방지 (자동 저장 · 저장 응답 확인 · 리비전 충돌 방지 · 사진 분리 저장 · 미저장 수정분 보호 · 샘플추가 버튼 제거)]
 // 바로가 공장 통합 관리 시스템 - 레시피 전용 모듈 (recipe.js)
 // ============================================================================
 
@@ -2347,7 +2347,7 @@ async function applyCurrentRawMaterialPricesToAllRecipes() {
     const unmatchNote = (unmatchedNames.size > 0 ? ` (미매칭 수기품목 ${unmatchedNames.size}종 유지)` : '')
         + (manualKeptRows > 0 ? ` · 수동 고정 단가 ${manualKeptRows}건은 그대로 유지` : '');
     showToast(
-        `[현재 단가 보정 완료] 총 ${totalMatched}개 항목(원재료 ${matchedRawRows} · 포장재 ${matchedPackRows}) 연동 · 단가변동 ${changedPriceRows}건 반영!${unmatchNote} — 자동 저장됩니다.`,
+        `[현재 단가 보정 완료] 총 ${totalMatched}개 항목(원재료 ${matchedRawRows} · 포장재 ${matchedPackRows}) 연동 · 단가변동 ${changedPriceRows}건 반영!${unmatchNote} — [DB 저장]을 눌러야 DB에 반영됩니다.`,
         'success'
     );
 }
@@ -2404,14 +2404,13 @@ function clearRecipeDirty() {
     try { localStorage.removeItem(RECIPE_DIRTY_KEY); } catch (e) {}
 }
 
-// 레시피 수정 시 호출: 이 기기에 즉시 보관 + 1.5초 뒤 DB 자동 저장
+// 레시피 수정 시 호출: 이 기기에 즉시 보관 + '저장 안 됨' 표시 (자동 저장 없음 — [DB 저장] 또는 Ctrl+S를 눌러야 DB에 올라감)
+const RECIPE_UNSAVED_TEXT = '저장 안 됨 · DB 저장 필요';
 function persistRecipeChange() {
     saveLocalCache();
     recipeChangeSeq++;
     if (!readRecipeDirty()) writeRecipeDirty(recipeDbRevision);
-    if (recipeSaveTimer) clearTimeout(recipeSaveTimer);
-    recipeSaveTimer = setTimeout(() => { recipeSaveTimer = null; pushRecipesToGoogleSheet(true); }, RECIPE_AUTOSAVE_DELAY_MS);
-    updateRecipeDbStatusUI('syncing', '저장 대기...');
+    if (!recipeIsSaving) updateRecipeDbStatusUI('error', RECIPE_UNSAVED_TEXT);
     if (typeof window.refreshProductPriceRecipeLinks === 'function') window.refreshProductPriceRecipeLinks(); // [3단계 Q4] 제품단가 재료비 실시간 반영
 }
 
@@ -2503,7 +2502,7 @@ function applySubRecipeChangesToAllRecipes() {
             <div class="border border-stone-200 rounded-xl overflow-hidden"><table class="w-full border-collapse"><thead><tr class="bg-stone-100 border-b border-stone-200"><th class="${th}">레시피</th><th class="${th} text-right">이전 (g)</th><th class="${th} text-right">갱신 (g)</th></tr></thead><tbody>
             ${totals.map(t => `<tr class="border-b border-stone-100"><td class="${td} font-bold">${escapeHtml(t.name)}</td><td class="${td} text-right tabular-nums text-stone-500">${fmtDec(t.b, 0)}</td><td class="${td} text-right tabular-nums font-extrabold">${fmtDec(t.a, 0)}</td></tr>`).join('')}
             </tbody></table></div></div>
-            <p class="text-stone-500">자동 저장됩니다.</p>`}
+            <p class="text-rose-700 font-bold">아직 DB에 저장되지 않았습니다. [DB 저장]을 눌러 주세요.</p>`}
             <p class="text-stone-500">반제품 줄 이름 옆의 [1배합 자동] / [수량 고정] 표시를 누르면 줄마다 바꿀 수 있습니다.</p>
         </div>
         <div class="px-5 py-3 border-t border-stone-200 flex justify-end"><button type="button" onclick="document.getElementById('subApplyResultModal').remove()" class="px-4 h-9 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-extrabold cursor-pointer">확인</button></div>
@@ -2544,6 +2543,9 @@ async function syncRecipesFromGoogleSheet(showMessage = false) {
         if (showMessage) showToast('레시피 저장이 진행 중입니다. 저장이 끝난 뒤 다시 새로고침해 주세요.', 'error');
         return;
     }
+    // 새로고침 버튼: 저장 안 된 수정분이 있으면 버리기 전에 확인
+    const discardLocal = Boolean(showMessage && recipeDbLoaded && readRecipeDirty());
+    if (discardLocal && !window.confirm('DB에 저장하지 않은 레시피 변경이 있습니다.\n새로고침하면 그 변경은 사라집니다. 계속할까요?')) return;
     updateRecipeDbStatusUI('syncing', '불러오는 중...');
     try {
         const json = await barogaApi(recipeGasWebAppUrl, { action: 'getAll' }, 20000);
@@ -2552,18 +2554,19 @@ async function syncRecipesFromGoogleSheet(showMessage = false) {
         if (!Array.isArray(rows)) throw new Error('응답 형식을 인식할 수 없습니다');
         const revision = (json && typeof json.revision === 'number') ? json.revision : null;
 
+        if (discardLocal) clearRecipeDirty(); // 확인을 받았고 DB도 정상 응답함 → 이 기기 수정분을 버리고 DB 내용으로
         const dirty = readRecipeDirty();
         const localCount = (recipesData || []).length;
 
         if (dirty && localCount > 0) {
             if (revision !== null && dirty.baseRevision === revision) {
-                // 이 기기의 미저장 수정분이 있고, 그 사이 DB가 바뀌지 않았음 → 이 기기 내용을 유지하고 저장
+                // 이 기기의 미저장 수정분이 있고, 그 사이 DB가 바뀌지 않았음 → 이 기기 내용을 유지 (저장은 [DB 저장]을 눌러야 함)
                 recipeDbLoaded = true;
                 recipeDbRevision = revision;
                 recipeDbBlockReason = '';
                 if (activeMasterDomain === 'RECIPE') renderRecipeWorkspace();
-                showToast(`저장되지 않았던 레시피 수정분(${dirty.at || ''})을 DB에 저장합니다.`, 'info');
-                pushRecipesToGoogleSheet(false);
+                updateRecipeDbStatusUI('error', RECIPE_UNSAVED_TEXT);
+                showToast(`저장되지 않은 레시피 수정분(${dirty.at || ''})이 이 기기에 남아 있습니다. [DB 저장]을 눌러야 DB에 올라갑니다.`, 'info');
                 return;
             }
             // 그 사이 다른 곳에서 DB가 바뀜 → DB 기준으로 맞추고, 이 기기 수정분은 별도 백업
@@ -2620,7 +2623,7 @@ async function pushRecipesToGoogleSheet(silent = false) {
         showToast(`레시피를 저장하지 않았습니다: ${recipeDbBlockReason}. 변경 내용은 이 기기에만 있습니다.`, 'error');
         return false;
     }
-    if (recipeIsSaving) { recipeSavePending = true; return; }
+    if (recipeIsSaving) { showToast('저장 중입니다.', 'info'); return; }
     recipeIsSaving = true;
     updateRecipeDbStatusUI('syncing', '저장 중...');
     const sentSeq = recipeChangeSeq;
@@ -2659,9 +2662,8 @@ async function pushRecipesToGoogleSheet(silent = false) {
         if (json && json.ok === true && typeof json.revision === 'number') {
             recipeDbRevision = json.revision;
             ok = true;
-            if (recipeChangeSeq === sentSeq) clearRecipeDirty();
-            else writeRecipeDirty(recipeDbRevision);
-            updateRecipeDbStatusUI('connected', `저장됨 ${recipeNowHm()} · ${recipesData.length}종`);
+            if (recipeChangeSeq === sentSeq) { clearRecipeDirty(); updateRecipeDbStatusUI('connected', `저장됨 ${recipeNowHm()} · ${recipesData.length}종`); }
+            else { writeRecipeDirty(recipeDbRevision); updateRecipeDbStatusUI('error', RECIPE_UNSAVED_TEXT); } // 저장하는 사이에 또 바뀐 내용은 다시 [DB 저장]
             if (!silent) showToast('레시피 DB에 저장되었습니다.', 'success');
         } else if (json && json.conflict) {
             recipeDbLoaded = false;
@@ -2684,7 +2686,6 @@ async function pushRecipesToGoogleSheet(silent = false) {
             : `레시피 DB 저장 실패: ${e && e.message ? e.message : e} — 변경 내용은 이 기기에만 있습니다.`, 'error');
     } finally {
         recipeIsSaving = false;
-        if (recipeSavePending) { recipeSavePending = false; if (ok) pushRecipesToGoogleSheet(true); }
     }
     return ok;
 }

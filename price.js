@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: price.js v1.16 - 2026-11-21 PK단위 원가표 행 삭제(중복·공정 DB에 없는 행), 행 추가 시 중복 생성 방지 / v1.15 - 2026-11-21 생산일지 손실 분석용 1배합 실생산(ea)·원재료비 제공 / v1.14 - 2026-11-21 생산일지용 품목 목록(PK 총생산원가 포함) 제공 / v1.13 - 2026-11-20 공정 상세 원재료비 카드도 레시피 실시간 값 표시 / v1.12 3~5단계 (레시피 재료비 실시간 반영·매장 수수료율 설정화·퇴직금 표기 정리) / v1.11 2단계 보안 (급여·고정비·매출·단가 기본값 코드에서 제거, DB 값만 사용) / v1.10 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 빈 DB 자동 덮어쓰기 제거)]
+// [VERSION: price.js v1.17 - 2026-11-24 자동 저장 삭제: [DB 저장](Ctrl+S)을 눌러야 DB에 저장 · 저장 안 된 변경은 상태 배지에 표시, 새로고침 전 확인 / v1.16 - 2026-11-21 PK단위 원가표 행 삭제(중복·공정 DB에 없는 행), 행 추가 시 중복 생성 방지 / v1.15 - 2026-11-21 생산일지 손실 분석용 1배합 실생산(ea)·원재료비 제공 / v1.14 - 2026-11-21 생산일지용 품목 목록(PK 총생산원가 포함) 제공 / v1.13 - 2026-11-20 공정 상세 원재료비 카드도 레시피 실시간 값 표시 / v1.12 3~5단계 (레시피 재료비 실시간 반영·매장 수수료율 설정화·퇴직금 표기 정리) / v1.11 2단계 보안 (급여·고정비·매출·단가 기본값 코드에서 제거, DB 값만 사용) / v1.10 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 빈 DB 자동 덮어쓰기 제거)]
 // 바로가 공장 통합 관리 시스템 - 제품단가 전용 모듈 (price.js)
 // ============================================================================
 (function () {
@@ -1539,7 +1539,7 @@
           return;
         }
 
-        if (priceSavingRef.current) { priceResaveRef.current = true; return; }
+        if (priceSavingRef.current) { showToast('저장 중입니다.'); return; }
         priceSavingRef.current = true;
         if (priceAutosaveTimerRef.current) { clearTimeout(priceAutosaveTimerRef.current); priceAutosaveTimerRef.current = null; }
         setSyncStatus('SAVING');
@@ -1599,6 +1599,10 @@
           ? overrideUrl.trim()
           : (priceGasUrl || DEFAULT_PRICE_GAS_WEB_APP_URL);
         if (!targetUrl) return;
+        // 새로고침 버튼: 저장 안 된 변경이 있으면 버리기 전에 확인
+        if (priceDirtyRef.current && priceDbLoadedRef.current && !overrideUrl) {
+          if (!window.confirm('DB에 저장하지 않은 제품단가 변경이 있습니다.\n새로고침하면 그 변경은 사라집니다. 계속할까요?')) return;
+        }
 
         setSyncStatus('LOADING');
 
@@ -1739,7 +1743,7 @@
         setIsPriceDirty(false);
       }, [priceLoadTick]);
 
-      // [A1] 내용이 기준점과 달라지면 자동 저장 예약
+      // [A1] 내용이 기준점과 달라졌는지(저장 안 된 변경) 판단
       const [priceRecheckTick, setPriceRecheckTick] = useState(0);
       useEffect(() => {
         if (!priceDbLoadedRef.current || priceBaselineJsonRef.current === null) return;
@@ -1748,11 +1752,7 @@
         const dirty = nowJson !== priceBaselineJsonRef.current;
         priceDirtyRef.current = dirty;
         setIsPriceDirty(dirty);
-        if (!dirty || priceSavingRef.current || nowJson === priceFailedJsonRef.current) return;
-        priceAutosaveTimerRef.current = setTimeout(() => {
-          priceAutosaveTimerRef.current = null;
-          handleSaveToGoogleSheet(null, true);
-        }, PRICE_AUTOSAVE_DELAY_MS);
+        // [수동 저장] 자동 저장 없음: 달라지면 '저장 안 됨'으로만 표시. [DB 저장](또는 Ctrl+S)을 눌러야 DB에 올라감
       }, [settings, categoryDbs, pkCostRows, msUpdatedDate, priceRecheckTick]);
 
       // [A1] 창 닫기 경고 (index.html 공통 처리기에 등록)
@@ -3647,17 +3647,17 @@
                       type: "button",
                       onClick: openPriceDbConfigModal,
                       className: `flex items-center gap-1.5 px-3 py-1.5 h-9 rounded-xl border text-xs font-bold transition cursor-pointer ${
-                        syncStatus === 'ERROR'
-                          ? 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100'
-                          : syncStatus === 'SAVING' || syncStatus === 'LOADING'
-                            ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
+                        syncStatus === 'SAVING' || syncStatus === 'LOADING'
+                          ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
+                          : syncStatus === 'ERROR' || isPriceDirty
+                            ? 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100'
                             : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
                       }`
                     },
                       React.createElement("span", { className: `w-2 h-2 rounded-full ${
                         syncStatus === 'SAVING' || syncStatus === 'LOADING'
                           ? 'bg-amber-500 animate-pulse'
-                          : syncStatus === 'ERROR'
+                          : syncStatus === 'ERROR' || isPriceDirty
                             ? 'bg-rose-500'
                             : 'bg-emerald-500'
                       }` }),
@@ -3668,7 +3668,7 @@
                           : syncStatus === 'ERROR'
                             ? syncErrorLabel
                             : isPriceDirty
-                              ? '저장 대기...'
+                              ? '저장 안 됨 · DB 저장 필요'
                               : (lastSyncedAt && priceSyncedKind ? `${priceSyncedKind} ${lastSyncedAt} · ${pkCostRows.length}종` : `DB 연동됨 (${pkCostRows.length}종)`)),
                       React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", className: "w-3.5 h-3.5 ml-0.5 opacity-75" },
                         React.createElement("path", { d: "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" }),
@@ -3679,6 +3679,7 @@
                       type: "button",
                       onClick: () => handleSaveToGoogleSheet(null, false),
                       disabled: syncStatus === 'LOADING' || syncStatus === 'SAVING',
+                      "data-save-key": "price",
                       className: "flex items-center gap-1.5 px-3.5 py-1.5 h-9 rounded-xl text-xs font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition cursor-pointer disabled:opacity-50"
                     },
                       React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", className: "w-3.5 h-3.5" },
