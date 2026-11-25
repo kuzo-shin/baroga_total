@@ -61,7 +61,9 @@
             .m-scroll-row > * { flex-shrink: 0; white-space: nowrap; }
             /* [모바일 v3.01] 상단: 제목 한 줄, 접속 코드 버튼은 같은 줄 오른쪽 */
             header.app-header > div:first-child { flex-wrap: nowrap; gap: 0.5rem; }
-            header.app-header h1 { font-size: 0.95rem; line-height: 1.25; letter-spacing: -0.02em; }
+            header.app-header h1 { font-size: 0.9rem; line-height: 1.25; letter-spacing: -0.02em; }
+            header.app-header > div:first-child > div:first-child > div:first-child { padding: 0.3rem 0.55rem; }
+            header.app-header .baroga-serif { font-size: 0.95rem; }
             header.app-header > div:first-child > div:first-child { min-width: 0; gap: 0.6rem; }
             /* 레시피 상단 바: 설명 문구는 숨기고 버튼은 줄바꿈 허용(글자가 세로로 꺾이지 않게) */
             #recipeSubHeaderBar > div > div:first-child { display: none; }
@@ -72,7 +74,7 @@
             #recipeDetailContainer div:has(> table.table-fixed) { overflow-x: auto; -webkit-overflow-scrolling: touch; }
             #recipeDetailContainer { padding: 0.75rem; }
             /* 생산일지·생산 재고: 달력(월~금 + 주말 + 주 합계)은 최소 폭을 두고 옆으로 밀어서 봄 */
-            #productionRoot div[style*="repeat(5, minmax(0, 1fr))"] { min-width: 900px; }
+            #productionRoot div[style*="repeat(5, minmax(0, 1fr))"] { min-width: 1100px; }
             #productionRoot div:has(> div[style*="repeat(5, minmax(0, 1fr))"]) { overflow-x: auto; -webkit-overflow-scrolling: touch; }
             #productionRoot .text-xl, #productionStockRoot .text-xl { font-size: 1.05rem; line-height: 1.5rem; }
             /* 생산일지 입력 창: 품목 줄(품목·목표·실행·포장·금액)은 최소 폭을 두고 옆으로 밀어서 봄 */
