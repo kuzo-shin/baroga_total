@@ -2047,7 +2047,7 @@
       if (SCRAP.test(m.name)) { skipped.push(m.name); return; }
       const gs = byName[m.name] || [], rem = (R.mats[m.key] || {}).need || 0;
       const spec = m.linked ? String(m.linked.spec || '') : (gs[0] ? gs[0].spec : '');
-      const per = m.kind === 'EA' && m.pack && m.specQty > 0 ? m.specQty : 1, u = unitOf(spec), fmt = m.kind === 'G' ? fmtG : (n) => num(n, Math.abs(n) >= 100 ? 0 : 1) + (/^ea$/i.test(u) ? '개' : u);
+      const per = m.kind === 'EA' && m.pack && m.specQty > 0 ? m.specQty : 1, u = unitOf(spec), fmt = m.kind === 'G' ? fmtG : (n) => num(n, Math.abs(n) >= 100 ? 0 : 1) + (per > 1 || /^ea$/i.test(u) ? '개' : u);
       const base = { name: m.name, spec, kind: m.kind, need: m.need, rem, fmt, users: Object.keys(m.from) };
       if (!gs.length) { check.push(Object.assign(base, { why: m.linked ? '원재료 메뉴에 재고 기록이 없음' : '원재료 메뉴에서 같은 이름을 찾지 못함' })); return; }
       let stock = 0, bad = '';
