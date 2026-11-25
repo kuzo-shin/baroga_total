@@ -1,4 +1,4 @@
-// [VERSION: production.js v2.40 - 2026-11-25 모바일: 탭 바를 옆으로 넘기는 줄로 / v2.39 - 2026-11-25 생산 재고: 출고를 엠즈 출고와 직출고로 나눠 표시(직출고도 재고에서 차감) · '엠즈 입고' 문구를 '제품 출고'로 / v2.38 - 2026-11-24 자동 저장 삭제: [DB 저장](Ctrl+S)을 눌러야 DB에 저장 · 저장 안 된 변경이 있으면 상태 배지에 표시, 새로고침 전 확인 / v2.37 - 2026-11-24 엠즈 재고 탭용 stockForMs(공장 재고 현재고) 내보내기 / v2.36 - 2026-11-24 재고 실사를 그 달 마지막 근무일(말일)에 하면 카트 수를 월말 카트 재고에도 자동 저장 · 상단 기준일 알림에서 카트 실사와 월말 카트 재고를 하나로 합침 / v2.35 - 2026-11-24 생산 재고: 재고조사 입력 버튼 3개 색 통일 · 상단에 재고 종류별 기준일 알림(생지 실사·카트 실사·월말 카트 재고·파지 재고조사) / v2.34 - 2026-11-24 생산 재고에 파지 재고 표(반제품 아래)와 [파지 재고조사 입력] 버튼, 파지 관리의 버튼은 안내로 바꿈 / v2.33 - 2026-11-24 파지 재고조사(기초 파지 재고) 입력: 남은 파지 = 조사한 재고 + 다음 날부터의 발생 − 사용 / v2.32 - 2026-11-24 파지 종류 재정리(패스츄리·퀸아망·쇼숑, 몽마르트 파지=패스츄리 파지) · 발생 종류는 품목 기준 · 사용은 레시피에 적힌 종류별로 계산(단과자 등 여러 종류) · 0 입력도 기록 / v2.31 - 2026-11-24 파지 사용 다시 켬: 믹싱에 쓰는 파지는 반제품 레시피에 등록된 파지 g × 배합 수로 계산(별도 기준 7.5kg·[파지 자동 차감 기준] 창 폐지) / v2.30 - 2026-11-23 파지 관리: 보는 기간(N월 전체·최근 3개월·누적) — 상단 카드와 아래 표에 적용 / 파지 사용 표시는 정리 전까지 끔(SCRAP_USE_ON=false, 저장값 보존) / v2.29 - 2026-11-23 파지 관리: 파지로 만드는 제품이 생산 스케쥴에 있으면 품목별 사용 kg 자동 표시(일자 창·달력·주간·월 표), 남은 파지에 반영 / v2.28 - 2026-11-23 파지 사용: 반제품 믹싱 1배합당 자동 차감(기본 패스츄리 7.5kg, 기준 설정 가능)·파지로 만드는 제품 자동 계산(레시피 기준)·직접 입력, 남은 파지 표시 / 파지·부족분 원재료 팝업 가운데 정렬 / v2.27 - 2026-11-23 파지 관리 상단 카드 글자 크기를 다른 탭과 맞춤 / v2.26 - 2026-11-23 DB 상태 UI를 다른 탭과 통일(상태 배지·DB 저장·새로고침), 파지 관리 검정 바탕 줄임 / v2.25 - 2026-11-23 파지 관리: 주간 합계 카드 개편, 상단 카드 글자 키움, 반죽별 '성형에서 빠진 양 중 파지·폐기' 표 / 원재료 손실 파지 전환율 문구 줄바꿈 / v2.24 - 2026-11-23 파지 관리: 생산 반죽 kg 대비 파지 비율(카드·달력·일자 창·표) / 원재료 손실: 파지 전환율(발생 vs 파지 품목 사용) / v2.23 - 2026-11-23 '2. 파지 관리' 탭 신설(달력·일자 창에서 파이 품목별 파지 kg 입력, 3종), 탭에 번호 표시 / v2.22 - 2026-11-23 원재료 손실: 알생지·파베이크 수율을 상단 카드·아래 표·주별 비교에서 따로 분리 / v2.21 - 2026-11-23 원재료 손실 머리: 1~12월 버튼(윗줄) + 보는 기간 버튼(아랫줄), 월말 카트 재고 입력을 생산 재고 화면으로 이동 / v2.20 - 2026-11-23 원재료 손실(파이 보관분 대응): 기간 '최근 3개월·누적', 월말 카트 재고 입력 → 재고 반영 계산, 성형한 날 사용 카트 미입력 경고(달력·일자 창) / v2.19 - 2026-11-23 원재료 손실: 금액 표기 통일(+초록 = 초과 생산, −빨강 = 생산 부족), 파이 초과분도 금액 표시 / v2.18 - 2026-11-23 원재료 손실: 상단 카드 파이·생지 같은 양식(수율+금액), 문구 정리(투입 대비 생산 초과/부족 등), 생지 부족분 원재료 팝업 / v2.17 - 2026-11-23 원재료 손실: 투입보다 파이에 쓴 반죽이 많으면 음수 대신 '투입보다 더 씀(초과)'으로 풀어 표시, 초과분은 손실 원재료비에서 제외 / v2.16 - 2026-11-23 원재료 손실(공정 표 형태로 개편·생산일지 연동 초록 점·생지 실제 생산은 포장 완료 등록 기준): 반죽 1개당 버터 1,000g 현장 기준(설정 가능), 1카트 기준을 반죽 이름 옆에 표시, 설명 문구 수정 / v2.15 - 2026-11-23 원재료 손실 개편: 파이 공정별(믹싱→라미네이팅→성형)·1카트 기준(개수×g)·버터 포함 중량, 파이를 생지 위로, 반제품 이름 레시피 기준 통일 / v2.14 - 2026-11-22 미배정 표시 삼각형 아이콘 + 범례 / v2.13 - 2026-11-22 작업 인원: 미배정 팀원 있으면 칸에 ! 표시·이름 / v2.12 - 2026-11-22 포장 안 된 품목 월별 구분, 참고 자료 안내 문구 / v2.11 - 2026-11-22 포장 달력 칸에 생산·포장 금액 / v2.10 - 2026-11-22 포장 완료: 금액 차이(KPI·주·품목), 포장 안 된 품목 목록 / v2.9 - 2026-11-22 포장 완료 등록 탭 신설(재고 입고 = 포장), 생산일지 창 크기 줄임, '실제 포장 수량'→'포장 수량' / v2.8 - 2026-11-22 일자 창에서 휴무일 지정(사유 문구), 달력 칸 옅은 빨강 + 문구 / v2.7 - 2026-11-22 달력 칸 최소 높이 1행(빈 주는 짧게), 기록 없는 주 합계 한 줄 / v2.6 - 2026-11-22 작업 인원에 1인 생산금액(KPI·날짜·주·파트별), 작업 구분별 생산 파트·인원 기준 설정 / v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
+// [VERSION: production.js v2.41 - 2026-11-25 생산 스케쥴에 [다음 주 원재료 확인] 추가(다음 주 목표 × 레시피 → 필요 원재료·포장재 vs 보유, 부족·확인 필요·빠듯함·충분) / v2.40 - 2026-11-25 모바일: 탭 바를 옆으로 넘기는 줄로 / v2.39 - 2026-11-25 생산 재고: 출고를 엠즈 출고와 직출고로 나눠 표시(직출고도 재고에서 차감) · '엠즈 입고' 문구를 '제품 출고'로 / v2.38 - 2026-11-24 자동 저장 삭제: [DB 저장](Ctrl+S)을 눌러야 DB에 저장 · 저장 안 된 변경이 있으면 상태 배지에 표시, 새로고침 전 확인 / v2.37 - 2026-11-24 엠즈 재고 탭용 stockForMs(공장 재고 현재고) 내보내기 / v2.36 - 2026-11-24 재고 실사를 그 달 마지막 근무일(말일)에 하면 카트 수를 월말 카트 재고에도 자동 저장 · 상단 기준일 알림에서 카트 실사와 월말 카트 재고를 하나로 합침 / v2.35 - 2026-11-24 생산 재고: 재고조사 입력 버튼 3개 색 통일 · 상단에 재고 종류별 기준일 알림(생지 실사·카트 실사·월말 카트 재고·파지 재고조사) / v2.34 - 2026-11-24 생산 재고에 파지 재고 표(반제품 아래)와 [파지 재고조사 입력] 버튼, 파지 관리의 버튼은 안내로 바꿈 / v2.33 - 2026-11-24 파지 재고조사(기초 파지 재고) 입력: 남은 파지 = 조사한 재고 + 다음 날부터의 발생 − 사용 / v2.32 - 2026-11-24 파지 종류 재정리(패스츄리·퀸아망·쇼숑, 몽마르트 파지=패스츄리 파지) · 발생 종류는 품목 기준 · 사용은 레시피에 적힌 종류별로 계산(단과자 등 여러 종류) · 0 입력도 기록 / v2.31 - 2026-11-24 파지 사용 다시 켬: 믹싱에 쓰는 파지는 반제품 레시피에 등록된 파지 g × 배합 수로 계산(별도 기준 7.5kg·[파지 자동 차감 기준] 창 폐지) / v2.30 - 2026-11-23 파지 관리: 보는 기간(N월 전체·최근 3개월·누적) — 상단 카드와 아래 표에 적용 / 파지 사용 표시는 정리 전까지 끔(SCRAP_USE_ON=false, 저장값 보존) / v2.29 - 2026-11-23 파지 관리: 파지로 만드는 제품이 생산 스케쥴에 있으면 품목별 사용 kg 자동 표시(일자 창·달력·주간·월 표), 남은 파지에 반영 / v2.28 - 2026-11-23 파지 사용: 반제품 믹싱 1배합당 자동 차감(기본 패스츄리 7.5kg, 기준 설정 가능)·파지로 만드는 제품 자동 계산(레시피 기준)·직접 입력, 남은 파지 표시 / 파지·부족분 원재료 팝업 가운데 정렬 / v2.27 - 2026-11-23 파지 관리 상단 카드 글자 크기를 다른 탭과 맞춤 / v2.26 - 2026-11-23 DB 상태 UI를 다른 탭과 통일(상태 배지·DB 저장·새로고침), 파지 관리 검정 바탕 줄임 / v2.25 - 2026-11-23 파지 관리: 주간 합계 카드 개편, 상단 카드 글자 키움, 반죽별 '성형에서 빠진 양 중 파지·폐기' 표 / 원재료 손실 파지 전환율 문구 줄바꿈 / v2.24 - 2026-11-23 파지 관리: 생산 반죽 kg 대비 파지 비율(카드·달력·일자 창·표) / 원재료 손실: 파지 전환율(발생 vs 파지 품목 사용) / v2.23 - 2026-11-23 '2. 파지 관리' 탭 신설(달력·일자 창에서 파이 품목별 파지 kg 입력, 3종), 탭에 번호 표시 / v2.22 - 2026-11-23 원재료 손실: 알생지·파베이크 수율을 상단 카드·아래 표·주별 비교에서 따로 분리 / v2.21 - 2026-11-23 원재료 손실 머리: 1~12월 버튼(윗줄) + 보는 기간 버튼(아랫줄), 월말 카트 재고 입력을 생산 재고 화면으로 이동 / v2.20 - 2026-11-23 원재료 손실(파이 보관분 대응): 기간 '최근 3개월·누적', 월말 카트 재고 입력 → 재고 반영 계산, 성형한 날 사용 카트 미입력 경고(달력·일자 창) / v2.19 - 2026-11-23 원재료 손실: 금액 표기 통일(+초록 = 초과 생산, −빨강 = 생산 부족), 파이 초과분도 금액 표시 / v2.18 - 2026-11-23 원재료 손실: 상단 카드 파이·생지 같은 양식(수율+금액), 문구 정리(투입 대비 생산 초과/부족 등), 생지 부족분 원재료 팝업 / v2.17 - 2026-11-23 원재료 손실: 투입보다 파이에 쓴 반죽이 많으면 음수 대신 '투입보다 더 씀(초과)'으로 풀어 표시, 초과분은 손실 원재료비에서 제외 / v2.16 - 2026-11-23 원재료 손실(공정 표 형태로 개편·생산일지 연동 초록 점·생지 실제 생산은 포장 완료 등록 기준): 반죽 1개당 버터 1,000g 현장 기준(설정 가능), 1카트 기준을 반죽 이름 옆에 표시, 설명 문구 수정 / v2.15 - 2026-11-23 원재료 손실 개편: 파이 공정별(믹싱→라미네이팅→성형)·1카트 기준(개수×g)·버터 포함 중량, 파이를 생지 위로, 반제품 이름 레시피 기준 통일 / v2.14 - 2026-11-22 미배정 표시 삼각형 아이콘 + 범례 / v2.13 - 2026-11-22 작업 인원: 미배정 팀원 있으면 칸에 ! 표시·이름 / v2.12 - 2026-11-22 포장 안 된 품목 월별 구분, 참고 자료 안내 문구 / v2.11 - 2026-11-22 포장 달력 칸에 생산·포장 금액 / v2.10 - 2026-11-22 포장 완료: 금액 차이(KPI·주·품목), 포장 안 된 품목 목록 / v2.9 - 2026-11-22 포장 완료 등록 탭 신설(재고 입고 = 포장), 생산일지 창 크기 줄임, '실제 포장 수량'→'포장 수량' / v2.8 - 2026-11-22 일자 창에서 휴무일 지정(사유 문구), 달력 칸 옅은 빨강 + 문구 / v2.7 - 2026-11-22 달력 칸 최소 높이 1행(빈 주는 짧게), 기록 없는 주 합계 한 줄 / v2.6 - 2026-11-22 작업 인원에 1인 생산금액(KPI·날짜·주·파트별), 작업 구분별 생산 파트·인원 기준 설정 / v2.5 - 2026-11-22 달력 날짜 크게, 탭 아이콘, 작업 인원 휴무 영역 분리·배정 카드 색, 휴무 입력 칸 넓힘 / v2.4 - 2026-11-21 작업 인원 달력 칸 파트별 색 묶음·이름 줄바꿈·휴무 줄 분리, 인원 설정 창 탭 디자인 / v2.3 - 2026-11-21 '생산 달력'→'생산 스케쥴', 작업 인원(팀 9종 배정·휴무·인원 설정) 신설, 스케쥴 칸에 근무/휴무 인원 / v2.2 - 2026-11-21 주말 칸 60px 고정(금액 만원 표기), 남는 폭은 평일 품목명으로 / v2.1 - 2026-11-21 달력 칸 품목을 파트별로 묶고 왼쪽 색 띠로 구분 / v2.0 - 2026-11-21 생산 재고를 대항목으로 분리, 달력 칸 12종까지 표시 / v1.9 - 2026-11-21 달력 품목 줄 간격 좁힘(품목명 더 보이게), 주말 열 더 좁게 / v1.8 - 2026-11-21 달력: 토·일 한 칸으로 합침, 평일 넓게, 품목 줄 표처럼 열 고정, 앞으로 올 날은 '예정' / v1.7 - 2026-11-21 제품단가 중복 행은 매입가 있는 행 하나만 사용 / v1.6 - 2026-11-21 반제품(라미네이팅 카트) 재고: 만든·사용·폐기, 원재료비 평가, 파이 손실은 사용 카트 기준 / v1.5 - 2026-11-21 달력: 주말 열 좁게, 단위 뱃지(PK·배합) 앞으로, 글씨 굵게, 주 합계 카드 밝게 / v1.4 - 2026-11-21 일자 입력창 개편(화면 중앙·품목 고르기 판·큰 글씨), 달력 칸 하루 10종까지 표시 / v1.3 - 2026-11-21 원재료 손실(수율) 분석: 생지 투입 배합 대비 실제 생산, 파이 라미네이팅 카트 반죽 대비 사용 반죽, 주·월 비교 / v1.2 - 2026-11-21 기본 DB 주소, 7일 달력(주말 근무), 1~12월 버튼, 반제품 달력 표시, 품목 늦게 불러와도 자동 갱신 / v1.1 - 2026-11-21 단가 0원 품목은 제품단가 현재 값 자동 반영, 쇼숑오뽐므 BOX 재고(4PK=1BOX) / v1.0 - 2026-11-21 신규: 생산일지(주 5일 달력 · 목표/실행 · 달성률) + 생지 재고(PK, 엠즈 입고 차감, 원가·매입가 평가)]
 //  - 품목 목록·단가: 제품단가 탭(barogaProductPriceBridge.getProductionProducts)
 //      파이 = PK로 입력 / 알생지·파베이크·제과 = 배합으로 입력 → '1배합 PK수'로 PK 환산 (실제 포장 PK를 직접 고칠 수 있음)
 //      금액 = PK × 엠즈 매입가(PK). 줄을 만들 때의 단가를 줄에 저장 → 나중에 단가가 바뀌어도 지난 기록 금액은 그대로
@@ -408,7 +408,8 @@
             <div class="flex flex-wrap items-center gap-1">${monthBtns}</div>
             <button type="button" onclick="Prod.setMonth('${today().slice(0, 7)}')" class="px-2.5 py-1 rounded-xl border border-stone-200 text-xs font-bold cursor-pointer hover:bg-stone-50">이번 달</button>
           </div>
-          <span class="text-xs text-stone-500">칸을 눌러 입력 · <span class="text-blue-700 font-bold">＋</span> 계획에 없던 품목 · 목표→실행 · <span class="px-1 rounded bg-stone-100 text-stone-500 font-bold">반</span> 반제품(금액 제외)</span>
+          <div class="flex flex-wrap items-center gap-2"><span class="text-xs text-stone-500">칸을 눌러 입력 · <span class="text-blue-700 font-bold">＋</span> 계획에 없던 품목 · 목표→실행 · <span class="px-1 rounded bg-stone-100 text-stone-500 font-bold">반</span> 반제품(금액 제외)</span>
+            <button type="button" onclick="Prod.openNextWeekMaterials()" title="다음 주 생산 스케쥴(목표)에 필요한 원재료와 보유량을 비교합니다" class="flex items-center gap-1.5 px-3 h-8 rounded-xl text-xs font-extrabold bg-amber-500 hover:bg-amber-600 text-stone-950 cursor-pointer whitespace-nowrap"><i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i><span>다음 주 원재료 확인</span></button></div>
         </div>
         <div class="grid gap-1.5 text-xs font-extrabold text-center" style="${GRID_STYLE}"><div class="text-stone-500">월</div><div class="text-stone-500">화</div><div class="text-stone-500">수</div><div class="text-stone-500">목</div><div class="text-stone-500">금</div><div><span class="text-blue-600">토</span>·<span class="text-rose-600">일</span></div><div class="text-stone-500">주 합계</div></div>
         ${weekRows}
@@ -1985,6 +1986,100 @@
         <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm"><thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600 whitespace-nowrap"><th class="py-2 px-2">주</th>${shown.map((g) => `<th class="py-2 px-2 text-right">${esc(g.ch.short)} 성형</th>`).join('')}<th class="py-2 px-2 text-right">파이 원재료비 차이</th>${trendCats.map((c) => `<th class="py-2 px-2 text-right">${CAT_LABEL[c]} 수율</th><th class="py-2 px-2 text-right">${CAT_LABEL[c]} 원재료비 차이</th>`).join('')}</tr></thead><tbody>${trendTrs}</tbody></table></div>
       </div>`;
   }
+  // ----- 다음 주 원재료 확인 (발주 누락 방지용) -----
+  //  다음 주(월~일) 생산 스케쥴의 '목표' 수량 × 레시피 → 원재료·포장재 필요량. 반제품은 안의 원재료까지 풀어서 계산
+  //  보유 = 원재료 메뉴의 현재고(같은 이름의 모든 규격 합) − 이번 주 남은 생산(목표)에 쓸 양
+  //  라미네이팅 카트(반제품) 재고는 계산에 넣지 않음 → 반죽을 전부 새로 만드는 것으로 봄(필요량이 조금 넉넉하게 나옴)
+  function weekMaterialNeeds(from, to) {
+    const products = getProducts(), recipes = Array.isArray(window.recipesData) ? window.recipesData : [];
+    const out = { mats: {}, lines: [], noRecipe: [], noBatch: [] };
+    if (typeof window.evaluateRecipeBaseTotals !== 'function') return out;
+    const evalCache = {};
+    const add = (key, name, linked, kind, qty, from0) => { if (!(qty > 0)) return; const m = out.mats[key] || (out.mats[key] = { key, name, linked, kind, need: 0, from: {} }); m.need += qty; m.from[from0] = (m.from[from0] || 0) + qty; };
+    Object.keys(db.days).filter((d) => d >= from && d <= to).sort().forEach((d) => {
+      const day = db.days[d] || {}; if (day.off) return;
+      (day.lines || []).forEach((l) => {
+        const tgt = Number(l.target) || 0; if (!(tgt > 0)) return;
+        const rc = recipes.find((x) => String(x.productCode) === String(l.code) && x.recipeType !== 'SUB');
+        if (!rc) { out.noRecipe.push({ date: d, name: l.name, target: tgt, unit: l.unit }); return; }
+        const ppb = linePkPerBatch(l), batches = l.unit === '배합' ? tgt : ppb > 0 ? tgt / ppb : null;
+        if (batches == null) { out.noBatch.push({ date: d, name: l.name, target: tgt, unit: l.unit }); return; }
+        let ev = evalCache[rc.id]; if (ev === undefined) { try { ev = window.evaluateRecipeBaseTotals(JSON.parse(JSON.stringify(rc))); } catch (e) { ev = null; } evalCache[rc.id] = ev; }
+        if (!ev) { out.noRecipe.push({ date: d, name: l.name, target: tgt, unit: l.unit }); return; }
+        out.lines.push({ date: d, name: l.name, target: tgt, unit: l.unit, batches });
+        const walk = (e, scale) => (e.itemBreakdown || []).forEach((b) => {
+          if (b.subEval) { walk(b.subEval, scale * (Number(b.scale) || 0)); return; }
+          const ig = b.ig || {}, nm = String(ig.item || '').trim(); if (!nm) return;
+          const lk = b.linkedRaw || null, name = lk ? String(lk.item || nm).trim() : nm, isEa = String(ig.unit || 'G').toUpperCase() === 'EA';
+          add((isEa ? 'EA:' : 'G:') + name, name, lk, isEa ? 'EA' : 'G', (isEa ? (Number(ig.qty) || 0) : (Number(b.effWeightG) || 0)) * scale * batches, l.name);
+        });
+        walk(ev, 1);
+        // 포장재: 레시피의 포장지 수량은 1PK 기준 → 1배합 PK 수 × 배합 수
+        const packQty = Number(rc.packQty) || 0, pks = packQty > 0 ? batches * (Number(ev.baseYieldQty) || 0) / packQty : (l.unit === 'PK' ? tgt : batches * ppb);
+        (rc.packagingList || []).forEach((pk) => {
+          const nm = String(pk.name || '').trim(); if (!nm) return;
+          let lk = null; try { lk = typeof window.syncPackagingWithRawCatalog === 'function' ? window.syncPackagingWithRawCatalog(JSON.parse(JSON.stringify(pk))) : null; } catch (e) { lk = null; }
+          const name = lk ? String(lk.item || nm).trim() : nm;
+          const m0 = out.mats['EA:' + name]; add('EA:' + name, name, lk, 'EA', (Number(pk.usedQty) || 0) * pks, l.name);
+          const m = out.mats['EA:' + name]; if (m && !m0) { m.pack = true; m.specQty = Number(pk.specQty) || 0; }
+        });
+      });
+    });
+    return out;
+  }
+  function openNextWeekMaterials() {
+    const t0 = new Date(today() + 'T00:00:00'), dow = (t0.getDay() + 6) % 7, addD = (n) => ymd(new Date(t0.getFullYear(), t0.getMonth(), t0.getDate() + n));
+    const thisSun = addD(6 - dow), nextMon = addD(7 - dow), nextSun = addD(13 - dow);
+    // 이번 주 남은 생산: 오늘 실행을 아직 입력하지 않았으면 오늘부터, 입력했으면 내일부터
+    const todayDone = ((db.days[today()] || {}).lines || []).some((l) => Number(l.actual) > 0), remFrom = todayDone ? addD(1) : today();
+    const N = weekMaterialNeeds(nextMon, nextSun), R = remFrom <= thisSun ? weekMaterialNeeds(remFrom, thisSun) : { mats: {}, lines: [] };
+    // 원재료 메뉴의 현재고: 같은 이름의 모든 규격을 합쳐 g 또는 개수로
+    let groups = []; try { groups = typeof window.getStockGroups === 'function' ? window.getStockGroups() : []; } catch (e) { groups = []; }
+    const hasW = (s) => /\d\s*(kg|g|l|ml)\b/i.test(String(s || '').replace(/,/g, ''));
+    const cntOf = (s) => { const m = String(s || '').replace(/,/g, '').match(/(\d+(?:\.\d+)?)\s*(ea|매|장|개|pcs|p|입|롤)\b/i); return m ? Number(m[1]) || 1 : null; };
+    const byName = {}; groups.forEach((g) => { const n = String(g.item || '').trim(); (byName[n] || (byName[n] = [])).push(g); });
+    const fmtG = (g) => (Math.abs(g) >= 1000 ? num(g / 1000, 1) + 'kg' : num(g, 0) + 'g'), fmtE = (n) => num(n, n >= 100 ? 0 : 1) + '개';
+    const SKIP = /^(식수|물|정제수|수돗물|얼음)$/, SCRAP = /파지/;
+    const rows = [], check = [], skipped = [];
+    Object.values(N.mats).forEach((m) => {
+      if (SKIP.test(m.name)) return;
+      if (SCRAP.test(m.name)) { skipped.push(m.name); return; }
+      const gs = byName[m.name] || [], fmt = m.kind === 'G' ? fmtG : fmtE, rem = (R.mats[m.key] || {}).need || 0;
+      const spec = m.linked ? String(m.linked.spec || '') : (gs[0] ? gs[0].spec : '');
+      const base = { name: m.name, spec, kind: m.kind, need: m.need, rem, fmt, users: Object.keys(m.from) };
+      if (!gs.length) { check.push(Object.assign(base, { why: m.linked ? '원재료 메뉴에 재고 기록이 없음' : '원재료 메뉴에서 같은 이름을 찾지 못함' })); return; }
+      let stock = 0, bad = '';
+      gs.forEach((g) => { const tot = Number(g.total) || 0; if (m.kind === 'G') { if (!hasW(g.spec)) { if (tot > 0) bad = `규격 "${g.spec}"을 무게로 바꿀 수 없음`; return; } stock += tot * window.parseSpecToGrams(g.spec); } else { const c = cntOf(g.spec) || (m.specQty > 0 && g.spec === spec ? m.specQty : null); if (c == null) { if (tot > 0) bad = `규격 "${g.spec}"에서 낱개 수량을 알 수 없음`; return; } stock += tot * c; } });
+      if (bad) { check.push(Object.assign(base, { why: bad, stock })); return; }
+      const avail = stock - rem, lack = Math.max(0, m.need - avail), left = avail - m.need;
+      const unitSize = m.kind === 'G' ? (hasW(spec) ? window.parseSpecToGrams(spec) : 0) : (cntOf(spec) || m.specQty || 0);
+      rows.push(Object.assign(base, { stock, avail, lack, left, orderUnits: lack > 0 && unitSize > 0 ? Math.ceil(lack / unitSize) : null, cls: lack > 0 ? 'LACK' : left < m.need * 0.2 ? 'TIGHT' : 'OK' }));
+    });
+    const lackRows = rows.filter((r) => r.cls === 'LACK').sort((a, b) => b.lack / (b.need || 1) - a.lack / (a.need || 1)), tightRows = rows.filter((r) => r.cls === 'TIGHT').sort((a, b) => a.left / (a.need || 1) - b.left / (b.need || 1)), okRows = rows.filter((r) => r.cls === 'OK').sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+    const th = 'py-2 px-2 text-xs font-extrabold text-stone-600 whitespace-nowrap', td = 'py-1.5 px-2 text-right tabular-nums whitespace-nowrap';
+    const tr = (r) => `<tr class="border-b border-stone-100"><td class="py-1.5 px-2"><div class="font-bold text-stone-900">${esc(r.name)}</div><div class="text-[11px] text-stone-400">${esc(r.spec || '-')} · ${esc(r.users.slice(0, 3).join(', '))}${r.users.length > 3 ? ` 외 ${r.users.length - 3}` : ''}</div></td>
+        <td class="${td} font-bold">${r.fmt(r.need)}</td><td class="${td} text-stone-600">${r.fmt(r.stock)}</td><td class="${td} text-stone-500">${r.rem > 0 ? '−' + r.fmt(r.rem) : '-'}</td><td class="${td} ${r.avail < 0 ? 'text-rose-700 font-bold' : ''}">${r.fmt(r.avail)}</td>
+        <td class="${td} font-extrabold ${r.lack > 0 ? 'text-rose-700' : 'text-emerald-700'}">${r.lack > 0 ? r.fmt(r.lack) : '+' + r.fmt(r.left)}</td><td class="${td} text-xs ${r.orderUnits ? 'font-extrabold text-rose-700' : 'text-stone-300'}">${r.orderUnits ? `${num(r.orderUnits)} × ${esc(r.spec)}` : '-'}</td></tr>`;
+    const table = (list, lackLabel) => `<div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm"><thead><tr class="bg-stone-100"><th class="${th}">원재료 · 규격 · 쓰는 품목</th><th class="${th} text-right">① 다음 주 필요</th><th class="${th} text-right">현재고</th><th class="${th} text-right">이번 주 남은 사용</th><th class="${th} text-right">② 다음 주 시작 보유</th><th class="${th} text-right">${lackLabel}</th><th class="${th} text-right">발주 환산</th></tr></thead><tbody>${list.map(tr).join('')}</tbody></table></div>`;
+    const card = (cls, title, sub, body) => `<section class="rounded-2xl border ${cls} p-3"><h4 class="text-sm font-extrabold mb-0.5">${title}</h4><div class="text-xs text-stone-500 mb-2">${sub}</div>${body}</section>`;
+    const md = (d) => `${Number(d.slice(5, 7))}/${Number(d.slice(8))}`;
+    const prodSum = {}; N.lines.forEach((l) => { const x = prodSum[l.name] || (prodSum[l.name] = { name: l.name, target: 0, unit: l.unit, batches: 0 }); x.target += l.target; x.batches += l.batches; });
+    const prodList = Object.values(prodSum).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+    const warn = [...N.noRecipe.map((x) => ({ ...x, why: '레시피가 연결되지 않음' })), ...N.noBatch.map((x) => ({ ...x, why: '1배합 PK 수가 없어 배합 수로 바꿀 수 없음' }))];
+    const empty = !N.lines.length && !warn.length;
+    const body = empty ? `<div class="py-10 text-center text-sm text-stone-500">다음 주(${md(nextMon)} ~ ${md(nextSun)}) 생산 스케쥴에 목표 수량이 입력된 품목이 없습니다.<br>달력에서 다음 주 목표를 먼저 입력해 주세요.</div>` : `
+        ${!groups.length ? '<div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-sm font-bold">원재료 재고를 불러오지 못했습니다. 원재료 메뉴를 한 번 열어 재고가 보이는지 확인한 뒤 다시 눌러 주세요.</div>' : ''}
+        ${card('border-rose-200 bg-rose-50/40', `<span class="text-rose-800">부족 ${lackRows.length}종</span>`, '① 다음 주 필요 − ② 다음 주 시작 보유 = 부족. 발주가 필요한 원재료입니다.', lackRows.length ? table(lackRows, '부족') : '<div class="py-4 text-center text-sm text-stone-500">부족한 원재료가 없습니다.</div>')}
+        ${(check.length || warn.length) ? card('border-amber-300 bg-amber-50/50', `<span class="text-amber-900">확인 필요 ${check.length + warn.length}건</span>`, '보유량을 계산하지 못했습니다. 재고가 충분하다는 뜻이 아니니 직접 확인해 주세요.', `<div class="flex flex-col gap-1 text-sm">${check.map((r) => `<div class="flex flex-wrap items-baseline justify-between gap-2 border-b border-amber-100 py-1"><span><b>${esc(r.name)}</b> <span class="text-xs text-stone-500">${esc(r.why)}</span></span><span class="tabular-nums whitespace-nowrap">다음 주 필요 <b>${r.fmt(r.need)}</b></span></div>`).join('')}${warn.map((x) => `<div class="flex flex-wrap items-baseline justify-between gap-2 border-b border-amber-100 py-1"><span><b>${esc(x.name)}</b> <span class="text-xs text-stone-500">${md(x.date)} · ${esc(x.why)} — 이 품목의 원재료는 계산에서 빠졌습니다</span></span><span class="tabular-nums whitespace-nowrap">목표 <b>${num(x.target)}</b> ${esc(x.unit)}</span></div>`).join('')}</div>`) : ''}
+        ${tightRows.length ? card('border-stone-200 bg-white', `빠듯함 ${tightRows.length}종`, '부족하지는 않지만 다음 주를 쓰고 나면 필요량의 20%도 남지 않습니다.', table(tightRows, '쓰고 남는 양')) : ''}
+        <details class="rounded-2xl border border-stone-200 bg-white p-3"><summary class="text-sm font-extrabold cursor-pointer">충분 ${okRows.length}종 <span class="text-xs font-bold text-stone-400">(눌러서 펼치기)</span></summary><div class="mt-2">${okRows.length ? table(okRows, '쓰고 남는 양') : '<div class="py-3 text-center text-sm text-stone-500">없음</div>'}</div></details>
+        <details class="rounded-2xl border border-stone-200 bg-white p-3"><summary class="text-sm font-extrabold cursor-pointer">계산에 쓴 다음 주 스케쥴 ${prodList.length}개 품목 <span class="text-xs font-bold text-stone-400">(눌러서 펼치기)</span></summary><div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 text-sm">${prodList.map((p) => `<div class="flex justify-between gap-2 border-b border-stone-100 py-1"><span class="font-bold truncate">${esc(p.name)}</span><span class="tabular-nums whitespace-nowrap">${num(p.target)} ${esc(p.unit)}${p.unit === '배합' ? '' : ` <span class="text-xs text-stone-400">(${num(p.batches, 1)}배합)</span>`}</span></div>`).join('')}</div></details>`;
+    modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold">다음 주 원재료 확인 <span class="text-xs font-bold text-stone-500">${md(nextMon)}(월) ~ ${md(nextSun)}(일) 생산 스케쥴 목표 기준</span></h3>
+        <div class="text-xs text-stone-500 mt-1 leading-relaxed">참고용입니다. <b>이번 주 남은 생산</b>(${remFrom <= thisSun ? `${md(remFrom)} ~ ${md(thisSun)} 목표` : '없음'})에 쓸 양은 현재고에서 먼저 뺐습니다. <b>라미네이팅 카트 재고는 넣지 않고</b> 반죽을 전부 새로 만드는 것으로 계산했고, <b>포장재도 포함</b>했습니다. 이미 발주해서 들어올 물량은 반영되지 않습니다.${skipped.length ? ' 파지는 사는 원재료가 아니라 뺐습니다.' : ''}</div></div>
+      <div class="p-4 max-h-[70vh] overflow-y-auto flex flex-col gap-3">${body}</div>
+      <div class="px-5 py-3 border-t border-stone-200 flex items-center justify-between gap-2"><span class="text-xs text-stone-400">현재고 = 원재료 메뉴 3. 현재 재고 (같은 이름의 모든 규격 합)</span><button type="button" onclick="Prod.closeModal()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">닫기</button></div>`, true);
+  }
+
   // 레시피 1배합을 원재료 단위까지 펼침 (반제품은 안의 원재료로) → { 이름: { g, cost } }
   function flattenRecipeMaterials(rc) {
     const out = {};
@@ -2390,7 +2485,7 @@
     openCrewDay, closeCrewDay, crewAdd, crewToggleW, crewRemove, crewAddLeave, crewLeaveField, crewRemoveLeave, crewCopyPrev, saveCrewDay,
     openCrewSettings, cfgField, cfgAdd, cfgRemove, saveCrewSettings, crewSetTabTo, crewToggleRetired, cfgPerCapita,
     setLossPeriod: (k) => { lossPeriodKey = k; render(); }, openScrapDay, closeScrapDay, saveScrapDay, setScrapField, addScrapRow, removeScrapRow, setScrapUse, addScrapUse, removeScrapUse, setScrapMemo: (v) => { if (scrapDraft) scrapDraft.memo = v; },
-    openLossSettings, saveLossSettings, openLossMaterials, openEndStock, saveEndStock, openScrapBase, saveScrapBase, clearScrapBase, addUsedRows,
+    openLossSettings, saveLossSettings, openLossMaterials, openNextWeekMaterials, openEndStock, saveEndStock, openScrapBase, saveScrapBase, clearScrapBase, addUsedRows,
     openCountModal, saveCount, openAdjustModal, saveAdjust, removeAdjust, closeModal, loadMs, openDbModal, saveDbUrl, saveNow,
     _debug: () => ({ db, dbRevision, cloudLoaded, products: getProducts() }),
     // 엠즈 재고 탭에서 공장 재고(PK)를 더할 때 사용: 재고 실사 기준일과 품목별 현재고
