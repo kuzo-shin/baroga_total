@@ -275,6 +275,7 @@
       </div>
       <div id="prodModal"></div>`;
     if (keepModal) { const nm = el.querySelector('#prodModal'); if (nm) keepModal.forEach((n) => nm.appendChild(n)); }
+    if (keepModal && modalReopen) { try { modalReopen(); } catch (e) {} } // 조회용 팝업은 새로 불러온 값으로 다시 계산
     if (window.lucide) { try { lucide.createIcons(); } catch (e) {} }
     if (draft) renderEditor();
   }
@@ -2091,7 +2092,7 @@
     modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-[15px] font-extrabold">다음 주 원재료 확인 <span class="text-xs font-bold text-stone-500">${md(nextMon)}(월) ~ ${md(nextSun)}(일) 생산 스케쥴 목표 기준</span></h3>
         <div class="text-xs text-stone-500 mt-1 leading-relaxed">참고용입니다. <b>이번 주 남은 생산</b>(${remFrom <= thisSun ? `${md(remFrom)} ~ ${md(thisSun)} 목표` : '없음'})에 쓸 양은 현재고에서 먼저 뺐습니다. <b>라미네이팅 카트 재고는 넣지 않고</b> 반죽을 전부 새로 만드는 것으로 계산했고, <b>포장재도 포함</b>했습니다. 이미 발주해서 들어올 물량은 반영되지 않습니다.${skipped.length ? ' 파지는 사는 원재료가 아니라 뺐습니다.' : ''}</div></div>
       <div class="p-3 max-h-[70vh] overflow-y-auto flex flex-col gap-2.5">${body}</div>
-      <div class="px-5 py-3 border-t border-stone-200 flex items-center justify-between gap-2"><span class="text-xs text-stone-400">현재고 = 원재료 메뉴 3. 현재 재고 (같은 이름의 모든 규격 합)</span><button type="button" onclick="Prod.closeModal()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">닫기</button></div>`, true, 'max-w-[860px]');
+      <div class="px-5 py-3 border-t border-stone-200 flex items-center justify-between gap-2"><span class="text-xs text-stone-400">현재고 = 원재료 메뉴 3. 현재 재고 (같은 이름의 모든 규격 합)</span><button type="button" onclick="Prod.closeModal()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">닫기</button></div>`, true, 'max-w-[860px]', openNextWeekMaterials);
   }
 
   // 레시피 1배합을 원재료 단위까지 펼침 (반제품은 안의 원재료로) → { 이름: { g, cost } }
@@ -2382,8 +2383,9 @@
         ${adjRows ? `<table class="w-full"><thead><tr class="text-stone-500 border-b"><th class="py-1 px-2 text-left">날짜</th><th class="py-1 px-2 text-left">품목</th><th class="py-1 px-2 text-right">증감</th><th class="py-1 px-2 text-left">사유</th><th></th></tr></thead><tbody>${adjRows}</tbody></table>` : '<div class="text-stone-400">조정 기록이 없습니다.</div>'}
       </div>`;
   }
-  function modal(html, center, wide) { const h = document.getElementById('prodModal'); if (h) h.innerHTML = `<div class="fixed inset-0 z-50 bg-stone-900/40 flex ${center ? 'items-center' : 'items-start'} justify-center p-3 sm:p-6 overflow-y-auto" onclick="if(event.target===this)Prod.closeModal()"><div class="bg-white rounded-2xl shadow-xl w-full ${typeof wide === 'string' ? wide : wide ? 'max-w-[1120px]' : 'max-w-[720px]'}">${html}</div></div>`; }
-  function closeModal() { const h = document.getElementById('prodModal'); if (h) h.innerHTML = ''; }
+  let modalReopen = null; // 조회용 팝업: 화면을 다시 그릴 때(DB를 새로 불러왔을 때) 최신 값으로 다시 계산해 띄움
+  function modal(html, center, wide, reopen) { modalReopen = reopen || null; const h = document.getElementById('prodModal'); if (h) h.innerHTML = `<div class="fixed inset-0 z-50 bg-stone-900/40 flex ${center ? 'items-center' : 'items-start'} justify-center p-3 sm:p-6 overflow-y-auto" onclick="if(event.target===this)Prod.closeModal()"><div class="bg-white rounded-2xl shadow-xl w-full ${typeof wide === 'string' ? wide : wide ? 'max-w-[1120px]' : 'max-w-[720px]'}">${html}</div></div>`; }
+  function closeModal() { modalReopen = null; const h = document.getElementById('prodModal'); if (h) h.innerHTML = ''; }
   function openCountModal() {
     const { rows, semiRows } = computeStock();
     modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold">재고 실사 입력</h3><div class="text-xs text-stone-500 mt-0.5">기준일 <b>마감 후</b> 냉동창고에 있는 PK 수량입니다. 칸에는 지금 계산된 재고가 미리 들어 있으니, 센 수량으로 고쳐 주세요. 기준일이 그 달의 <b>마지막 근무일(또는 말일)</b>이면 반제품 카트 수는 '월말 카트 재고'에도 자동으로 함께 저장됩니다.</div></div>
