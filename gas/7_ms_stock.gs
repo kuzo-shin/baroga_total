@@ -1,6 +1,6 @@
 /**
  * [바로가 ERP] 7. 엠즈 재고 DB — Google Apps Script
- * 버전: v1.1 (2026-11-25 운영팀 사이트용 읽기 전용 작업 getHist 추가) / v1.0 (2026-11-24 신규)
+ * 버전: v1.1 (2026-11-25 운영팀 사이트용 읽기 전용 작업 getHistIndex·getHist 추가) / v1.0 (2026-11-24 신규)
  *
  *  - 엠즈 e플랫폼에서 읽어 온 자료(현재고·유통기한별 현재고·위탁상품 수불부·일자별 수불현황·주문대비 입고현황)를 통째로 보관
  *  - 'MS_STOCK_DB' 시트에 전체 데이터를 40,000자씩 나눠 저장 (한도 없음), 먼저 지우지 않음
@@ -56,12 +56,24 @@ function readAll_() {
   }
 }
 
-// 운영팀 사이트(baroga_ops)가 하루 한 번 가져가는 월별 발주 이력만 돌려줌 (읽기 전용)
-function readHist_() {
+// 운영팀 사이트(gontran_operations)가 하루 한 번 읽어 가는 월별 발주 이력 (읽기 전용)
+//  - getHistIndex: 달마다 줄 수·마지막 날만 돌려줌 (무엇이 바뀌었는지 비교용, 작음)
+//  - getHist: body.months(['YYYY-MM', ...])에 적은 달만 돌려줌. 없으면 전부
+function readHist_(body) {
   try {
     const r = readPayload_();
-    const p = r.payload || {};
-    return jsonOut({ ok: true, status: 'ok', revision: getRevision_(), asOf: String(p.asOf || ''), hist: p.hist && typeof p.hist === 'object' ? p.hist : {} });
+    const p = r.payload || {}, hist = p.hist && typeof p.hist === 'object' ? p.hist : {};
+    if (body.action === 'getHistIndex') {
+      const index = {};
+      Object.keys(hist).forEach(function (ym) { const h = hist[ym] || {}; index[ym] = { rows: Array.isArray(h.rows) ? h.rows.length : 0, to: String(h.to || '') }; });
+      return jsonOut({ ok: true, status: 'ok', revision: getRevision_(), asOf: String(p.asOf || ''), index: index });
+    }
+    let out = hist;
+    if (Array.isArray(body.months)) {
+      out = {};
+      body.months.slice(0, 24).forEach(function (ym) { if (hist[ym]) out[ym] = hist[ym]; });
+    }
+    return jsonOut({ ok: true, status: 'ok', revision: getRevision_(), asOf: String(p.asOf || ''), hist: out });
   } catch (err) {
     return jsonOut({ ok: false, status: 'error', message: String(err && err.message ? err.message : err) });
   }
@@ -198,6 +210,6 @@ function doPost(e) {
   const denied = checkAccess_(body);
   if (denied) return jsonOut(denied);
   if (body.action === 'getAll') return readAll_();
-  if (body.action === 'getHist') return readHist_();
+  if (body.action === 'getHist' || body.action === 'getHistIndex') return readHist_(body);
   return writeAll_(body);
 }
