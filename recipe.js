@@ -683,15 +683,15 @@ function renderRecipeWorkspace() {
     if (!document.getElementById('fdThreeColRoot')) {
         mainEl.innerHTML = `
             <style>
-                .fd-th { background-color: #EFE2C6; color: #292524; font-weight: 800; font-size: 11px; border: 1px solid #D6C7A9; white-space: nowrap; }
-                .fd-td { border: 1px solid #E5E0D8; font-size: 11.5px; }
-                .fd-kv-label { background-color: #EFE2C6; color: #292524; font-weight: 800; font-size: 11px; border: 1px solid #D6C7A9; padding: 5px 6px; text-align: center; white-space: nowrap; cursor: help; }
-                .fd-kv-val { background-color: #FFFFFF; color: #1C1917; font-weight: 700; font-size: 11.5px; border: 1px solid #DFD9CE; padding: 4px 7px; text-align: right; }
+                .fd-th { background-color: #F5F5F4; color: #292524; font-weight: 800; font-size: 12px; border: 1px solid #D6D3D1; white-space: nowrap; }
+                .fd-td { border: 1px solid #E7E5E4; font-size: 12px; }
+                .fd-kv-label { background-color: #F5F5F4; color: #292524; font-weight: 800; font-size: 12px; border: 1px solid #D6D3D1; padding: 5px 6px; text-align: center; white-space: nowrap; cursor: help; }
+                .fd-kv-val { background-color: #FFFFFF; color: #1C1917; font-weight: 700; font-size: 12px; border: 1px solid #E7E5E4; padding: 4px 7px; text-align: right; }
                 .fd-kv-val[data-tip] { cursor: help; }
                 .fd-kv-val[data-tip]:hover { background-color: #FEFCE8; }
-                .fd-kv-input { width: 100%; min-width: 0; text-align: right; font-weight: 800; background: #FFFBEB; border: 1px solid #F59E0B; border-radius: 4px; padding: 1px 5px; font-size: 11.5px; color: #1C1917; }
+                .fd-kv-input { width: 100%; min-width: 0; text-align: right; font-weight: 800; background: #FFFBEB; border: 1px solid #F59E0B; border-radius: 4px; padding: 1px 5px; font-size: 12px; color: #1C1917; }
                 .fd-kv-input:focus { outline: 2px solid #D97706; background: #FFFFFF; }
-                #fdHoverTip { pointer-events: none; position: fixed; z-index: 9999; max-width: 360px; padding: 7px 10px; border-radius: 10px; background: rgba(28, 25, 23, 0.96); color: #FAFAF9; font-size: 11.5px; line-height: 1.45; font-weight: 600; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.35); border: 1px solid rgba(245, 158, 11, 0.45); white-space: pre-line; transition: opacity 0.08s ease; }
+                #fdHoverTip { pointer-events: none; position: fixed; z-index: 9999; max-width: 360px; padding: 7px 10px; border-radius: 10px; background: rgba(28, 25, 23, 0.96); color: #FAFAF9; font-size: 12px; line-height: 1.45; font-weight: 600; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.35); border: 1px solid rgba(245, 158, 11, 0.45); white-space: pre-line; transition: opacity 0.08s ease; }
             </style>
             <div id="fdHoverTip" class="hidden opacity-0 no-print"></div>
             <div id="fdThreeColRoot" class="grid grid-cols-1 xl:grid-cols-12 gap-3 xl:items-stretch xl:h-[calc(100vh-196px)] xl:min-h-[530px]">
@@ -992,7 +992,7 @@ function renderRecipeDetailPanel() {
                             <div class="flex items-center gap-1 min-w-0">
                                 <button type="button" onclick="toggleSubNodeCollapse('${escapeHtml(nodeKey)}')" class="text-xs w-4 h-4 inline-flex items-center justify-center rounded border border-rose-300 bg-white text-rose-700 cursor-pointer shrink-0">${isCollapsed ? '+' : '-'}</button>
                                 <span onclick="selectRecipeItem('${escapeHtml(entry.subRc.id)}')" class="underline decoration-dotted cursor-pointer truncate" title="${escapeHtml(entry.subRc.productName)} (클릭 시 해당 반제품 레시피로 이동)">${escapeHtml(entry.subRc.productName)}</span>
-                                <button type="button" onclick="toggleSubFullBatch(${idx})" title="${ig.fullBatch ? '반제품 1배합 전체 사용: [반제품 변경 적용]을 누르면 최신 1배합 분량으로 갱신됩니다. 누르면 수량 고정으로 바뀝니다.' : '수량 고정: 반제품이 바뀌어도 이 투입량은 그대로입니다. 누르면 1배합 전체 사용(자동)으로 바뀝니다.'}" class="shrink-0 px-1 py-px rounded border text-[10px] font-bold cursor-pointer ${ig.fullBatch ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-stone-300 text-stone-500'}">${ig.fullBatch ? '1배합 자동' : '수량 고정'}</button>
+                                <button type="button" onclick="toggleSubFullBatch(${idx})" title="${ig.fullBatch ? '반제품 1배합 전체 사용: [반제품 변경 적용]을 누르면 최신 1배합 분량으로 갱신됩니다. 누르면 수량 고정으로 바뀝니다.' : '수량 고정: 반제품이 바뀌어도 이 투입량은 그대로입니다. 누르면 1배합 전체 사용(자동)으로 바뀝니다.'}" class="shrink-0 px-1 py-px rounded border text-xs font-bold cursor-pointer ${ig.fullBatch ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-stone-300 text-stone-500'}">${ig.fullBatch ? '1배합 자동' : '수량 고정'}</button>
                             </div>
                         </td>
                         <td class="fd-td py-1 px-1 text-center"><input type="text" value="${escapeHtml(ig.origin || '')}" onchange="updateRecipeIngredient(${idx}, 'origin', this.value)" class="w-full min-w-0 text-center bg-transparent focus:bg-white focus:outline-amber-500 text-xs"></td>
@@ -1349,14 +1349,14 @@ ${fmtDec(m.rawMaterialCost, 1)}원 + ${fmtDec(m.totalPackCost, 1)}원 = ${fmtDec
                 </div>
 
                 <!-- 제품이미지 영역 -->
-                <div class="sm:col-span-4 border border-[#D6C7A9] bg-[#F7EFE1] rounded flex flex-col items-center justify-center relative overflow-hidden min-h-[190px] group">
+                <div class="sm:col-span-4 border border-stone-300 bg-stone-50 rounded flex flex-col items-center justify-center relative overflow-hidden min-h-[190px] group">
                     ${rc.imageData
                         ? `<img src="${rc.imageData}" alt="제품이미지" class="w-full h-full object-cover max-h-[225px]">
                            <div class="absolute inset-0 bg-stone-950/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-1.5">
                                <button type="button" onclick="document.getElementById('recipeImgInput').click()" class="px-2 py-1 rounded bg-white text-stone-900 text-xs font-bold cursor-pointer">변경</button>
                                <button type="button" onclick="clearRecipeImage()" class="px-2 py-1 rounded bg-rose-600 text-white text-xs font-bold cursor-pointer">삭제</button>
                            </div>`
-                        : `<div onclick="document.getElementById('recipeImgInput').click()" class="w-full h-full flex flex-col items-center justify-center p-3 text-center cursor-pointer hover:bg-[#EFE2C6]/60 transition">
+                        : `<div onclick="document.getElementById('recipeImgInput').click()" class="w-full h-full flex flex-col items-center justify-center p-3 text-center cursor-pointer hover:bg-stone-100 transition">
                                <i data-lucide="image-plus" class="w-6 h-6 text-stone-500 mb-1"></i>
                                <span class="text-xs font-extrabold text-stone-700">제품이미지</span>
                                <span class="text-xs text-stone-500 mt-0.5">클릭하여 사진 등록</span>
@@ -2486,7 +2486,7 @@ function applySubRecipeChangesToAllRecipes() {
     const old = document.getElementById('subApplyResultModal'); if (old) old.remove();
     const wrap = document.createElement('div');
     wrap.id = 'subApplyResultModal';
-    wrap.className = 'fixed inset-0 bg-stone-950/60 z-50 flex items-center justify-center p-4';
+    wrap.className = 'fixed inset-0 bg-stone-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4';
     wrap.onclick = (e) => { if (e.target === wrap) wrap.remove(); };
     const th = 'py-2 px-2.5 text-left font-extrabold text-stone-600', td = 'py-1.5 px-2.5';
     wrap.innerHTML = `<div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col">

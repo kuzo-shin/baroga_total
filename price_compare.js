@@ -20,7 +20,7 @@
   const absUrl = (u, base) => { if (!u) return ''; if (/^https?:\/\//i.test(u)) return u; if (base) { try { return new URL(u, base).href; } catch (e) {} } return ''; };
   const safeUrl = (u) => (/^https?:\/\//i.test(String(u || '')) ? String(u) : '');
   const ext = (u, t, cls) => (safeUrl(u) ? `<a href="${esc(safeUrl(u))}" target="_blank" rel="noopener" class="${cls || 'text-amber-800 underline decoration-amber-300 underline-offset-2 hover:text-amber-900'}">${t}</a>` : t);
-  const pill = (txt, cls) => `<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[11px] font-bold border whitespace-nowrap ${cls}">${txt}</span>`;
+  const pill = (txt, cls) => `<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-xs font-bold border whitespace-nowrap ${cls}">${txt}</span>`;
   const P = {
     save: 'bg-emerald-50 text-emerald-800 border-emerald-200', cost: 'bg-rose-50 text-rose-700 border-rose-200', warn: 'bg-amber-50 text-amber-800 border-amber-200',
     mute: 'bg-stone-100 text-stone-600 border-stone-200', accent: 'bg-sky-50 text-sky-800 border-sky-200', dark: 'bg-stone-900 text-white border-stone-900',
@@ -32,13 +32,13 @@
     'C': ['C', '참고', P.mute], '-': ['', '참고', P.mute], 'N': ['', '가격 미공개', P.mute], 'X': ['X', '품절·미열람', 'bg-rose-50 text-rose-700 border-rose-200'],
   };
   const gp = (g, n) => { const m = G[g] || ['', g || '', P.mute]; return pill(`${m[0] ? `<b>${esc(m[0])}</b>` : ''}${n != null ? esc(n) : esc(m[1])}`, m[2]); };
-  const copyBtn = (t, label) => `<button type="button" data-copy="${esc(t)}" class="pc-copy ml-1 px-1.5 py-0.5 rounded-md border border-stone-200 bg-white text-[11px] font-bold text-stone-600 hover:bg-stone-50 cursor-pointer">${label || '복사'}</button>`;
+  const copyBtn = (t, label) => `<button type="button" data-copy="${esc(t)}" class="pc-copy ml-1 px-1.5 py-0.5 rounded-md border border-stone-200 bg-white text-xs font-bold text-stone-600 hover:bg-stone-50 cursor-pointer">${label || '복사'}</button>`;
   const telTxt = (p) => (p ? `<span class="select-all">전화 ${esc(p)}</span>` : '');
   const mailTxt = (e) => (e ? `<span><a class="select-all text-amber-800 underline decoration-amber-300" href="mailto:${esc(e)}">${esc(e)}</a>${copyBtn(e)}</span>` : '');
   const card = 'bg-white border border-stone-200 rounded-2xl shadow-xs';
   const input = 'border border-stone-300 rounded-xl px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300';
   const chipCls = (on) => `px-3 py-1 rounded-full text-xs font-bold cursor-pointer border ${on ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'}`;
-  const th = 'px-2.5 py-2 text-[11px] font-extrabold text-stone-500 bg-stone-50 border-b border-stone-200 whitespace-nowrap';
+  const th = 'px-2.5 py-2 text-xs font-extrabold text-stone-600 bg-stone-100 whitespace-nowrap';
   const td = 'px-2.5 py-2 border-b border-stone-100 align-top';
 
   // ---------- 상태 ----------
@@ -134,7 +134,7 @@
     const cur = data;
     const row = (l, a, b) => `<tr class="border-b border-stone-100"><td class="py-1.5 px-2 font-bold text-stone-600">${l}</td><td class="py-1.5 px-2 text-right tabular-nums">${b == null ? '—' : esc(b)}</td><td class="py-1.5 px-2 text-right tabular-nums font-extrabold">${esc(a)}</td></tr>`;
     modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold">단가 비교 자료 가져오기</h3><div class="text-xs text-stone-500 mt-0.5">파일 <b>${esc(d.source.file || '')}</b> · ${esc(d.source.sub || '')}</div></div>
-      <div class="p-4"><table class="w-full text-sm"><tr class="text-[11px] text-stone-500"><th class="text-left px-2">구분</th><th class="text-right px-2">지금 DB</th><th class="text-right px-2">가져올 파일</th></tr>
+      <div class="p-4"><table class="w-full text-sm"><tr class="text-xs text-stone-500"><th class="text-left px-2">구분</th><th class="text-right px-2">지금 DB</th><th class="text-right px-2">가져올 파일</th></tr>
       ${row('품목', d.items.length, cur && cur.items.length)}${row('업체별 연락처', d.calls.length, cur && cur.calls.length)}${row('견적 메일 초안', d.quotes.length, cur && cur.quotes.length)}
       ${row('최근 재확인 줄', d.recheck.length, cur && cur.recheck.length)}${row('1순위 요약', d.summary.length, cur && cur.summary.length)}${row('125품목 차액', d.diffs.length, cur && cur.diffs.length)}
       ${row('거래처 전체', d.vendors.length, cur && cur.vendors.length)}${row('인계서 글자 수', d.hand.length.toLocaleString('ko-KR'), cur && cur.hand.length.toLocaleString('ko-KR'))}${row('업데이트 메모', d.notes.length, cur && cur.notes.length)}</table>
@@ -173,7 +173,7 @@
     loaded = false; dbRevision = null; data = null; closeModal(); render();
     pull(true);
   }
-  function modal(html) { const h = document.getElementById('pcModal'); if (h) h.innerHTML = `<div class="fixed inset-0 z-50 bg-stone-900/40 flex items-start justify-center p-3 sm:p-6 overflow-y-auto" onclick="if(event.target===this)PriceCmp.closeModal()"><div class="bg-white rounded-2xl shadow-xl w-full max-w-[640px]">${html}</div></div>`; }
+  function modal(html) { const h = document.getElementById('pcModal'); if (h) h.innerHTML = `<div class="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs flex items-start justify-center p-3 sm:p-6 overflow-y-auto" onclick="if(event.target===this)PriceCmp.closeModal()"><div class="bg-white rounded-2xl shadow-xl w-full max-w-[640px]">${html}</div></div>`; }
   function closeModal() { const h = document.getElementById('pcModal'); if (h) h.innerHTML = ''; }
 
   // ---------- 화면 ----------
@@ -254,7 +254,7 @@
               <span class="block mt-1 text-2xl sm:text-3xl text-emerald-700 tabular-nums">연 ${won(S.sumM12)}원 <span class="text-base">절감</span> <span class="text-sm font-bold text-stone-500">월 ${won(S.sumM1)}원</span></span></h2>
             <p class="mt-2 text-xs text-stone-500 leading-relaxed">현재 단가와 후보 단가를 모두 부가세 포함 기준으로 맞춰 비교했습니다. 후보 단가는 쇼핑몰 표시가라 배송비·최소 주문량은 확인 전입니다. 절감은 견적을 받아야 확정됩니다. 전화·메일·구매는 이 화면에서 하지 않습니다.</p>
           </div>
-          <dl class="grid grid-cols-2 sm:grid-cols-3 gap-2">${facts.map(([l, v, s]) => `<div class="rounded-xl bg-stone-50 border border-stone-200 px-3 py-2"><dt class="text-[11px] font-bold text-stone-500">${esc(l)}</dt><dd class="text-base font-extrabold text-stone-900 tabular-nums">${esc(v)}<span class="block text-[11px] font-bold text-stone-500">${esc(s)}</span></dd></div>`).join('')}</dl>
+          <dl class="grid grid-cols-2 sm:grid-cols-3 gap-2">${facts.map(([l, v, s]) => `<div class="rounded-xl bg-stone-50 border border-stone-200 px-3 py-2"><dt class="text-xs font-bold text-stone-500">${esc(l)}</dt><dd class="text-base font-extrabold text-stone-900 tabular-nums">${esc(v)}<span class="block text-xs font-bold text-stone-500">${esc(s)}</span></dd></div>`).join('')}</dl>
           ${rcBox()}
         </div>
         <div class="${card} p-4 xl:col-span-5">
@@ -297,7 +297,7 @@
       <div class="mt-2 flex flex-wrap gap-1.5">${Object.keys(RC_L).map((k) => pill(`${RC_L[k]} <b class="ml-1">${c[k]}</b>`, RC_P[k])).join('')}</div>
       <div class="mt-1.5 text-xs text-stone-500">후보 상품 링크 ${R.length}줄을 다시 열어 표시가·품절을 확인 · 재고 칸 갱신 ${esc(rc.stock)}줄 · 순위 다시 매긴 품목 ${esc(rc.touched)}개(1순위 바뀐 품목 ${esc(rc.vchg)}개)</div>
       ${big.length ? `<ul class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-0.5 text-xs">${big.map((x) => `<li class="flex justify-between gap-2"><span class="truncate text-stone-600">${esc(x.name)} · ${esc(x.vendor)}</span><span class="tabular-nums whitespace-nowrap">${won(x.old)} → <b>${won(x.new)}원</b> <span class="${x.pct > 0 ? 'text-rose-600' : 'text-emerald-700'} font-bold">${x.pct > 0 ? '+' : ''}${Number(x.pct).toFixed(1)}%</span></span></li>`).join('')}</ul>` : ''}
-      <p class="mt-2 text-[11px] text-stone-500 leading-relaxed">자동 반영은 페이지 표시가가 기록과 ±${esc(rc.autoPct)}% 안쪽으로 다를 때만 합니다. 그보다 크게 다르면 옵션·용량이 다른 경우가 많아 값은 그대로 두고 '확인 필요'로만 남겼습니다.</p>
+      <p class="mt-2 text-xs text-stone-500 leading-relaxed">자동 반영은 페이지 표시가가 기록과 ±${esc(rc.autoPct)}% 안쪽으로 다를 때만 합니다. 그보다 크게 다르면 옵션·용량이 다른 경우가 많아 값은 그대로 두고 '확인 필요'로만 남겼습니다.</p>
     </section>`;
   }
   function pick() {
@@ -319,7 +319,7 @@
   const curVatWord = (s) => { s = String(s || ''); return s.startsWith('별도') ? '부가세 별도 → 포함으로 환산' : s.startsWith('포함') ? '부가세 포함' : s.startsWith('면세') ? '면세(부가세 없음)' : '부가세 구분 미확인'; };
   const candVat = (v) => { const s = String(v.vat || ''); return s.startsWith('포함') ? '부가세 포함' : s.startsWith('별도') ? '별도 → 포함 환산' : (s === '면세' || s.startsWith('면세(')) ? '면세' : s.includes('면세') ? '면세 추정' : '포함 추정'; };
   const vatPill = (s) => pill(esc(s), s === '별도' ? P.warn : s === '면세' ? P.mute : P.accent);
-  const sub = (h, cls) => `<span class="block text-[11px] ${cls || 'text-stone-500'} mt-0.5">${h}</span>`;
+  const sub = (h, cls) => `<span class="block text-xs ${cls || 'text-stone-500'} mt-0.5">${h}</span>`;
   function curBadge(it) {
     const c = it.curCheck; if (!c) return '';
     if (c.src !== '전표') return sub(pill('입고 전표 없음', P.mute));
@@ -357,11 +357,11 @@
   }
   function noteCell(n) {
     if (!n) return ''; const s = String(n);
-    return s.length <= 90 ? sub(esc(s)) : `<details class="text-[11px] text-stone-500 mt-0.5"><summary class="cursor-pointer">${esc(s.slice(0, 90))}… 더 보기</summary><div>${esc(s)}</div></details>`;
+    return s.length <= 90 ? sub(esc(s)) : `<details class="text-xs text-stone-500 mt-0.5"><summary class="cursor-pointer">${esc(s.slice(0, 90))}… 더 보기</summary><div>${esc(s)}</div></details>`;
   }
   function vrow(v) {
     const bg = v.grade === 'A' ? 'bg-emerald-50/60' : v.grade === 'X' ? 'opacity-60' : '';
-    const rk = v.rank ? `<span class="inline-flex w-5 h-5 items-center justify-center rounded-full text-[11px] font-extrabold ${v.rank === 1 ? 'bg-amber-500 text-stone-950' : 'bg-stone-200 text-stone-700'}">${v.rank}</span>` : '<span class="inline-block w-5 text-center text-stone-400">·</span>';
+    const rk = v.rank ? `<span class="inline-flex w-5 h-5 items-center justify-center rounded-full text-xs font-extrabold ${v.rank === 1 ? 'bg-amber-500 text-stone-950' : 'bg-stone-200 text-stone-700'}">${v.rank}</span>` : '<span class="inline-block w-5 text-center text-stone-400">·</span>';
     const st = String(v.stock || '');
     return `<tr class="${bg}">
       <td class="${td} whitespace-nowrap">${rk} ${gp(v.grade)}</td>
@@ -400,12 +400,12 @@
       ['연 사용액(PD 출고 기준)', won(it.yearAmt) + '원'], ['견적 3% 가정', '연 ' + won(it.quotePot) + '원'],
       ['규격', `${esc(it.spec)}${it.trust === '불일치' ? ` <span class="text-rose-600">⚠ 규격 불일치(명세 ${esc(it.invoiceSpec)})</span>` : ''}`],
     ];
-    const slips = it.slips && it.slips.length ? `<div class="rounded-xl border border-stone-200 bg-white p-3"><h4 class="text-xs font-extrabold text-stone-700 mb-1.5">최근 입고 전표 — 현재 단가·부가세 구분의 근거</h4><ul class="text-xs space-y-0.5 tabular-nums">${it.slips.map((s) => `<li>${esc(s.d)} · ${esc(s.v)} · <b>${won(s.p)}원</b>/${esc(s.u)} × ${esc(s.q)} ${vatPill(s.t)}</li>`).join('')}</ul>${it.curPrev && it.curPrev.price != null && (it.curPrev.price !== it.curPrice || (it.curPrev.vat || '') !== it.curVat) ? `<div class="mt-1.5 text-[11px] text-stone-500">전표 반영 전 화면 값: ${won(it.curPrev.price)}원 ${esc(it.curPrev.vat || '구분 없음')} · ${esc(it.curPrev.supplier || '')} · ${won(it.curPrev.kg)}원/kg (${esc(it.curPrev.src || '')})</div>` : ''}</div>` : '';
-    const recBox = rec ? `<div class="rounded-xl border border-stone-200 bg-white p-3"><h4 class="text-xs font-extrabold text-stone-700 mb-1.5">전화·견적 추천 ${cl.length}곳</h4><ul class="text-xs space-y-1">${rec}</ul>${cl.length > 6 ? `<div class="mt-1.5 text-[11px] text-stone-500">외 ${cl.length - 6}곳 (아래 표에서 확인)</div>` : ''}</div>` : '';
+    const slips = it.slips && it.slips.length ? `<div class="rounded-xl border border-stone-200 bg-white p-3"><h4 class="text-xs font-extrabold text-stone-700 mb-1.5">최근 입고 전표 — 현재 단가·부가세 구분의 근거</h4><ul class="text-xs space-y-0.5 tabular-nums">${it.slips.map((s) => `<li>${esc(s.d)} · ${esc(s.v)} · <b>${won(s.p)}원</b>/${esc(s.u)} × ${esc(s.q)} ${vatPill(s.t)}</li>`).join('')}</ul>${it.curPrev && it.curPrev.price != null && (it.curPrev.price !== it.curPrice || (it.curPrev.vat || '') !== it.curVat) ? `<div class="mt-1.5 text-xs text-stone-500">전표 반영 전 화면 값: ${won(it.curPrev.price)}원 ${esc(it.curPrev.vat || '구분 없음')} · ${esc(it.curPrev.supplier || '')} · ${won(it.curPrev.kg)}원/kg (${esc(it.curPrev.src || '')})</div>` : ''}</div>` : '';
+    const recBox = rec ? `<div class="rounded-xl border border-stone-200 bg-white p-3"><h4 class="text-xs font-extrabold text-stone-700 mb-1.5">전화·견적 추천 ${cl.length}곳</h4><ul class="text-xs space-y-1">${rec}</ul>${cl.length > 6 ? `<div class="mt-1.5 text-xs text-stone-500">외 ${cl.length - 6}곳 (아래 표에서 확인)</div>` : ''}</div>` : '';
     return `<tr class="bg-amber-50/40"><td colspan="14" class="px-3 sm:px-5 py-4 border-b border-amber-200">
       <div class="flex flex-col gap-3">
         <p class="text-sm text-stone-800"><b class="mr-1 px-1.5 py-0.5 rounded bg-stone-900 text-white text-xs">판단</b>${esc(it.verdict)}${it.note ? `<span class="block mt-1 text-xs text-amber-800">내부 대조 주의: ${esc(it.note)}</span>` : ''}</p>
-        <dl class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-2">${meta.map(([l, v]) => `<div class="rounded-lg bg-white border border-stone-200 px-2.5 py-1.5"><dt class="text-[11px] font-bold text-stone-500">${l}</dt><dd class="text-xs font-bold text-stone-900 tabular-nums">${v}</dd></div>`).join('')}</dl>
+        <dl class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-2">${meta.map(([l, v]) => `<div class="rounded-lg bg-white border border-stone-200 px-2.5 py-1.5"><dt class="text-xs font-bold text-stone-500">${l}</dt><dd class="text-xs font-bold text-stone-900 tabular-nums">${v}</dd></div>`).join('')}</dl>
         ${slips || recBox ? `<div class="grid grid-cols-1 lg:grid-cols-2 gap-3">${slips}${recBox}</div>` : ''}
         <div class="overflow-x-auto rounded-xl border border-stone-200 bg-white"><table class="w-full text-sm min-w-[1100px]"><thead><tr>
           <th class="${th} text-left">순위</th><th class="${th} text-left">업체</th><th class="${th} text-left">동일제품</th><th class="${th} text-right">표시가격 · 규격</th><th class="${th} text-right">원/kg</th><th class="${th} text-right">현재 대비<br>차액 원/kg</th><th class="${th} text-right">차액 1개월</th><th class="${th} text-right">3개월</th><th class="${th} text-right">6개월</th><th class="${th} text-right">12개월</th><th class="${th} text-left">확인·출처</th>
@@ -462,7 +462,7 @@
     document.getElementById('pcQcnt').textContent = rows.length + '통';
     el.innerHTML = rows.map(([c, i]) => `<details class="rounded-xl border border-stone-200 bg-white">
       <summary class="px-3 py-2.5 cursor-pointer"><span class="inline-flex items-center gap-1.5 font-extrabold text-stone-900">${pill(c.source === 'sheet' ? '시트 원본' : '자동초안', c.source === 'sheet' ? P.save : P.accent)}${esc(c.vendor)}</span>
-        <span class="block text-xs text-stone-600 mt-0.5">${esc(c.subject)}</span><span class="block text-[11px] text-stone-500">${esc(c.emailStatus)}</span></summary>
+        <span class="block text-xs text-stone-600 mt-0.5">${esc(c.subject)}</span><span class="block text-xs text-stone-500">${esc(c.emailStatus)}</span></summary>
       <div class="px-3 pb-3 flex flex-col gap-2 border-t border-stone-100 pt-2">
         <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs">${[c.home && ext(c.home, '홈페이지'), c.phone ? telTxt(c.phone) : '<span class="text-stone-400">전화 미확인</span>', c.email ? `<span class="select-all">${esc(c.email)}</span>` : '<span class="text-stone-400">메일 미확인</span>'].filter(Boolean).join('')}</div>
         <div class="text-xs text-stone-600">${esc(c.items)}</div>
