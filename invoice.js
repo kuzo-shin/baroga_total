@@ -1,4 +1,4 @@
-// [VERSION: invoice.js v1.2 - 2026-11-25 품목 칸 뒤에 로고 워터마크 / v1.1 - 2026-11-25 납기일 기본값 = 발주일(따로 고르기 전에는 발주일을 따라감) · 글꼴 굵게 · 기본 정보(등록번호·대표자명·주소·업태/종목·연락처·참고사항)는 DB에서 자동 채움 / v1.0 - 2026-11-25 신규: 거래명세서 작성(A4) · PDF 다운로드 · 인쇄 · DB 저장]
+// [VERSION: invoice.js v1.3 - 2026-11-26 UI 통일: 상단 버튼 크기 · [DB 저장] 초록 / v1.2 - 2026-11-25 품목 칸 뒤에 로고 워터마크 / v1.1 - 2026-11-25 납기일 기본값 = 발주일(따로 고르기 전에는 발주일을 따라감) · 글꼴 굵게 · 기본 정보(등록번호·대표자명·주소·업태/종목·연락처·참고사항)는 DB에서 자동 채움 / v1.0 - 2026-11-25 신규: 거래명세서 작성(A4) · PDF 다운로드 · 인쇄 · DB 저장]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - 거래명세서 (invoice.js)
 //  - A4 거래명세서를 화면에서 바로 작성하고 PDF로 내려받거나 인쇄
@@ -181,14 +181,14 @@
       </style>
       <div class="w-full bg-stone-100/90 border-b border-stone-200 no-print"><div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-2">
         <div class="flex flex-wrap items-center gap-1.5">
-          <button type="button" onclick="Invoice.newDoc()" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-extrabold bg-stone-900 text-white cursor-pointer"><i data-lucide="file-plus" class="w-4 h-4"></i><span>새 명세서</span></button>
-          <button type="button" onclick="Invoice.copyDoc()" class="${BTN} !h-10 !text-sm"><i data-lucide="copy" class="w-4 h-4"></i><span>복사해서 새로</span></button>
-          <button type="button" onclick="Invoice.pdf()" class="flex items-center gap-2 px-4 h-10 rounded-xl text-sm font-extrabold bg-amber-500 hover:bg-amber-600 text-stone-950 cursor-pointer"><i data-lucide="download" class="w-4 h-4"></i><span>PDF 다운로드</span></button>
-          <button type="button" onclick="Invoice.print()" class="${BTN} !h-10 !text-sm"><i data-lucide="printer" class="w-4 h-4"></i><span>인쇄</span></button>
+          <button type="button" onclick="Invoice.newDoc()" class="flex items-center gap-1.5 px-3.5 h-9 rounded-xl text-xs font-extrabold bg-stone-900 hover:bg-stone-800 text-white transition cursor-pointer whitespace-nowrap"><i data-lucide="file-plus" class="w-3.5 h-3.5"></i><span>새 명세서</span></button>
+          <button type="button" onclick="Invoice.copyDoc()" class="${BTN}"><i data-lucide="copy" class="w-3.5 h-3.5"></i><span>복사해서 새로</span></button>
+          <button type="button" onclick="Invoice.pdf()" class="flex items-center gap-1.5 px-3.5 h-9 rounded-xl text-xs font-extrabold bg-amber-600 hover:bg-amber-700 text-white transition cursor-pointer whitespace-nowrap"><i data-lucide="download" class="w-3.5 h-3.5"></i><span>PDF 다운로드</span></button>
+          <button type="button" onclick="Invoice.print()" class="${BTN}"><i data-lucide="printer" class="w-3.5 h-3.5"></i><span>인쇄</span></button>
         </div>
         <div class="flex items-center gap-1.5 ml-auto">
           <button type="button" id="invDbBadge" onclick="Invoice.openDbModal()" title="DB 주소 설정"><span></span><span id="invStatusText">${esc(statusText)}</span><i data-lucide="settings" class="w-3.5 h-3.5 ml-0.5 opacity-75"></i></button>
-          <button type="button" onclick="Invoice.saveNow()" data-save-key="invoice" class="flex items-center gap-1.5 px-3.5 py-1.5 h-9 rounded-xl text-xs font-bold bg-stone-900 hover:bg-stone-800 text-white transition cursor-pointer"><i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i><span>DB 저장</span></button>
+          <button type="button" onclick="Invoice.saveNow()" data-save-key="invoice" class="flex items-center gap-1.5 px-3.5 py-1.5 h-9 rounded-xl text-xs font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition cursor-pointer"><i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i><span>DB 저장</span></button>
           <button type="button" onclick="Invoice.pull(true)" title="DB에서 다시 불러오기" class="flex items-center justify-center w-9 h-9 rounded-xl border border-stone-200 bg-white hover:bg-stone-100 text-stone-700 transition cursor-pointer"><i data-lucide="refresh-cw" class="w-4 h-4"></i></button>
         </div></div></div>
       <div class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-4 flex flex-col lg:flex-row gap-4 items-start">
@@ -289,7 +289,7 @@
   }
 
   // ---------- DB 설정 ----------
-  function modal(html) { const m = document.getElementById('invModal'); if (m) m.innerHTML = `<div class="fixed inset-0 z-[60] bg-stone-950/50 flex items-center justify-center p-4" onclick="if(event.target===this)Invoice.closeModal()"><div class="bg-white rounded-2xl shadow-xl w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col">${html}</div></div>`; }
+  function modal(html) { const m = document.getElementById('invModal'); if (m) m.innerHTML = `<div class="fixed inset-0 z-[60] bg-stone-950/60 backdrop-blur-xs flex items-center justify-center p-4" onclick="if(event.target===this)Invoice.closeModal()"><div class="bg-white rounded-2xl shadow-xl w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col">${html}</div></div>`; }
   function closeModal() { const m = document.getElementById('invModal'); if (m) m.innerHTML = ''; }
   function openDbModal() {
     modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold text-stone-900">거래명세서 구글 스프레드시트 DB 설정</h3><div class="text-xs text-stone-500 mt-0.5 leading-relaxed">구글 시트에 <span class="font-mono">8_invoice.gs</span>를 배포한 뒤 웹 앱 주소(…/exec)를 넣어 주세요. 접속 코드는 다른 DB와 같은 코드를 씁니다.</div></div>
