@@ -70,9 +70,8 @@
             #recipeSubHeaderBar .ml-auto { flex-wrap: wrap; justify-content: flex-end; margin-left: 0; width: 100%; }
             #recipeSubHeaderBar .ml-auto > button { white-space: nowrap; flex-shrink: 0; }
             /* 레시피 배합표: 칸이 눌려 숫자가 잘리지 않게 최소 폭을 두고 옆으로 밀어서 봄 */
-            #recipeDetailContainer table.table-fixed { min-width: 600px; }
-            #recipeDetailContainer div:has(> table.table-fixed) { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-            #recipeDetailContainer { padding: 0.75rem; }
+            #fdCenterFormulaPanel table.table-fixed { min-width: 620px; }
+            #fdCenterFormulaPanel div:has(> table.table-fixed) { overflow-x: auto; -webkit-overflow-scrolling: touch; }
             /* 생산일지·생산 재고: 달력(월~금 + 주말 + 주 합계)은 최소 폭을 두고 옆으로 밀어서 봄 */
             #productionRoot div[style*="repeat(5, minmax(0, 1fr))"] { min-width: 1100px; }
             #productionRoot div:has(> div[style*="repeat(5, minmax(0, 1fr))"]) { overflow-x: auto; -webkit-overflow-scrolling: touch; }
