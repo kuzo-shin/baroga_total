@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: v3.19 - 2026-11-24 자동 저장 삭제: [DB 저장](Ctrl+S)을 눌러야 DB에 저장 · 저장 안 된 변경은 상태 배지에 표시, 새로고침 전 확인 / v3.18 - 2026-11-24 레시피중량(G) → 원재료 총투입(G)(반제품 속 원재료 포함·손실 전), 반제품 변경 미적용 경고는 중량합계에 표시 / v3.17 - 2026-11-24 충전합계(G) 대신 레시피중량(G) 표시(반제품 최신 1배합 기준, 중량합계와 다르면 빨간색) / v3.16 - 2026-11-24 [반제품 변경 적용] 버튼 · 반제품 줄 1배합 자동/수량 고정 표시 / v3.15 - 2026-11-20 ⚠규격 경고는 단가 있는 재료만 · 원가 캐시 키를 발주내역 지문으로 / v3.14 3~5단계 (단가 일괄적용 시 기존 연결·수동고정 보존·포장재 5원 자동보정 제거·규격 인식 경고·반제품 손실률·품목코드 중복 방지·CSV 안전 처리·원가 계산 캐시) / v3.13 2단계 보안 (DB 요청에 접속 코드 첨부) / v3.12 1단계 데이터 손실 방지 (자동 저장 · 저장 응답 확인 · 리비전 충돌 방지 · 사진 분리 저장 · 미저장 수정분 보호 · 샘플추가 버튼 제거)]
+// [VERSION: v3.20 - 2026-11-26 UI 통일: 표 머리 회색 · 표 글자 12px / v3.19 - 2026-11-24 자동 저장 삭제: [DB 저장](Ctrl+S)을 눌러야 DB에 저장 · 저장 안 된 변경은 상태 배지에 표시, 새로고침 전 확인 / v3.18 - 2026-11-24 레시피중량(G) → 원재료 총투입(G)(반제품 속 원재료 포함·손실 전), 반제품 변경 미적용 경고는 중량합계에 표시 / v3.17 - 2026-11-24 충전합계(G) 대신 레시피중량(G) 표시(반제품 최신 1배합 기준, 중량합계와 다르면 빨간색) / v3.16 - 2026-11-24 [반제품 변경 적용] 버튼 · 반제품 줄 1배합 자동/수량 고정 표시 / v3.15 - 2026-11-20 ⚠규격 경고는 단가 있는 재료만 · 원가 캐시 키를 발주내역 지문으로 / v3.14 3~5단계 (단가 일괄적용 시 기존 연결·수동고정 보존·포장재 5원 자동보정 제거·규격 인식 경고·반제품 손실률·품목코드 중복 방지·CSV 안전 처리·원가 계산 캐시) / v3.13 2단계 보안 (DB 요청에 접속 코드 첨부) / v3.12 1단계 데이터 손실 방지 (자동 저장 · 저장 응답 확인 · 리비전 충돌 방지 · 사진 분리 저장 · 미저장 수정분 보호 · 샘플추가 버튼 제거)]
 // 바로가 공장 통합 관리 시스템 - 레시피 전용 모듈 (recipe.js)
 // ============================================================================
 
@@ -685,8 +685,8 @@ function renderRecipeWorkspace() {
             <style>
                 .fd-th { background-color: #F5F5F4; color: #292524; font-weight: 800; font-size: 12px; border: 1px solid #D6D3D1; white-space: nowrap; }
                 .fd-td { border: 1px solid #E7E5E4; font-size: 12px; }
-                .fd-kv-label { background-color: #F5F5F4; color: #292524; font-weight: 800; font-size: 12px; border: 1px solid #D6D3D1; padding: 5px 6px; text-align: center; white-space: nowrap; cursor: help; }
-                .fd-kv-val { background-color: #FFFFFF; color: #1C1917; font-weight: 700; font-size: 12px; border: 1px solid #E7E5E4; padding: 4px 7px; text-align: right; }
+                .fd-kv-label { background-color: #F5F5F4; color: #292524; font-weight: 800; font-size: 11px; border: 1px solid #D6D3D1; padding: 5px 6px; text-align: center; white-space: nowrap; cursor: help; }
+                .fd-kv-val { background-color: #FFFFFF; color: #1C1917; font-weight: 700; font-size: 11.5px; border: 1px solid #E7E5E4; padding: 4px 7px; text-align: right; }
                 .fd-kv-val[data-tip] { cursor: help; }
                 .fd-kv-val[data-tip]:hover { background-color: #FEFCE8; }
                 .fd-kv-input { width: 100%; min-width: 0; text-align: right; font-weight: 800; background: #FFFBEB; border: 1px solid #F59E0B; border-radius: 4px; padding: 1px 5px; font-size: 12px; color: #1C1917; }
