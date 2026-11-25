@@ -2036,23 +2036,25 @@
     // 원재료 메뉴의 현재고: 같은 이름의 모든 규격을 합쳐 g 또는 개수로
     let groups = []; try { groups = typeof window.getStockGroups === 'function' ? window.getStockGroups() : []; } catch (e) { groups = []; }
     const hasW = (s) => /\d\s*(kg|g|l|ml)\b/i.test(String(s || '').replace(/,/g, ''));
-    const cntOf = (s) => { const m = String(s || '').replace(/,/g, '').match(/(\d+(?:\.\d+)?)\s*(ea|매|장|개|pcs|p|입|롤)\b/i); return m ? Number(m[1]) || 1 : null; };
+    // 개수로 쓰는 재료(레시피 단위 EA·포장재): 레시피 수량이 '사는 단위' 기준(포장재는 규격수량으로 나눈 값)이라 재고도 사는 단위 그대로 비교
+    const unitOf = (s) => { const m = String(s || '').match(/\/\s*([^\/\s]+)\s*$/); return m ? m[1] : '개'; };
     const byName = {}; groups.forEach((g) => { const n = String(g.item || '').trim(); (byName[n] || (byName[n] = [])).push(g); });
-    const fmtG = (g) => (Math.abs(g) >= 1000 ? num(g / 1000, 1) + 'kg' : num(g, 0) + 'g'), fmtE = (n) => num(n, n >= 100 ? 0 : 1) + '개';
-    const SKIP = /^(식수|물|정제수|수돗물|얼음)$/, SCRAP = /파지/;
+    const fmtG = (g) => (Math.abs(g) >= 1000 ? num(g / 1000, 1) + 'kg' : num(g, 0) + 'g');
+    const SKIP = /^(식수|물|정제수|수돗물|얼음)/, SCRAP = /파지/;
     const rows = [], check = [], skipped = [];
     Object.values(N.mats).forEach((m) => {
       if (SKIP.test(m.name)) return;
       if (SCRAP.test(m.name)) { skipped.push(m.name); return; }
-      const gs = byName[m.name] || [], fmt = m.kind === 'G' ? fmtG : fmtE, rem = (R.mats[m.key] || {}).need || 0;
+      const gs = byName[m.name] || [], rem = (R.mats[m.key] || {}).need || 0;
       const spec = m.linked ? String(m.linked.spec || '') : (gs[0] ? gs[0].spec : '');
+      const per = m.kind === 'EA' && m.pack && m.specQty > 0 ? m.specQty : 1, u = unitOf(spec), fmt = m.kind === 'G' ? fmtG : (n) => num(n, Math.abs(n) >= 100 ? 0 : 1) + (/^ea$/i.test(u) ? '개' : u);
       const base = { name: m.name, spec, kind: m.kind, need: m.need, rem, fmt, users: Object.keys(m.from) };
       if (!gs.length) { check.push(Object.assign(base, { why: m.linked ? '원재료 메뉴에 재고 기록이 없음' : '원재료 메뉴에서 같은 이름을 찾지 못함' })); return; }
       let stock = 0, bad = '';
-      gs.forEach((g) => { const tot = Number(g.total) || 0; if (m.kind === 'G') { if (!hasW(g.spec)) { if (tot > 0) bad = `규격 "${g.spec}"을 무게로 바꿀 수 없음`; return; } stock += tot * window.parseSpecToGrams(g.spec); } else { const c = cntOf(g.spec) || (m.specQty > 0 && g.spec === spec ? m.specQty : null); if (c == null) { if (tot > 0) bad = `규격 "${g.spec}"에서 낱개 수량을 알 수 없음`; return; } stock += tot * c; } });
+      gs.forEach((g) => { const tot = Number(g.total) || 0; if (m.kind === 'G') { if (!hasW(g.spec)) { if (tot > 0) bad = `규격 "${g.spec}"을 무게로 바꿀 수 없음`; return; } stock += tot * window.parseSpecToGrams(g.spec); } else stock += tot * per; });
       if (bad) { check.push(Object.assign(base, { why: bad, stock })); return; }
       const avail = stock - rem, lack = Math.max(0, m.need - avail), left = avail - m.need;
-      const unitSize = m.kind === 'G' ? (hasW(spec) ? window.parseSpecToGrams(spec) : 0) : (cntOf(spec) || m.specQty || 0);
+      const unitSize = m.kind === 'G' ? (hasW(spec) ? window.parseSpecToGrams(spec) : 0) : per;
       rows.push(Object.assign(base, { stock, avail, lack, left, orderUnits: lack > 0 && unitSize > 0 ? Math.ceil(lack / unitSize) : null, cls: lack > 0 ? 'LACK' : left < m.need * 0.2 ? 'TIGHT' : 'OK' }));
     });
     const lackRows = rows.filter((r) => r.cls === 'LACK').sort((a, b) => b.lack / (b.need || 1) - a.lack / (a.need || 1)), tightRows = rows.filter((r) => r.cls === 'TIGHT').sort((a, b) => a.left / (a.need || 1) - b.left / (b.need || 1)), okRows = rows.filter((r) => r.cls === 'OK').sort((a, b) => a.name.localeCompare(b.name, 'ko'));
