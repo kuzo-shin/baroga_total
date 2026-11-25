@@ -78,7 +78,7 @@
             #productionRoot .text-xl, #productionStockRoot .text-xl { font-size: 1.05rem; line-height: 1.5rem; }
             /* 생산일지 입력 창: 품목 줄(품목·목표·실행·포장·금액)은 최소 폭을 두고 옆으로 밀어서 봄 */
             #prodModal div[class*="grid-cols-[minmax(0,1.8fr)"], #prodModal div[class*="grid-cols-[minmax(0,1.5fr)"] { min-width: 620px; }
-            #prodModal section { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            #prodModal section { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-shrink: 0; }
             #prodModal input[type="search"] { width: 9rem; }
             /* 넓은 표가 든 카드의 안쪽 여백을 줄여 표 폭 확보 */
             #msStockRoot .rounded-2xl.p-4, #productionRoot .rounded-2xl.p-4, #productionStockRoot .rounded-2xl.p-4 { padding: 0.75rem; }
