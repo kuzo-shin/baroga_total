@@ -1,6 +1,6 @@
 /**
  * [바로가 ERP] 7. 엠즈 재고 DB — Google Apps Script
- * 버전: v1.0 (2026-11-24 신규)
+ * 버전: v1.1 (2026-11-25 운영팀 사이트용 읽기 전용 작업 getHist 추가) / v1.0 (2026-11-24 신규)
  *
  *  - 엠즈 e플랫폼에서 읽어 온 자료(현재고·유통기한별 현재고·위탁상품 수불부·일자별 수불현황·주문대비 입고현황)를 통째로 보관
  *  - 'MS_STOCK_DB' 시트에 전체 데이터를 40,000자씩 나눠 저장 (한도 없음), 먼저 지우지 않음
@@ -51,6 +51,17 @@ function readAll_() {
       return jsonOut({ ok: true, status: 'empty', revision: getRevision_(), message: '아직 저장된 DB 데이터가 없습니다.' });
     }
     return jsonOut({ ok: true, status: 'ok', revision: getRevision_(), source: r.source, updatedAt: r.updatedAt, payload: r.payload });
+  } catch (err) {
+    return jsonOut({ ok: false, status: 'error', message: String(err && err.message ? err.message : err) });
+  }
+}
+
+// 운영팀 사이트(baroga_ops)가 하루 한 번 가져가는 월별 발주 이력만 돌려줌 (읽기 전용)
+function readHist_() {
+  try {
+    const r = readPayload_();
+    const p = r.payload || {};
+    return jsonOut({ ok: true, status: 'ok', revision: getRevision_(), asOf: String(p.asOf || ''), hist: p.hist && typeof p.hist === 'object' ? p.hist : {} });
   } catch (err) {
     return jsonOut({ ok: false, status: 'error', message: String(err && err.message ? err.message : err) });
   }
@@ -187,5 +198,6 @@ function doPost(e) {
   const denied = checkAccess_(body);
   if (denied) return jsonOut(denied);
   if (body.action === 'getAll') return readAll_();
+  if (body.action === 'getHist') return readHist_();
   return writeAll_(body);
 }
