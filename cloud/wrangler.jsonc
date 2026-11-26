@@ -1,0 +1,19 @@
+{
+  // 바로가 공장 ERP — Cloudflare 서버(Worker) 설정
+  //  화면(index.html 등)은 지금처럼 GitHub Pages에 두고, 이 서버는 DB(D1)와 사진(R2)만 맡음
+  //  첫 메뉴: 공장 일지. 나머지 메뉴(구글 시트 DB)는 순서대로 옮겨 올 예정
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "baroga-erp",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-01",
+  // 아이디를 적지 않으면 첫 배포 때 Cloudflare가 이 이름으로 자동으로 만들고 계속 연결함 (wrangler 4.45 이상)
+  "d1_databases": [{ "binding": "DB", "database_name": "baroga-erp-db" }],
+  "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "baroga-erp-photos" }],
+  // 배포할 때 Cloudflare 화면에서 넣은 변수·비밀값(ACCESS_CODE)을 지우지 않음
+  "keep_vars": true,
+  "vars": {
+    // 이 서버를 불러도 되는 화면 주소 (쉼표로 여러 개). 비밀값 아님
+    "ALLOWED_ORIGINS": "https://kuzo-shin.github.io"
+  },
+  "observability": { "enabled": true }
+}
