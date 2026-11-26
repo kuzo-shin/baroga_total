@@ -492,8 +492,9 @@
     try { C = compute(); } catch (e) { ownOnly = prev; out.error = e.message; return out; } ownOnly = prev;
     const feed = typeof window.barogaMsStockFeed === 'function' ? window.barogaMsStockFeed() : { links: {} }, links = feed.links || {}, lim = n || 5;
     const erpOf = (c) => (links[String(c)] !== undefined && links[String(c)] !== null ? String(links[String(c)]) : '');
-    out.order = C.items.filter((it) => it.rot != null).sort((a, b) => a.rot - b.rot || b.short30 - a.short30).slice(0, lim).map((it) => ({ code: it.code, erp: erpOf(it.code), name: it.name, unit: it.unit, total: it.total, avg: it.avg, rot: it.rot, grade: it.grade }));
-    out.stop = noProduceList(C).slice(0, lim).map((x) => ({ code: x.code, erp: erpOf(x.code), name: x.name, unit: x.unit, qty: x.lotQty, unsold: x.unsold, ratio: x.ratio }));
+    const stopAll = noProduceList(C), stopCodes = new Set(stopAll.map((x) => String(x.code))); // 생산 금지 권장에 있는 품목은 생산 추천에서 뺌(같은 품목이 양쪽에 나오지 않게)
+    out.order = C.items.filter((it) => it.rot != null && !stopCodes.has(String(it.code))).sort((a, b) => a.rot - b.rot || b.short30 - a.short30).slice(0, lim).map((it) => ({ code: it.code, erp: erpOf(it.code), name: it.name, unit: it.unit, total: it.total, avg: it.avg, rot: it.rot, grade: it.grade }));
+    out.stop = stopAll.slice(0, lim).map((x) => ({ code: x.code, erp: erpOf(x.code), name: x.name, unit: x.unit, qty: x.lotQty, unsold: x.unsold, ratio: x.ratio }));
     return out;
   }
   // 엠즈 재고 탭을 열지 않았어도 자료를 한 번 불러옴 (불러온 뒤 cb)
