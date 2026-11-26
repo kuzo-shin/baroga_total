@@ -1,0 +1,6 @@
+{
+  "name": "baroga-erp-cloud",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node test/factory_log.test.mjs" }
+}
