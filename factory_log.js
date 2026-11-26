@@ -97,10 +97,10 @@
     }).join('');
     const days = [0, 1, 2, 3, 4, 5, 6].map((i) => {
       const d = addDays(ws, i), out = Number(d.slice(5, 7)) !== monthNo, isT = d === t, col = i === 6 ? 'text-rose-600' : i === 5 ? 'text-blue-600' : 'text-stone-700';
-      return `<button type="button" onclick="FactoryLog.newAt('${d}')" title="${md(d)} 일지 쓰기" style="grid-column:${i + 1};grid-row:1 / -1" class="group text-left align-top p-1.5 cursor-pointer ${i < 6 ? 'border-r border-stone-100' : ''} ${out ? 'bg-stone-50/70' : 'bg-white'} hover:bg-amber-50/60"><span class="flex items-start justify-between"><span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-extrabold ${isT ? 'bg-stone-900 text-white' : col} ${out && !isT ? 'opacity-40' : ''}">${Number(d.slice(8, 10))}</span><i data-lucide="plus" class="w-3.5 h-3.5 text-stone-300 opacity-0 group-hover:opacity-100"></i></span></button>`;
+      return `<button type="button" onclick="FactoryLog.newAt('${d}')" title="${md(d)} 일지 쓰기" style="grid-column:${i + 1};grid-row:1 / -1" class="group flex flex-col justify-start items-stretch text-left p-1.5 cursor-pointer ${i < 6 ? 'border-r border-stone-100' : ''} ${out ? 'bg-stone-50/70' : 'bg-white'} hover:bg-amber-50/60"><span class="flex items-start justify-between"><span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-extrabold ${isT ? 'bg-stone-900 text-white' : col} ${out && !isT ? 'opacity-40' : ''}">${Number(d.slice(8, 10))}</span><i data-lucide="plus" class="w-3.5 h-3.5 text-stone-300 opacity-0 group-hover:opacity-100"></i></span></button>`;
     }).join('');
     const L = lanes.length;
-    return `<div class="grid grid-cols-7 border-b border-stone-200 last:border-b-0" style="grid-template-rows:30px repeat(${L}, 25px) minmax(${Math.max(10, 82 - L * 25)}px, 1fr)">${days}${bars}</div>`;
+    return `<div class="grid grid-cols-7 border-b border-stone-200 last:border-b-0" style="grid-template-rows:32px ${L ? `repeat(${L}, 25px) ` : ''}minmax(${Math.max(10, 80 - L * 25)}px, 1fr)">${days}${bars}</div>`;
   }
   function calendarHtml() {
     const r = range(), weeks = []; for (let d = r.from; d <= r.to; d = addDays(d, 7)) weeks.push(d);
