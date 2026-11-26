@@ -1,4 +1,4 @@
-// [VERSION: ms_stock.js v1.12 - 2026-11-26 대시보드·유통기한 임박에 '생산 금지 권장' 표(유통기한 안에 못 파는 수량 많은 순) / v1.11 - 2026-11-26 UI 통일: 최소 글자 12px · 버튼 색 · 팝업 배경 / v1.10 - 2026-11-24 운영 보고서: 표마다 상위 10줄 + [펼치기] · 칸 줄바꿈 없게 열 폭 조정 · 3(반품·폐기)과 4(요일 패턴) 순서 바꿈 / v1.9 - 2026-11-24 운영 보고서를 공장 관점으로(금액 대신 순출고 수량 · 생산 필요량 · 품목별 출고 추이와 수량 등급 · 요일 패턴 · 매입처 반품 · 폐기 위험), 가맹점 분석은 뺌 / v1.8 - 2026-11-24 5. 운영 보고서 신설(주간·월간: 생산 필요량 · 요일별 패턴 · 품목 등급 · 가맹점 이상 신호 · 폐기·반품 손실), 월별 발주 이력(hist) 누적 저장 · 5. 발주 추이와 6. 그래프 삭제 / v1.7 - 2026-11-24 그래프를 점선에서 실선(점을 선으로 이음)으로 / v1.6 - 2026-11-24 6. 그래프 탭 신설(품목 발주금액 TOP10의 일자별 발주 수량 · 가맹점 발주 총액의 일자별 변화) · 발주 추이 표 숫자 줄 맞춤 / v1.5 - 2026-11-24 [전체 품목 보기] 버튼에 색 · 발주 추이 위 합계에 (n품목)/(n점) 표기, 표 첫 줄은 '주차별 합계' · 가맹점 단위 곳→점 / v1.4 - 2026-11-24 발주 추이: 추이 그래프·칸 아래 막대 삭제(숫자 + ▲▼만) / v1.3 - 2026-11-24 발주 추이: 품목별·가맹점별 좌우 카드 · 맨 위 합계 줄 · N주차(실제 날짜 범위, 7일 미만 주 표시) · 줄마다 막대 그래프와 칸 아래 막대 / v1.2 - 2026-11-24 화면을 다른 메뉴와 같은 모양으로(상단 탭 바 + 오른쪽 DB 상태·새로고침, 버튼 모양 통일) · 기준 안내를 한 줄 요약 + [계산 기준] 펼침으로 묶음 · 구역 제목 키우고 설명은 괄호로 / v1.1 - 2026-11-24 바로가 품목만 보기([바로가 품목 설정]에서 고른 상품, 정하지 않은 상품은 추정 · 전체 보기 전환 가능) / v1.0 - 2026-11-24 신규: 엠즈 재고 대시보드(발주 우선순위 · 유통기한 임박 · 반품 현황 · 발주 추이). 자료는 엠즈 e플랫폼에서 읽어 전용 DB(구글 시트)에 저장한 것을 불러옴]
+// [VERSION: ms_stock.js v1.13 - 2026-11-26 생산일지 입력 창용 참고 자료 내보내기(planHints: 생산 추천·생산 금지 권장 상위) / v1.12 - 2026-11-26 대시보드·유통기한 임박에 '생산 금지 권장' 표(유통기한 안에 못 파는 수량 많은 순) / v1.11 - 2026-11-26 UI 통일: 최소 글자 12px · 버튼 색 · 팝업 배경 / v1.10 - 2026-11-24 운영 보고서: 표마다 상위 10줄 + [펼치기] · 칸 줄바꿈 없게 열 폭 조정 · 3(반품·폐기)과 4(요일 패턴) 순서 바꿈 / v1.9 - 2026-11-24 운영 보고서를 공장 관점으로(금액 대신 순출고 수량 · 생산 필요량 · 품목별 출고 추이와 수량 등급 · 요일 패턴 · 매입처 반품 · 폐기 위험), 가맹점 분석은 뺌 / v1.8 - 2026-11-24 5. 운영 보고서 신설(주간·월간: 생산 필요량 · 요일별 패턴 · 품목 등급 · 가맹점 이상 신호 · 폐기·반품 손실), 월별 발주 이력(hist) 누적 저장 · 5. 발주 추이와 6. 그래프 삭제 / v1.7 - 2026-11-24 그래프를 점선에서 실선(점을 선으로 이음)으로 / v1.6 - 2026-11-24 6. 그래프 탭 신설(품목 발주금액 TOP10의 일자별 발주 수량 · 가맹점 발주 총액의 일자별 변화) · 발주 추이 표 숫자 줄 맞춤 / v1.5 - 2026-11-24 [전체 품목 보기] 버튼에 색 · 발주 추이 위 합계에 (n품목)/(n점) 표기, 표 첫 줄은 '주차별 합계' · 가맹점 단위 곳→점 / v1.4 - 2026-11-24 발주 추이: 추이 그래프·칸 아래 막대 삭제(숫자 + ▲▼만) / v1.3 - 2026-11-24 발주 추이: 품목별·가맹점별 좌우 카드 · 맨 위 합계 줄 · N주차(실제 날짜 범위, 7일 미만 주 표시) · 줄마다 막대 그래프와 칸 아래 막대 / v1.2 - 2026-11-24 화면을 다른 메뉴와 같은 모양으로(상단 탭 바 + 오른쪽 DB 상태·새로고침, 버튼 모양 통일) · 기준 안내를 한 줄 요약 + [계산 기준] 펼침으로 묶음 · 구역 제목 키우고 설명은 괄호로 / v1.1 - 2026-11-24 바로가 품목만 보기([바로가 품목 설정]에서 고른 상품, 정하지 않은 상품은 추정 · 전체 보기 전환 가능) / v1.0 - 2026-11-24 신규: 엠즈 재고 대시보드(발주 우선순위 · 유통기한 임박 · 반품 현황 · 발주 추이). 자료는 엠즈 e플랫폼에서 읽어 전용 DB(구글 시트)에 저장한 것을 불러옴]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - 엠즈 재고 (ms_stock.js)
 //  - 엠즈 e플랫폼(재고관리·주문관리) 화면에서 읽은 자료를 통째로 DB에 넣고, 여기서 계산해 보여 줌
@@ -483,7 +483,22 @@
     shell(basis + body);
   }
   let mounted = false;
+  // 생산일지 입력 창에 보여 줄 참고 자료: 발주 우선순위 상위(생산 추천)와 생산 금지 권장 상위. 항상 바로가 품목만.
+  //  erp = 엠즈 입고의 '레시피 품목코드' 연결(없으면 '')
+  function planHints(n) {
+    const out = { loaded: !!loaded, loading: !!loading, hasData: !!data, asOf: data ? data.asOf : '', order: [], stop: [] };
+    if (!data) return out;
+    const prev = ownOnly; let C; ownOnly = true;
+    try { C = compute(); } catch (e) { ownOnly = prev; out.error = e.message; return out; } ownOnly = prev;
+    const feed = typeof window.barogaMsStockFeed === 'function' ? window.barogaMsStockFeed() : { links: {} }, links = feed.links || {}, lim = n || 5;
+    const erpOf = (c) => (links[String(c)] !== undefined && links[String(c)] !== null ? String(links[String(c)]) : '');
+    out.order = C.items.filter((it) => it.rot != null).sort((a, b) => a.rot - b.rot || b.short30 - a.short30).slice(0, lim).map((it) => ({ code: it.code, erp: erpOf(it.code), name: it.name, unit: it.unit, total: it.total, avg: it.avg, rot: it.rot, grade: it.grade }));
+    out.stop = noProduceList(C).slice(0, lim).map((x) => ({ code: x.code, erp: erpOf(x.code), name: x.name, unit: x.unit, qty: x.lotQty, unsold: x.unsold, ratio: x.ratio }));
+    return out;
+  }
+  // 엠즈 재고 탭을 열지 않았어도 자료를 한 번 불러옴 (불러온 뒤 cb)
+  function ensureLoaded(cb) { if (loaded || loading || !getUrl()) return false; pull(false).then(() => { try { if (cb) cb(); } catch (e) {} }); return true; }
   function mount() { render(); if (!mounted) { mounted = true; pull(false); } }
   window.mountMsStockApp = mount;
-  window.MsStock = { mount, pull, pickFile, importSnapshot, preview, openDbModal, saveDbUrl, closeModal, setView: (v) => { view = v; render(); }, setReport: (m) => { repMode = m === 'M' ? 'M' : 'W'; render(); }, setReportKey: (v) => { repKey[repMode] = String(v); render(); }, toggleRep: (k) => { repOpen[k] = !repOpen[k]; render(); }, importHistory, packMonth, toggleOwn: () => { ownOnly = !ownOnly; render(); }, openOwnModal, saveOwn, _debug: () => ({ data, dbRevision, loaded, computed: data ? compute() : null }) };
+  window.MsStock = { mount, pull, planHints, ensureLoaded, pickFile, importSnapshot, preview, openDbModal, saveDbUrl, closeModal, setView: (v) => { view = v; render(); }, setReport: (m) => { repMode = m === 'M' ? 'M' : 'W'; render(); }, setReportKey: (v) => { repKey[repMode] = String(v); render(); }, toggleRep: (k) => { repOpen[k] = !repOpen[k]; render(); }, importHistory, packMonth, toggleOwn: () => { ownOnly = !ownOnly; render(); }, openOwnModal, saveOwn, _debug: () => ({ data, dbRevision, loaded, computed: data ? compute() : null }) };
 })();
