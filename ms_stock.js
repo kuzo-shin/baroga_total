@@ -1,4 +1,4 @@
-// [VERSION: ms_stock.js v1.11 - 2026-11-26 UI 통일: 최소 글자 12px · 버튼 색 · 팝업 배경 / v1.10 - 2026-11-24 운영 보고서: 표마다 상위 10줄 + [펼치기] · 칸 줄바꿈 없게 열 폭 조정 · 3(반품·폐기)과 4(요일 패턴) 순서 바꿈 / v1.9 - 2026-11-24 운영 보고서를 공장 관점으로(금액 대신 순출고 수량 · 생산 필요량 · 품목별 출고 추이와 수량 등급 · 요일 패턴 · 매입처 반품 · 폐기 위험), 가맹점 분석은 뺌 / v1.8 - 2026-11-24 5. 운영 보고서 신설(주간·월간: 생산 필요량 · 요일별 패턴 · 품목 등급 · 가맹점 이상 신호 · 폐기·반품 손실), 월별 발주 이력(hist) 누적 저장 · 5. 발주 추이와 6. 그래프 삭제 / v1.7 - 2026-11-24 그래프를 점선에서 실선(점을 선으로 이음)으로 / v1.6 - 2026-11-24 6. 그래프 탭 신설(품목 발주금액 TOP10의 일자별 발주 수량 · 가맹점 발주 총액의 일자별 변화) · 발주 추이 표 숫자 줄 맞춤 / v1.5 - 2026-11-24 [전체 품목 보기] 버튼에 색 · 발주 추이 위 합계에 (n품목)/(n점) 표기, 표 첫 줄은 '주차별 합계' · 가맹점 단위 곳→점 / v1.4 - 2026-11-24 발주 추이: 추이 그래프·칸 아래 막대 삭제(숫자 + ▲▼만) / v1.3 - 2026-11-24 발주 추이: 품목별·가맹점별 좌우 카드 · 맨 위 합계 줄 · N주차(실제 날짜 범위, 7일 미만 주 표시) · 줄마다 막대 그래프와 칸 아래 막대 / v1.2 - 2026-11-24 화면을 다른 메뉴와 같은 모양으로(상단 탭 바 + 오른쪽 DB 상태·새로고침, 버튼 모양 통일) · 기준 안내를 한 줄 요약 + [계산 기준] 펼침으로 묶음 · 구역 제목 키우고 설명은 괄호로 / v1.1 - 2026-11-24 바로가 품목만 보기([바로가 품목 설정]에서 고른 상품, 정하지 않은 상품은 추정 · 전체 보기 전환 가능) / v1.0 - 2026-11-24 신규: 엠즈 재고 대시보드(발주 우선순위 · 유통기한 임박 · 반품 현황 · 발주 추이). 자료는 엠즈 e플랫폼에서 읽어 전용 DB(구글 시트)에 저장한 것을 불러옴]
+// [VERSION: ms_stock.js v1.12 - 2026-11-26 대시보드·유통기한 임박에 '생산 금지 권장' 표(유통기한 안에 못 파는 수량 많은 순) / v1.11 - 2026-11-26 UI 통일: 최소 글자 12px · 버튼 색 · 팝업 배경 / v1.10 - 2026-11-24 운영 보고서: 표마다 상위 10줄 + [펼치기] · 칸 줄바꿈 없게 열 폭 조정 · 3(반품·폐기)과 4(요일 패턴) 순서 바꿈 / v1.9 - 2026-11-24 운영 보고서를 공장 관점으로(금액 대신 순출고 수량 · 생산 필요량 · 품목별 출고 추이와 수량 등급 · 요일 패턴 · 매입처 반품 · 폐기 위험), 가맹점 분석은 뺌 / v1.8 - 2026-11-24 5. 운영 보고서 신설(주간·월간: 생산 필요량 · 요일별 패턴 · 품목 등급 · 가맹점 이상 신호 · 폐기·반품 손실), 월별 발주 이력(hist) 누적 저장 · 5. 발주 추이와 6. 그래프 삭제 / v1.7 - 2026-11-24 그래프를 점선에서 실선(점을 선으로 이음)으로 / v1.6 - 2026-11-24 6. 그래프 탭 신설(품목 발주금액 TOP10의 일자별 발주 수량 · 가맹점 발주 총액의 일자별 변화) · 발주 추이 표 숫자 줄 맞춤 / v1.5 - 2026-11-24 [전체 품목 보기] 버튼에 색 · 발주 추이 위 합계에 (n품목)/(n점) 표기, 표 첫 줄은 '주차별 합계' · 가맹점 단위 곳→점 / v1.4 - 2026-11-24 발주 추이: 추이 그래프·칸 아래 막대 삭제(숫자 + ▲▼만) / v1.3 - 2026-11-24 발주 추이: 품목별·가맹점별 좌우 카드 · 맨 위 합계 줄 · N주차(실제 날짜 범위, 7일 미만 주 표시) · 줄마다 막대 그래프와 칸 아래 막대 / v1.2 - 2026-11-24 화면을 다른 메뉴와 같은 모양으로(상단 탭 바 + 오른쪽 DB 상태·새로고침, 버튼 모양 통일) · 기준 안내를 한 줄 요약 + [계산 기준] 펼침으로 묶음 · 구역 제목 키우고 설명은 괄호로 / v1.1 - 2026-11-24 바로가 품목만 보기([바로가 품목 설정]에서 고른 상품, 정하지 않은 상품은 추정 · 전체 보기 전환 가능) / v1.0 - 2026-11-24 신규: 엠즈 재고 대시보드(발주 우선순위 · 유통기한 임박 · 반품 현황 · 발주 추이). 자료는 엠즈 e플랫폼에서 읽어 전용 DB(구글 시트)에 저장한 것을 불러옴]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - 엠즈 재고 (ms_stock.js)
 //  - 엠즈 e플랫폼(재고관리·주문관리) 화면에서 읽은 자료를 통째로 DB에 넣고, 여기서 계산해 보여 줌
@@ -220,6 +220,20 @@
     const list = C.items.filter((it) => it.rot != null).sort((a, b) => a.rot - b.rot || b.short30 - a.short30);
     const rows = (limit ? list.slice(0, limit) : list).map((it, i) => `<tr class="${it.rot <= 7 ? 'bg-rose-50/60' : ''}"><td class="${td} text-xs text-stone-400">${i + 1}</td><td class="${td} font-mono text-xs">${esc(it.code)}</td><td class="${td} font-bold">${esc(it.name)}</td><td class="${tdr}">${num(it.qty)} <span class="text-xs text-stone-400">${esc(it.unit)}</span></td><td class="${tdr}">${C.fac.ready ? num(it.factory) : '-'}</td><td class="${tdr} font-bold">${num(it.total)}</td><td class="${tdr}">${num(it.avg)}</td><td class="${tdr} text-stone-500">${num(it.avgThis)}</td><td class="${tdr} font-extrabold">${num(it.rot)}일</td><td class="${tdr}">${it.runout.slice(5).replace('-', '/')}</td><td class="${tdr}">${it.short30 > 0 ? num(it.short30) : '-'}</td><td class="${td}">${chip(it.grade)}</td></tr>`).join('');
     return tableWrap(`<th class="${th}">순위</th><th class="${th}">코드</th><th class="${th}">상품명</th><th class="${th} text-right">엠즈 재고</th><th class="${th} text-right">공장 재고</th><th class="${th} text-right">가용 합계</th><th class="${th} text-right">일평균 출고</th><th class="${th} text-right">이번 달 일평균</th><th class="${th} text-right">회전일</th><th class="${th} text-right">예상 소진일</th><th class="${th} text-right">30일치 부족</th><th class="${th}">조치</th>`, rows, '회전일을 계산할 품목이 없습니다.', 12);
+  }
+  // 생산 금지 권장: 지금 출고 속도로는 유통기한 안에 다 못 파는 품목. 품목별 '기한 내 못 파는 수량'(로트별 unsold 합)이 많은 순
+  //  유통기한은 엠즈 재고 로트에만 있으므로 공장 재고는 못 파는 수량 계산에 넣지 않고 참고로만 보여 줌
+  function noProduceList(C) {
+    const by = {};
+    C.lots.forEach((l) => { const x = by[l.code] || (by[l.code] = { code: l.code, name: l.name, unit: l.unit, avg: l.avg, lotQty: 0, unsold: 0, firstEx: '', firstLeft: null, lastEx: '', lastLeft: null, n: 0 }); x.lotQty += l.qty; x.unsold += l.unsold; x.n++; if (!x.firstEx || l.ex < x.firstEx) { x.firstEx = l.ex; x.firstLeft = l.left; } if (!x.lastEx || l.ex > x.lastEx) { x.lastEx = l.ex; x.lastLeft = l.left; } });
+    const itemBy = {}; C.items.forEach((it) => { itemBy[it.code] = it; });
+    return Object.values(by).filter((x) => x.unsold > 0.01).map((x) => { const it = itemBy[x.code] || {}; return Object.assign(x, { factory: Number(it.factory) || 0, rot: it.rot == null ? null : it.rot, sellable: x.lotQty - x.unsold, ratio: x.lotQty > 0 ? x.unsold / x.lotQty : 0 }); })
+      .sort((a, b) => b.unsold - a.unsold || b.ratio - a.ratio || a.name.localeCompare(b.name, 'ko'));
+  }
+  function noProduceTable(C, limit) {
+    const list = noProduceList(C), dday = (n) => (n < 0 ? `<span class="text-rose-700 font-bold">${num(-n, 0)}일 지남</span>` : `${num(n, 0)}일 남음`);
+    const rows = (limit ? list.slice(0, limit) : list).map((x, i) => `<tr class="${x.ratio >= 0.5 ? 'bg-rose-50/60' : ''}"><td class="${td} text-xs text-stone-400">${i + 1}</td><td class="${td} font-mono text-xs">${esc(x.code)}</td><td class="${td} font-bold">${esc(x.name)}</td><td class="${tdr}">${num(x.lotQty)} <span class="text-xs text-stone-400">${esc(x.unit)}</span></td><td class="${tdr}">${C.fac.ready ? num(x.factory) : '-'}</td><td class="${tdr}">${x.avg > 0 ? num(x.avg, x.avg < 1 ? 2 : 1) : '<span class="text-stone-400">출고 없음</span>'}</td><td class="${tdr} whitespace-nowrap">${x.lastEx.slice(5).replace('-', '/')} <span class="text-xs text-stone-500">${dday(x.lastLeft)}</span></td><td class="${tdr}">${num(x.sellable)}</td><td class="${tdr} font-extrabold text-rose-700">${num(x.unsold)}</td><td class="${tdr}">${num(x.ratio * 100, 0)}%</td><td class="${td}"><span class="px-1.5 py-0.5 rounded border text-xs font-bold whitespace-nowrap bg-rose-50 text-rose-800 border-rose-200">생산 금지 권장</span></td></tr>`).join('');
+    return tableWrap(`<th class="${th}">순위</th><th class="${th}">코드</th><th class="${th}">상품명</th><th class="${th} text-right">엠즈 재고</th><th class="${th} text-right">공장 재고</th><th class="${th} text-right">일평균 출고</th><th class="${th} text-right">가장 늦은 유통기한</th><th class="${th} text-right">기한 내 출고 가능</th><th class="${th} text-right">기한 내 못 파는 수량</th><th class="${th} text-right">재고 대비</th><th class="${th}">조치</th>`, rows, '유통기한 안에 소진이 어려운 품목이 없습니다.', 11);
   }
   function expiryTable(C, limit) {
     const list = C.lots.filter((l) => l.left <= 100 || l.unsold > 0.01);
@@ -447,6 +461,7 @@
             <li><b>조치</b> = 회전일 7일 이하 긴급 발주 / 14일 이하 우선 발주 / 30일 이하 발주 권장</li>
             <li><b>공장 재고</b> = ${C.fac.ready ? `생산 재고 현재고 (${esc(C.fac.baseDate)} 실사 기준)` : `<span class="text-amber-800 font-bold">미반영 — ${esc(C.fac.why)}</span>`}</li>
             <li><b>주문 조회 기간</b> = ${esc((d.period || {}).from || '')} ~ ${esc((d.period || {}).to || '')}${C.useOwn ? ` · 바로가 품목만 (주문 ${num(C.ordersShown, 0)}/${num(C.ordersAll, 0)}줄)` : ''}</li>
+            <li><b>생산 금지 권장</b> = 엠즈 재고를 유통기한 빠른 순으로 쌓았을 때 (누적 재고 − 일평균 출고 × 남은 일수)가 0보다 큰 품목. 그 수량이 '기한 내 못 파는 수량'. 공장 재고와 유통기한이 없는 재고는 계산에서 제외</li>
           </ul></details></div>`;
     const sec = (title, sub, body, more) => `<div class="${card}"><div class="flex items-center justify-between gap-2 mb-2.5"><h3 class="text-base font-extrabold text-stone-900">${title}${sub ? ` <span class="text-xs font-bold text-stone-500">(${sub})</span>` : ''}</h3>${more ? `<button type="button" onclick="MsStock.setView('${more}')" class="${BTN} !h-8">전체 보기 →</button>` : ''}</div>${body}</div>`;
     let body = '';
@@ -458,10 +473,11 @@
           ${kpi(C.useOwn ? '바로가 재고 품목' : '엠즈 재고 품목', C.stockShown + '개', `${C.useOwn ? `전체 ${C.stockAll}개 중 · ` : ''}가맹점 발주 ${num(C.sales.length, 0)}줄 · 매장 ${C.byStore.length}점`)}
         </div>
         ${sec('발주 우선순위', '회전일 짧은 순 10개', orderTable(C, 10), 'ORDER')}
+        ${sec('생산 금지 권장', '유통기한 안에 못 파는 수량 많은 순 10개 · 지금 출고 속도 기준', noProduceTable(C, 10), 'EXPIRY')}
         ${sec('유통기한 임박', '빠른 순 10개', expiryTable(C, 10), 'EXPIRY')}
         ${sec('반품 현황', '금액 큰 순 10건', returnBlock(C, 10), 'RETURN')}`;
     else if (view === 'ORDER') body = sec('발주 우선순위', '회전일 짧은 순 · 출고가 없는 품목 제외', orderTable(C)) + sec('출고가 없는 품목', '조회한 달 기준', tableWrap(`<th class="${th}">코드</th><th class="${th}">상품명</th><th class="${th} text-right">엠즈 재고</th>`, C.items.filter((it) => it.rot == null && it.qty > 0).map((it) => `<tr><td class="${td} font-mono text-xs">${esc(it.code)}</td><td class="${td} font-bold">${esc(it.name)}</td><td class="${tdr}">${num(it.qty)} <span class="text-xs text-stone-400">${esc(it.unit)}</span></td></tr>`).join(''), '해당 품목이 없습니다.', 3));
-    else if (view === 'EXPIRY') body = sec('유통기한 임박', '100일 이내 또는 기한 전 소진이 어려운 재고 · 보라색 = 소진 불가 예상', expiryTable(C));
+    else if (view === 'EXPIRY') body = sec('생산 금지 권장', '유통기한 안에 못 파는 수량 많은 순 · 지금 출고 속도 기준 · 공장 재고는 유통기한 자료가 없어 계산에서 제외', noProduceTable(C)) + sec('유통기한 임박', '100일 이내 또는 기한 전 소진이 어려운 재고 · 보라색 = 소진 불가 예상', expiryTable(C));
     else if (view === 'RETURN') body = sec('반품 현황', '', returnBlock(C));
     else if (view === 'REPORT') body = reportBody(C, sec);
     shell(basis + body);
