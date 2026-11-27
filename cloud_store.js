@@ -15,7 +15,7 @@
   const MONTH = /^\d{4}-\d{2}/;
   // 메뉴별로 '나눠서 보관할 칸'. 여기 없는 칸은 칸 하나가 조각 하나
   const RULES = {
-    raw: { orders: { type: 'arrayByMonth', field: 'date' } },                      // 발주·재고 기록 → 달마다
+    raw: { orders: { type: 'arrayByMonth', field: 'date', dayOver: 300000 } },     // 발주·재고 기록 → 달마다 (한 달이 300KB를 넘으면 그 달은 날마다)
     recipe: { data: { type: 'arrayById', field: 'id' } },                          // 레시피 → 품목마다
     price: { categoryDbs: { type: 'objectByKey' } },                               // 제품단가 → 분류마다
     production: { days: { type: 'objectByMonth' }, crew: { type: 'objectByMonth' }, pack: { type: 'objectByMonth' }, scrap: { type: 'objectByMonth' } }, // 날짜별 기록 → 달마다
@@ -54,8 +54,13 @@
       return same ? { type: 'objectByMonth', buckets: border } : { type: 'objectByMonth', buckets: border, keys };
     }
     if (rule.type === 'arrayByMonth' && Array.isArray(v) && v.every(isObj)) {
-      const groups = {}, border = [], runs = [];
-      v.forEach((it) => { const b = bucketOf(it[rule.field]); if (!groups[b]) { groups[b] = []; border.push(b); } groups[b].push(it); const last = runs[runs.length - 1]; if (last && last[0] === b) last[1]++; else runs.push([b, 1]); });
+      const groups = {}, border = [], runs = [], DAY = /^\d{4}-\d{2}-\d{2}/;
+      let names = v.map((it) => bucketOf(it[rule.field]));
+      if (rule.dayOver) { // 너무 큰 달은 날짜별 조각으로 (D1 한 줄 2MB 제한에 걸리지 않게)
+        const bytes = {}; v.forEach((it, i) => { bytes[names[i]] = (bytes[names[i]] || 0) + JSON.stringify(it).length; });
+        names = names.map((b, i) => (b !== '_' && bytes[b] > rule.dayOver ? (DAY.test(String(v[i][rule.field])) ? String(v[i][rule.field]).slice(0, 10) : b + '-_') : b));
+      }
+      v.forEach((it, i) => { const b = names[i]; if (!groups[b]) { groups[b] = []; border.push(b); } groups[b].push(it); const last = runs[runs.length - 1]; if (last && last[0] === b) last[1]++; else runs.push([b, 1]); });
       border.forEach((b) => { out[key(b)] = JSON.stringify(groups[b]); });
       return { type: 'arrayByMonth', runs }; // runs = [달, 연속 개수] … 원래 순서 그대로 되돌리는 데 씀
     }

@@ -26,6 +26,12 @@ const round = (domain, doc) => { const text = JSON.stringify(doc), s = CS.split(
   const s = round('raw', { orders });
   assert.ok(Object.keys(s).includes('p:orders:_') && Object.keys(s).includes('p:orders:2025-12'));
   round('raw', { orders: [] }); round('raw', { orders: [1, 2] });
+  // 한 달이 너무 크면 그 달만 날짜별 조각으로
+  const bigM = []; for (let i = 0; i < 900; i++) bigM.push({ id: 'x' + i, date: i % 50 === 0 ? '2026-11' : '2026-11-' + String((i % 28) + 1).padStart(2, '0'), colE: 'y'.repeat(400) });
+  for (let i = 0; i < 30; i++) bigM.splice(i * 7, 0, { id: 'o' + i, date: '2026-10-' + String((i % 28) + 1).padStart(2, '0') });
+  const sb = round('raw', { orders: bigM }), kb = Object.keys(sb);
+  assert.ok(kb.includes('p:orders:2026-10') && kb.includes('p:orders:2026-11-05') && kb.includes('p:orders:2026-11-_') && !kb.includes('p:orders:2026-11'), '큰 달만 날짜별');
+  assert.ok(Math.max(...kb.map((k) => sb[k].length)) < 300000);
 }
 {
   // 레시피: 품목마다. id 가 겹치거나 비면 통째로
