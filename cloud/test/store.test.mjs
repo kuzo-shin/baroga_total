@@ -32,6 +32,10 @@ const round = (domain, doc) => { const text = JSON.stringify(doc), s = CS.split(
   const sb = round('raw', { orders: bigM }), kb = Object.keys(sb);
   assert.ok(kb.includes('p:orders:2026-10') && kb.includes('p:orders:2026-11-05') && kb.includes('p:orders:2026-11-_') && !kb.includes('p:orders:2026-11'), '큰 달만 날짜별');
   assert.ok(Math.max(...kb.map((k) => sb[k].length)) < 300000);
+  const oneDay = []; for (let i = 0; i < 2000; i++) oneDay.push({ id: 'd' + i, date: '2026-11-04', colE: 'z'.repeat(450) });
+  const so = round('raw', { orders: oneDay.concat([{ id: 'e', date: '2026-11-05' }], oneDay.slice(0, 3)) }), ko = Object.keys(so);
+  assert.ok(ko.includes('p:orders:2026-11-04#0') && ko.includes('p:orders:2026-11-04#3') && ko.includes('p:orders:2026-11-05'), '하루가 크면 #n 으로 더 나눔');
+  assert.ok(Math.max(...ko.map((k) => so[k].length)) < 310000);
 }
 {
   // 레시피: 품목마다. id 가 겹치거나 비면 통째로

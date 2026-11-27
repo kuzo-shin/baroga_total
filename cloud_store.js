@@ -59,6 +59,9 @@
       if (rule.dayOver) { // 너무 큰 달은 날짜별 조각으로 (D1 한 줄 2MB 제한에 걸리지 않게)
         const bytes = {}; v.forEach((it, i) => { bytes[names[i]] = (bytes[names[i]] || 0) + JSON.stringify(it).length; });
         names = names.map((b, i) => (b !== '_' && bytes[b] > rule.dayOver ? (DAY.test(String(v[i][rule.field])) ? String(v[i][rule.field]).slice(0, 10) : b + '-_') : b));
+        // 하루가 그래도 크면(같은 날짜에 줄이 몰린 경우) 차례대로 #0, #1 … 로 더 나눔
+        const sz = v.map((it) => JSON.stringify(it).length), tot = {}; names.forEach((b, i) => { tot[b] = (tot[b] || 0) + sz[i]; });
+        const run = {}; names = names.map((b, i) => { if (tot[b] <= rule.dayOver) return b; const r = run[b] || (run[b] = { n: 0, bytes: 0 }); if (r.bytes && r.bytes + sz[i] > rule.dayOver) { r.n++; r.bytes = 0; } r.bytes += sz[i]; return b + '#' + r.n; });
       }
       v.forEach((it, i) => { const b = names[i]; if (!groups[b]) { groups[b] = []; border.push(b); } groups[b].push(it); const last = runs[runs.length - 1]; if (last && last[0] === b) last[1]++; else runs.push([b, 1]); });
       border.forEach((b) => { out[key(b)] = JSON.stringify(groups[b]); });
