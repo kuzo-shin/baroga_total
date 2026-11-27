@@ -1,4 +1,4 @@
-// [VERSION: cloud_store.js v1.2 - 2026-11-27 거래명세서 전환 완료(MOVED) / v1.1 - 2026-11-27 메뉴별 전환: 구글 DB와 같은 말투로 답하는 연결(gas) · 전환 표시(active) · 옛 주소 차단 목록(MOVED) / v1.0 - 2026-11-27 신규: Cloudflare 자료 보관소 연결(조각으로 나누기·합치기·검증) + 구글 DB에서 가져오기]
+// [VERSION: cloud_store.js v1.3 - 2026-11-27 8개 메뉴 모두 전환 완료(MOVED) → 옛 주소에서는 DB를 쓰는 메뉴를 막음 / v1.2 - 2026-11-27 거래명세서 전환 완료(MOVED) / v1.1 - 2026-11-27 메뉴별 전환: 구글 DB와 같은 말투로 답하는 연결(gas) · 전환 표시(active) · 옛 주소 차단 목록(MOVED) / v1.0 - 2026-11-27 신규: Cloudflare 자료 보관소 연결(조각으로 나누기·합치기·검증) + 구글 DB에서 가져오기]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - Cloudflare 자료 보관소 (cloud_store.js)
 //  구글 시트 DB는 메뉴마다 자료 전체를 JSON 한 덩어리로 저장했음. Cloudflare에서는 같은 자료를 '조각'으로 나눠 보관
@@ -30,7 +30,8 @@
     price_compare: {},
   };
   const DOMAINS = Object.keys(RULES);
-  const MOVED = ['invoice']; // 전환이 끝난 메뉴 (옛 주소에서 막음). 전환할 때마다 여기에 더함  · invoice 2026-11-27
+  // 전환이 끝난 메뉴 (옛 주소에서 막음) — 2026-11-27 8개 메뉴 모두 전환. 전환 시점의 구글 DB 판: invoice 2 · ms_stock 5 · ms_inbound 18 · production 157 · price 193 · recipe 181 · raw 157 · price_compare 2
+  const MOVED = ['invoice', 'ms_stock', 'ms_inbound', 'production', 'price', 'recipe', 'raw', 'price_compare'];
   const CLOUD_SITE = 'https://baroga-total.kuzo0909.workers.dev';
   // 구글 DB 응답에서 '화면이 쓰는 자료'가 들어 있는 칸
   const GAS_PICK = { raw: (j) => ({ orders: j.orders }), recipe: (j) => ({ data: j.data }), ms_inbound: (j) => j.data };
