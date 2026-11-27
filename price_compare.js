@@ -1,4 +1,4 @@
-// [VERSION: price_compare.js v1.3 - 2026-11-26 UI 통일: 표 머리 · 최소 글자 12px / v1.2 - 2026-11-23 품목명 줄바꿈 없이 넓게, 1·2순위 업체명 한 줄로 자름, '더 듦'→'더 비쌈' / v1.1 - 2026-11-23 기본 DB 주소 등록 / v1.0 - 2026-11-23 신규: 원재료 > 5. 원재료 단가 비교 (Claude 조사 HTML 8개 탭 이관, 시스템 디자인)]
+// [VERSION: price_compare.js v1.4 - 2026-11-27 DB 요청을 CloudStore 경유로(전환되면 Cloudflare, 그 전에는 구글 DB 그대로) / v1.3 - 2026-11-26 UI 통일: 표 머리 · 최소 글자 12px / v1.2 - 2026-11-23 품목명 줄바꿈 없이 넓게, 1·2순위 업체명 한 줄로 자름, '더 듦'→'더 비쌈' / v1.1 - 2026-11-23 기본 DB 주소 등록 / v1.0 - 2026-11-23 신규: 원재료 > 5. 원재료 단가 비교 (Claude 조사 HTML 8개 탭 이관, 시스템 디자인)]
 //  - 자료(후보 가격·업체 연락처·견적 메일·재확인 기록)는 공개 저장소에 두지 않고 '원재료 단가 비교 DB'(GAS 6_price_compare.gs)에만 저장
 //  - [자료 가져오기]: Claude가 만든 단가 비교 HTML(baroga_price_compare.html) 또는 JSON 파일을 골라 → 내용 확인 → DB에 통째로 저장
 //  - 화면은 읽기 전용 (전화·메일·구매는 이 화면에서 하지 않음)
@@ -51,7 +51,8 @@
   function setStatus(t) { statusText = t; const el = document.getElementById('pcStatus'); if (el) el.textContent = t; }
   async function api(body, ms) {
     if (typeof window.barogaApi !== 'function') throw new Error('접속 도구를 찾을 수 없습니다');
-    return window.barogaApi(getUrl(), body, ms || 60000);
+    const viaGas = (b, m) => window.barogaApi(getUrl(), b, m || 60000);
+    return window.CloudStore && typeof window.CloudStore.gas === 'function' ? window.CloudStore.gas('price_compare', viaGas)(body, ms || 60000) : viaGas(body, ms || 60000); // 전환되면 Cloudflare, 그 전에는 구글 DB
   }
 
   async function pull(showMsg) {
