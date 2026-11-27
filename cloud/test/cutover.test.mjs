@@ -12,6 +12,8 @@ const env = () => ({ DB, PHOTOS, DEV_EMAIL: email, ADMIN_EMAILS: 'Boss@Example.c
 globalThis.window = globalThis; globalThis.BAROGA_CLOUD_API = 'http://localhost'; globalThis.location = { hostname: 'baroga-total.example.workers.dev', protocol: 'https:' };
 globalThis.fetch = (u, o) => worker.fetch(new Request(u, o), env());
 const CS = require('../../cloud_store.js');
+const MOVED_NOW = CS.MOVED.slice(); CS.MOVED.length = 0; // 시험은 '전환이 끝난 메뉴 없음'에서 시작 (실제 목록은 아래에서 따로 확인)
+assert.ok(MOVED_NOW.every((d) => CS.DOMAINS.includes(d)));
 
 // 구글 DB 흉내 (판 번호와 자료를 가짐)
 const fakeGas = (first) => { const g = { rev: 5, doc: first, calls: 0 }; g.fn = async (body) => { g.calls++; if (body.action === 'getAll') return { ok: true, status: 'ok', revision: g.rev, source: 'GAS', payload: JSON.parse(JSON.stringify(g.doc)) }; if (Number(body.baseRevision) !== g.rev) return { ok: false, conflict: true, revision: g.rev }; g.doc = JSON.parse(JSON.stringify(body.payload)); g.rev++; return { ok: true, status: 'ok', revision: g.rev }; }; return g; };
