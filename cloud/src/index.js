@@ -1,4 +1,4 @@
-// [VERSION: cloud/src/index.js v1.1 - 2026-11-27 접속 코드 대신 Cloudflare Access 로그인(허용한 구글 계정) · 작성자/수정자 기록 · 화면 파일도 이 서버에서 제공 / v1.0 - 2026-11-27 신규: 공장 일지 API (D1 + R2)]
+// [VERSION: cloud/src/index.js v1.2 - 2026-11-27 메뉴별 자료 보관소(/api/store)·구글 DB 원본 백업(/api/backup) 추가 / v1.1 - 2026-11-27 접속 코드 대신 Cloudflare Access 로그인(허용한 구글 계정) · 작성자/수정자 기록 · 화면 파일도 이 서버에서 제공 / v1.0 - 2026-11-27 신규: 공장 일지 API (D1 + R2)]
 // ============================================================================
 // 바로가 공장 ERP — Cloudflare Worker (DB: D1, 사진: R2, 화면: assets)
 //  - 화면 파일(index.html·*.js)과 /api/* 를 같은 주소에서 제공
@@ -8,6 +8,7 @@
 //  - 표(테이블)는 서버가 첫 요청 때 만듦 (따로 명령을 돌리지 않아도 됨)
 //
 //   GET    /api/me                                            로그인한 사람의 이메일
+//  메뉴별 자료 보관소: /api/store, /api/backup (cloud/src/store.js)
 //  공장 일지
 //   GET    /api/factory-log?from=YYYY-MM-DD&to=YYYY-MM-DD   그 기간에 걸친 일지 + 체크리스트가 남은 일지(기간 무관)
 //   PUT    /api/factory-log                                   일지 한 건 새로 만들기·고치기 (고칠 때는 id·rev 필요)
@@ -17,6 +18,7 @@
 //   DELETE /api/photos/:id                                    사진 한 장 삭제
 // ============================================================================
 import { getEmail } from './auth.js';
+import { STORE_SCHEMA, StoreError, listDomains, readDomain, writeDomain, putBackup, listBackups } from './store.js';
 
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS factory_log (
@@ -43,7 +45,7 @@ const json = (obj, status) => new Response(JSON.stringify(obj), { status: status
 async function ensureSchema(env) {
   if (!env.DB) throw new HttpError(503, '서버에 DB(D1)가 연결되지 않았습니다.');
   if (!schemaReady) schemaReady = (async () => {
-    await env.DB.batch(SCHEMA.map((s) => env.DB.prepare(s.replace(/\s+/g, ' '))));
+    await env.DB.batch([...SCHEMA, ...STORE_SCHEMA].map((s) => env.DB.prepare(s.replace(/\s+/g, ' '))));
     // v1.0 에서 만든 표에는 작성자·수정자 칸이 없으므로 더함
     const cols = (await env.DB.prepare('PRAGMA table_info(factory_log)').all()).results.map((c) => c.name);
     const add = ['created_by', 'updated_by'].filter((c) => !cols.includes(c)).map((c) => env.DB.prepare(`ALTER TABLE factory_log ADD COLUMN ${c} TEXT NOT NULL DEFAULT ''`));
@@ -177,9 +179,15 @@ export default {
       if ((mm = path.match(/^\/api\/factory-log\/([A-Za-z0-9-]{1,40})\/photos$/)) && m === 'POST') return json(await addPhoto(env, request, url, mm[1]));
       if ((mm = path.match(/^\/api\/photos\/([A-Za-z0-9-]{1,40})$/)) && m === 'GET') return await getPhoto(env, mm[1]);
       if ((mm = path.match(/^\/api\/photos\/([A-Za-z0-9-]{1,40})$/)) && m === 'DELETE') return json(await deletePhoto(env, mm[1]));
+      // 메뉴별 자료 보관소 (cloud/src/store.js)
+      if (path === '/api/store' && m === 'GET') return json(await listDomains(env));
+      if ((mm = path.match(/^\/api\/store\/([a-z_]{1,30})$/)) && m === 'GET') return json(await readDomain(env, mm[1], url));
+      if ((mm = path.match(/^\/api\/store\/([a-z_]{1,30})$/)) && m === 'PUT') return json(await writeDomain(env, mm[1], request, email));
+      if ((mm = path.match(/^\/api\/backup\/([a-z_]{1,30})$/)) && m === 'PUT') return json(await putBackup(env, mm[1], request, email));
+      if ((mm = path.match(/^\/api\/backup\/([a-z_]{1,30})$/)) && m === 'GET') return json(await listBackups(env, mm[1]));
       throw new HttpError(404, '없는 주소입니다.');
     } catch (e) {
-      if (e instanceof HttpError) return json(Object.assign({ ok: false, error: e.message }, e.extra), e.status);
+      if (e instanceof HttpError || e instanceof StoreError) return json(Object.assign({ ok: false, error: e.message }, e.extra), e.status);
       console.error(e && e.stack ? e.stack : e);
       return json({ ok: false, error: '서버 오류: ' + (e && e.message ? e.message : String(e)) }, 500);
     }
