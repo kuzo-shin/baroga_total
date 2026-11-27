@@ -111,7 +111,7 @@ async function saveLog(env, request, email) {
     if (!cur) throw new HttpError(404, '이 일지를 찾을 수 없습니다. 다른 사람이 지웠을 수 있습니다.');
     const r = await env.DB.prepare('UPDATE factory_log SET start_date = ?, end_date = ?, title = ?, happened = ?, action = ?, assignees = ?, checklist = ?, open_items = ?, rev = rev + 1, updated_at = ?, updated_by = ? WHERE id = ? AND rev = ?')
       .bind(c.start, c.end, c.title, c.happened, c.action, JSON.stringify(c.assignees), JSON.stringify(c.checklist), c.open, now, email, id, Number(b.rev) || 0).run();
-    if (!r.meta || !r.meta.changes) throw new HttpError(409, '다른 사람이 먼저 고쳤습니다. 새로 불러온 뒤 다시 고쳐 주세요.', { conflict: true, log: await oneLog(env, id) });
+    if (!r.meta || !r.meta.changes) throw new HttpError(409, '다른 사용자가 먼저 수정했습니다. 새로고침 후 다시 입력해 주세요.', { conflict: true, log: await oneLog(env, id) });
     return { ok: true, log: await oneLog(env, id) };
   }
   const id = crypto.randomUUID();

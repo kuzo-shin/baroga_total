@@ -1,4 +1,4 @@
-// [VERSION: cloud_store.js v1.6 - 2026-11-27 저장한 사람을 이름으로 표시(권한 관리에 적은 이름) / v1.5 - 2026-11-27 DB 창에 '저장 기록'(판별 시각·사람·바뀐 부분) + [바뀐 내용 보기](항목별 전 → 후) / v1.4 - 2026-11-27 새 주소의 'DB 연결' 버튼은 구글 주소 입력 대신 Cloudflare 저장 상태 안내(dbInfo) / v1.3 - 2026-11-27 8개 메뉴 모두 전환 완료(MOVED) → 옛 주소에서는 DB를 쓰는 메뉴를 막음 / v1.2 - 2026-11-27 거래명세서 전환 완료(MOVED) / v1.1 - 2026-11-27 메뉴별 전환: 구글 DB와 같은 말투로 답하는 연결(gas) · 전환 표시(active) · 옛 주소 차단 목록(MOVED) / v1.0 - 2026-11-27 신규: Cloudflare 자료 보관소 연결(조각으로 나누기·합치기·검증) + 구글 DB에서 가져오기]
+// [VERSION: cloud_store.js v1.7 - 2026-11-27 화면 문구 정리('판'→저장 번호·○번째 저장, '조각' 표현 삭제, 변경 내역 보기 등) / v1.6 - 2026-11-27 저장한 사람을 이름으로 표시(권한 관리에 적은 이름) / v1.5 - 2026-11-27 DB 창에 '저장 기록'(판별 시각·사람·바뀐 부분) + [바뀐 내용 보기](항목별 전 → 후) / v1.4 - 2026-11-27 새 주소의 'DB 연결' 버튼은 구글 주소 입력 대신 Cloudflare 저장 상태 안내(dbInfo) / v1.3 - 2026-11-27 8개 메뉴 모두 전환 완료(MOVED) → 옛 주소에서는 DB를 쓰는 메뉴를 막음 / v1.2 - 2026-11-27 거래명세서 전환 완료(MOVED) / v1.1 - 2026-11-27 메뉴별 전환: 구글 DB와 같은 말투로 답하는 연결(gas) · 전환 표시(active) · 옛 주소 차단 목록(MOVED) / v1.0 - 2026-11-27 신규: Cloudflare 자료 보관소 연결(조각으로 나누기·합치기·검증) + 구글 DB에서 가져오기]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - Cloudflare 자료 보관소 (cloud_store.js)
 //  구글 시트 DB는 메뉴마다 자료 전체를 JSON 한 덩어리로 저장했음. Cloudflare에서는 같은 자료를 '조각'으로 나눠 보관
@@ -96,9 +96,9 @@
     return out;
   }
   // ---------- 합치기 ----------
-  function need(sections, key) { if (!(key in sections)) throw new Error(`조각이 없습니다: ${key}`); return JSON.parse(sections[key]); }
+  function need(sections, key) { if (!(key in sections)) throw new Error(`저장된 자료 일부를 찾을 수 없습니다. 관리자에게 알려 주세요. (${key})`); return JSON.parse(sections[key]); }
   function join(domain, sections) {
-    if (!sections || typeof sections._manifest !== 'string') throw new Error('조각 목록(_manifest)이 없습니다.');
+    if (!sections || typeof sections._manifest !== 'string') throw new Error('저장된 자료의 목록을 찾을 수 없습니다. 관리자에게 알려 주세요.');
     const mf = JSON.parse(sections._manifest), doc = {};
     mf.top.forEach((k) => {
       const p = mf.parts[k], key = (b) => `p:${k}:${b}`;
@@ -107,23 +107,23 @@
       else if (p.type === 'objectByMonth') {
         const groups = {}; p.buckets.forEach((b) => { groups[b] = need(sections, key(b)); });
         const o = {};
-        if (p.keys) p.keys.forEach((x) => { const g = groups[bucketOf(x)]; if (!g || !(x in g)) throw new Error(`조각 안에 값이 없습니다: ${k}/${x}`); o[x] = g[x]; });
+        if (p.keys) p.keys.forEach((x) => { const g = groups[bucketOf(x)]; if (!g || !(x in g)) throw new Error(`저장된 자료 일부가 빠져 있습니다. 관리자에게 알려 주세요. (${k}/${x})`); o[x] = g[x]; });
         else p.buckets.forEach((b) => { Object.keys(groups[b]).forEach((x) => { o[x] = groups[b][x]; }); });
         doc[k] = o;
       } else if (p.type === 'arrayByMonth') {
         const groups = {}, at = {}, arr = [];
-        p.runs.forEach(([b, n]) => { if (!groups[b]) { groups[b] = need(sections, key(b)); at[b] = 0; } for (let i = 0; i < n; i++) { if (at[b] >= groups[b].length) throw new Error(`조각 안에 줄이 모자랍니다: ${k}/${b}`); arr.push(groups[b][at[b]++]); } });
-        Object.keys(groups).forEach((b) => { if (at[b] !== groups[b].length) throw new Error(`조각 안에 줄이 남습니다: ${k}/${b}`); });
+        p.runs.forEach(([b, n]) => { if (!groups[b]) { groups[b] = need(sections, key(b)); at[b] = 0; } for (let i = 0; i < n; i++) { if (at[b] >= groups[b].length) throw new Error(`저장된 자료의 개수가 맞지 않습니다. 관리자에게 알려 주세요. (${k}/${b})`); arr.push(groups[b][at[b]++]); } });
+        Object.keys(groups).forEach((b) => { if (at[b] !== groups[b].length) throw new Error(`저장된 자료의 개수가 맞지 않습니다. 관리자에게 알려 주세요. (${k}/${b})`); });
         doc[k] = arr;
       } else if (p.type === 'arrayById') doc[k] = p.order.map((id) => need(sections, key(id)));
-      else throw new Error('모르는 조각 방식: ' + p.type);
+      else throw new Error('알 수 없는 저장 형식입니다. 관리자에게 알려 주세요. (' + p.type + ')');
     });
     return doc;
   }
   // 나눈 것을 다시 합쳐 원본과 글자 그대로 같은지 확인한 뒤 조각을 돌려줌. 다르면 오류(올리지 않음)
   function splitChecked(domain, doc) {
     const text = JSON.stringify(doc), clean = JSON.parse(text), sections = split(domain, clean);
-    if (JSON.stringify(join(domain, sections)) !== text) throw new Error(`[${domain}] 나눈 조각을 합친 결과가 원본과 다릅니다. 올리지 않았습니다.`);
+    if (JSON.stringify(join(domain, sections)) !== text) throw new Error(`[${domain}] 저장 전 검증에서 자료가 원본과 다르게 나와 저장하지 않았습니다. 관리자에게 알려 주세요.`);
     return { sections, text };
   }
   function diff(prev, next) {
@@ -181,7 +181,7 @@
     const g = await readGas(domain, opt.url), rep = { domain, gasRev: g.gasRev, gasUpdatedAt: g.gasUpdatedAt };
     const bk = await api('PUT', '/api/backup/' + domain, JSON.stringify(g.raw), true); rep.backup = bk.key;
     const cur = await api('GET', '/api/store/' + domain);
-    const s = await save(domain, g.doc, cur.rev, cur.sections, `구글 DB 판 ${g.gasRev} 에서 가져옴`);
+    const s = await save(domain, g.doc, cur.rev, cur.sections, `구글 DB(저장 번호 ${g.gasRev})에서 가져옴`);
     rep.changed = s.changed; rep.sections = Object.keys(s.sections).length; rep.bytes = new TextEncoder().encode(s.text).length;
     const back = await load(domain); rep.cloudRev = back.rev;
     rep.equal = back.text === s.text; rep.sha = await sha256(s.text); rep.shaCloud = await sha256(back.text);
@@ -204,7 +204,7 @@
   async function isActive(domain) { if (!available()) return false; const a = await flags(); return a.includes(domain) || MOVED.includes(domain); }
   async function setActive(domain, on) { const j = await api('PUT', '/api/store-active', { domain, on: !!on }); flagsP = Promise.resolve(j.active); return j.active; }
   const kst = (iso) => { const d = iso ? new Date(iso) : new Date(); if (isNaN(d)) return ''; return new Date(d.getTime() + 9 * 3600000).toISOString().replace('T', ' ').slice(0, 19); };
-  const CONFLICT_MSG = '다른 곳에서 먼저 저장된 데이터가 있습니다. 새로고침 후 다시 시도하세요.';
+  const CONFLICT_MSG = '다른 사용자가 먼저 저장했습니다. 새로고침 후 다시 입력해 주세요.';
   const conflictOut = (rev) => ({ ok: false, status: 'error', conflict: true, revision: rev, error: CONFLICT_MSG, message: CONFLICT_MSG });
   function wrapOut(domain, doc, rev, updatedAt) { // 구글 DB의 getAll 응답과 같은 모양
     if (domain === 'raw') return { ok: true, revision: rev, spreadsheetName: 'Cloudflare', sheetName: 'store', count: doc.orders.length, orders: doc.orders };
@@ -272,7 +272,7 @@
   const SKIP = new Set(['updatedAt', 'importedAt', 'at', 'savedAt']);
   const lab = (o) => (isObj(o) ? (o.name || o.productName || o.item || o.title || o.colB || o.vendor || '') : '');
   const idOf = (o) => (isObj(o) ? (o.id != null ? o.id : o.rowId != null ? o.rowId : o.code != null ? o.code : o.productCode != null ? o.productCode : null) : null);
-  const short = (v) => { if (v === undefined) return '(없음)'; if (v === null) return '(비움)'; if (v === '') return '(빈칸)'; if (typeof v === 'boolean') return v ? '예' : '아니오'; const t = typeof v === 'object' ? (isObj(v) ? (Object.entries(v).filter(([k, x]) => !['id', 'rowId', 'code', 'productCode', 'name', 'productName', 'item', 'title'].includes(k) && !SKIP.has(k) && (typeof x === 'number' || (typeof x === 'string' && x && x.length < 30)) && x !== 0).slice(0, 5).map(([k, x]) => `${FIELD_KO[k] || k} ${x}`).join(' · ') || JSON.stringify(v)) : JSON.stringify(v)) : String(v); return t.length > 70 ? t.slice(0, 70) + '…' : t; };
+  const short = (v) => { if (v === undefined || v === null || v === '') return '없음'; if (typeof v === 'boolean') return v ? '예' : '아니오'; const t = typeof v === 'object' ? (isObj(v) ? (Object.entries(v).filter(([k, x]) => !['id', 'rowId', 'code', 'productCode', 'name', 'productName', 'item', 'title'].includes(k) && !SKIP.has(k) && (typeof x === 'number' || (typeof x === 'string' && x && x.length < 30)) && x !== 0).slice(0, 5).map(([k, x]) => `${FIELD_KO[k] || k} ${x}`).join(' · ') || JSON.stringify(v)) : JSON.stringify(v)) : String(v); return t.length > 70 ? t.slice(0, 70) + '…' : t; };
   const maybeJson = (v) => { if (typeof v !== 'string' || !/^\s*[[{]/.test(v)) return v; try { return JSON.parse(v); } catch (e) { return v; } };
   function walkDiff(a, b, path, out) {
     if (out.length >= 300) return;
@@ -285,8 +285,8 @@
         a.forEach((x) => { const k = String(idOf(x)); if (!mb.has(k)) pushWhole(path.concat(lab(x) || k), 'del', x, out, path.length); });
         return;
       }
-      if (a.length === b.length) { a.forEach((x, i) => walkDiff(x, b[i], path.concat(lab(b[i]) || lab(x) || `${i + 1}번째`), out)); return; }
-      if (JSON.stringify(a) !== JSON.stringify(b)) out.push({ path, kind: 'set', a: `${a.length}줄`, b: `${b.length}줄` });
+      if (a.length === b.length) { a.forEach((x, i) => walkDiff(x, b[i], path.concat(lab(b[i]) || lab(x) || `${i + 1}번 항목`), out)); return; }
+      if (JSON.stringify(a) !== JSON.stringify(b)) out.push({ path, kind: 'set', a: `${a.length}건`, b: `${b.length}건` });
       return;
     }
     if (isObj(a) && isObj(b)) {
@@ -324,28 +324,28 @@
     return out;
   }
   function changesHtml(ch) {
-    if (!ch.length) return '<div class="text-xs text-stone-500">내용 차이가 없습니다(순서·저장 시각만 바뀜).</div>';
+    if (!ch.length) return '<div class="text-xs text-stone-500">변경된 값이 없습니다.</div>';
     const tag = { add: '<span class="px-1.5 rounded bg-emerald-100 text-emerald-800 font-bold">추가</span>', del: '<span class="px-1.5 rounded bg-rose-100 text-rose-800 font-bold">삭제</span>' };
     const rows = ch.slice(0, 200).map((c) => `<div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 py-1 border-b border-stone-100 last:border-0"><span class="text-stone-500">${c.path.map(escH).join(' › ')}</span>${c.kind === 'set' ? `<span class="font-bold text-stone-500 line-through decoration-stone-300">${escH(short(c.a))}</span><span class="text-stone-400">→</span><b class="text-stone-900">${escH(short(c.b))}</b>` : `${tag[c.kind]}<span class="text-stone-700">${escH(short(c.kind === 'add' ? c.b : c.a))}</span>`}</div>`).join('');
-    return `<div class="text-xs">${rows}${ch.length > 200 ? `<div class="pt-1 text-stone-500">외 ${ch.length - 200}곳</div>` : ''}</div>`;
+    return `<div class="text-xs">${rows}${ch.length > 200 ? `<div class="pt-1 text-stone-500">외 ${ch.length - 200}건</div>` : ''}</div>`;
   }
   async function showChanges(domain, rev, host) {
     if (host.dataset.open === '1') { host.dataset.open = ''; host.innerHTML = ''; return; }
     host.dataset.open = '1'; host.innerHTML = '<div class="text-xs text-stone-500 py-1">불러오는 중…</div>';
     try {
       const j = await api('GET', `/api/store/${domain}/changes?rev=${rev}`);
-      if (j.tooBig) { host.innerHTML = `<div class="text-xs text-stone-500 py-1">한 번에 조각 ${escH(j.count)}개가 저장된 판입니다(처음 가져오기·통째 교체). 항목별 비교는 생략합니다.</div>`; return; }
+      if (j.tooBig) { host.innerHTML = `<div class="text-xs text-stone-500 py-1">자료 전체를 한꺼번에 저장한 기록이라 상세 내역을 표시하지 않습니다.</div>`; return; }
       const ch = changesOf(j.changes);
-      host.innerHTML = `<div class="mt-1 rounded-lg border border-stone-200 bg-white px-3 py-1.5 max-h-72 overflow-y-auto"><div class="text-xs font-bold text-stone-500 pb-1">바뀐 곳 ${ch.length}곳${ch.length >= 300 ? ' 이상' : ''}</div>${changesHtml(ch)}</div>`;
+      host.innerHTML = `<div class="mt-1 rounded-lg border border-stone-200 bg-white px-3 py-1.5 max-h-72 overflow-y-auto"><div class="text-xs font-bold text-stone-500 pb-1">변경 ${ch.length}건${ch.length >= 300 ? ' 이상' : ''}</div>${changesHtml(ch)}</div>`;
     } catch (e) { host.innerHTML = `<div class="text-xs text-rose-700 font-bold py-1">${escH(e.message || e)}</div>`; }
   }
   function historyHtml(domain, j) {
     if (!j.revs.length) return '<p class="text-xs text-stone-500">저장 기록이 없습니다.</p>';
     return `<div class="rounded-xl border border-stone-200 divide-y divide-stone-100 max-h-[46vh] overflow-y-auto">${j.revs.map((r) => {
       const tops = [...new Set(r.keys.filter((k) => k !== 'k:updatedAt' && k !== 'k:importedAt').map((k) => sectionLabel(k)[0] + (/^p:[^:]+:(\d{4}-\d{2})/.test(k) ? ' ' + RegExp.$1 : '')))];
-      return `<div class="px-3 py-2"><div class="flex flex-wrap items-center gap-x-3 gap-y-1"><b class="tabular-nums text-stone-900">판 ${escH(r.rev)}</b><span class="tabular-nums text-stone-600">${escH(kst(r.at))}</span><span class="text-stone-600" title="${escH(r.by || '')}">${escH(who(r.by) || '-')}</span><button type="button" data-rev="${escH(r.rev)}" class="ml-auto px-2.5 h-7 rounded-lg border border-stone-300 bg-white text-xs font-bold text-stone-700 hover:bg-stone-50 cursor-pointer">바뀐 내용 보기</button></div>
-        <div class="mt-0.5 text-xs text-stone-500">바뀐 부분: ${tops.slice(0, 8).map(escH).join(' · ') || '-'}${tops.length > 8 ? ` 외 ${tops.length - 8}` : ''}${r.note ? ` · 메모: ${escH(r.note)}` : ''}</div><div data-changes="${escH(r.rev)}"></div></div>`;
-    }).join('')}</div><p class="text-xs text-stone-500">최근 ${j.revs.length}판 · 지난 내용은 180일 동안 보관됩니다. 2026-11-27 Cloudflare 전환 이전 기록은 없습니다.</p>`;
+      return `<div class="px-3 py-2"><div class="flex flex-wrap items-center gap-x-3 gap-y-1"><b class="tabular-nums text-stone-900">${escH(r.rev)}번째 저장</b><span class="tabular-nums text-stone-600">${escH(kst(r.at))}</span><span class="text-stone-600" title="${escH(r.by || '')}">${escH(who(r.by) || '-')}</span><button type="button" data-rev="${escH(r.rev)}" class="ml-auto px-2.5 h-7 rounded-lg border border-stone-300 bg-white text-xs font-bold text-stone-700 hover:bg-stone-50 cursor-pointer">변경 내역 보기</button></div>
+        <div class="mt-0.5 text-xs text-stone-500">수정 항목: ${tops.slice(0, 8).map(escH).join(' · ') || '-'}${tops.length > 8 ? ` 외 ${tops.length - 8}` : ''}${r.note ? ` · 메모: ${escH(r.note)}` : ''}</div><div data-changes="${escH(r.rev)}"></div></div>`;
+    }).join('')}</div><p class="text-xs text-stone-500">최근 ${j.revs.length}건 · 저장 기록은 180일간 보관됩니다. (2026-11-27 이후 기록)</p>`;
   }
 
   function dbInfo(domain) {
@@ -359,7 +359,7 @@
       <div class="px-5 py-3 border-b border-stone-200 flex items-center justify-between"><h3 class="text-base font-extrabold text-stone-900">${escH(NAMES[domain] || domain)} DB</h3>
         <button type="button" data-close class="text-stone-400 hover:text-stone-700 cursor-pointer" aria-label="닫기"><i data-lucide="x" class="w-5 h-5"></i></button></div>
       <div class="p-5 space-y-3 text-stone-700">
-        <p>이 메뉴의 자료는 <b>Cloudflare DB</b>에 저장됩니다. 따로 넣을 DB 주소나 접속 코드는 없습니다.</p>
+        <p>이 메뉴의 자료는 서버에 저장됩니다.</p>
         ${inner}
       </div>
       <div class="px-5 py-3 border-t border-stone-200 flex justify-end"><button type="button" data-close class="px-4 h-9 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold cursor-pointer">닫기</button></div></div>`;
@@ -371,7 +371,7 @@
       if (!d) { paint('<p class="text-rose-700 font-bold">서버에 이 메뉴의 자료가 없습니다.</p>'); return; }
       const kb = d.bytes >= 1048576 ? (d.bytes / 1048576).toFixed(2) + ' MB' : Math.round(d.bytes / 1024).toLocaleString() + ' KB';
       const row = (k, v) => `<div class="flex gap-3"><dt class="w-24 shrink-0 text-stone-500">${k}</dt><dd class="font-bold text-stone-900 break-all">${v}</dd></div>`;
-      paint(`<dl class="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 space-y-1.5">${row('판', escH(d.rev))}${row('마지막 저장', escH(kst(d.updatedAt)))}${row('저장한 사람', escH(who(d.updatedBy) || '-'))}${row('크기', escH(kb) + ' · 조각 ' + escH(d.sections))}</dl>
+      paint(`<dl class="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 space-y-1.5">${row('저장 번호', escH(d.rev))}${row('최근 저장', escH(kst(d.updatedAt)))}${row('저장한 사람', escH(who(d.updatedBy) || '-'))}${row('크기', escH(kb))}</dl>
         <div class="text-sm font-extrabold text-stone-900 pt-1">저장 기록</div><div id="cloudDbHist" class="space-y-2"><p class="text-xs text-stone-500">불러오는 중…</p></div>`);
       const hh = el.querySelector('#cloudDbHist');
       api('GET', `/api/store/${domain}/history`).then((h) => {
