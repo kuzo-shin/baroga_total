@@ -1,4 +1,4 @@
-// [VERSION: factory_log.js v1.1 - 2026-11-27 서버 기본 주소를 실제 만든 Worker(baroga-total)로 / v1.0 - 2026-11-27 신규: 공장 일지(달력 · 일어난 일/사후 대처 · 담당자 · 체크리스트 · 사진), DB는 Cloudflare(D1 + R2)]
+// [VERSION: factory_log.js v1.2 - 2026-11-27 접속 코드 대신 로그인(Cloudflare Access) · 새 주소에서만 동작 · 작성자/수정자 표시 / v1.1 - 2026-11-27 서버 기본 주소를 실제 만든 Worker(baroga-total)로 / v1.0 - 2026-11-27 신규: 공장 일지(달력 · 일어난 일/사후 대처 · 담당자 · 체크리스트 · 사진), DB는 Cloudflare(D1 + R2)]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - 공장 일지 (factory_log.js)
 //  - 생산과 상관없이 공장에서 있었던 일(기계 고장·수리, 누수 등)을 달력에 기록
@@ -7,12 +7,15 @@
 //  - 담당자 명단: 생산일지 '작업 인원'의 재직자 + 직접 입력
 //  - 저장: 일지 창의 [저장]을 누르면 그 일지 한 건이 바로 DB에 올라감 (자동 저장 없음)
 //  - DB: Cloudflare Worker(cloud/src/index.js) — 글은 D1, 사진은 R2. 다른 메뉴의 구글 시트 DB와 따로
+//  - 로그인: Cloudflare Access(허용한 구글 계정). 화면과 서버가 같은 주소라 따로 코드를 보내지 않음
+//            옛 주소(github.io)에서는 로그인을 확인할 수 없어 이 메뉴가 동작하지 않고, 새 주소 안내만 보임
 //  - 사진은 올리기 전에 긴 변 2000px JPG로 줄임(촬영 위치 같은 사진 속 정보도 빠짐)
 // ============================================================================
 (function () {
   'use strict';
-  const DEFAULT_URL = 'https://baroga-total.kuzo0909.workers.dev'; // Cloudflare 서버 주소 (다른 주소를 쓸 때만 [DB 설정]에서 바꿈)
-  const URL_KEY = 'baroga_cloud_api_url', CODE_KEY = 'baroga_access_code';
+  const CLOUD_SITE = 'https://baroga-total.kuzo0909.workers.dev'; // 새 주소 (로그인 필요)
+  // 서버 주소: 새 주소에서 열었으면 같은 주소(''), 옛 주소(github.io)면 쓸 수 없음(null). 시험할 때만 window.BAROGA_CLOUD_API 로 지정
+  const API_BASE = typeof window.BAROGA_CLOUD_API === 'string' ? window.BAROGA_CLOUD_API.replace(/\/+$/, '') : (/(^|\.)github\.io$/i.test(location.hostname) || location.protocol === 'file:' ? null : '');
   const PHOTO_MAX = 20, PHOTO_EDGE = 2000, PHOTO_Q = 0.85;
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const toast = (m, t) => (typeof window.showToast === 'function' ? window.showToast(m, t) : alert(m));
@@ -34,27 +37,25 @@
   const photoUrl = new Map(); // 사진 id → 화면에 쓸 주소(내려받은 사진)
 
   const root = () => document.getElementById('factoryLogRoot');
-  function getUrl() { let v = ''; try { v = localStorage.getItem(URL_KEY) || ''; } catch (e) {} return (v || DEFAULT_URL).replace(/\/+$/, ''); }
-  function getCode() { try { return localStorage.getItem(CODE_KEY) || ''; } catch (e) { return ''; } }
+  let me = '';
   function setStatus(t) { statusText = t; const el = document.getElementById('flStatusText'); if (el) el.textContent = t; }
 
   // ---------- 서버 ----------
   async function api(method, path, opt) {
     opt = opt || {};
-    const code = getCode();
-    if (!code) { if (typeof window.openAccessCodeModal === 'function') window.openAccessCodeModal(); const e = new Error('접속 코드를 입력해야 합니다'); e.unauthorized = true; throw e; }
-    const headers = { 'X-Access-Code': encodeURIComponent(code) };
+    if (API_BASE === null) throw new Error('공장 일지는 새 주소에서만 쓸 수 있습니다');
+    const headers = {};
     let body;
     if (opt.blob) { body = opt.blob; headers['Content-Type'] = opt.type || 'image/jpeg'; }
     else if (opt.json !== undefined) { body = JSON.stringify(opt.json); headers['Content-Type'] = 'application/json'; }
     const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), opt.timeout || 30000);
     let res;
-    try { res = await fetch(getUrl() + path, { method, headers, body, signal: ctl.signal }); }
-    catch (e) { throw new Error(e.name === 'AbortError' ? '서버 응답이 너무 늦습니다' : 'Cloudflare 서버에 연결하지 못했습니다 (주소·배포 상태를 확인해 주세요)'); }
+    try { res = await fetch(API_BASE + path, { method, headers, body, signal: ctl.signal, credentials: 'same-origin' }); }
+    catch (e) { throw new Error(e.name === 'AbortError' ? '서버 응답이 너무 늦습니다' : '서버에 연결하지 못했습니다. 로그인이 끝났을 수 있으니 화면을 새로고침해 주세요'); }
     finally { clearTimeout(timer); }
     if (opt.asBlob && res.ok) return await res.blob();
     let j = null; try { j = await res.json(); } catch (e) {}
-    if (res.status === 401) { const e = new Error('Cloudflare 서버의 접속 코드가 이 사이트에 넣은 접속 코드와 다릅니다'); e.unauthorized = true; throw e; }
+    if (res.status === 401 || (!j && res.ok)) { const e = new Error('로그인이 필요합니다. 화면을 새로고침해 다시 로그인해 주세요'); e.unauthorized = true; throw e; }
     if (!res.ok || !j || j.ok === false) { const e = new Error((j && j.error) || `서버 응답 오류 (HTTP ${res.status})`); e.status = res.status; e.data = j; throw e; }
     return j;
   }
@@ -65,15 +66,17 @@
   }
   async function pull(showMsg) {
     if (loading) return;
+    if (API_BASE === null) { loaded = false; lastError = ''; setStatus('새 주소에서 사용'); render(); return; }
     loading = true; lastError = ''; setStatus('불러오는 중...');
     try {
+      if (!me) { try { me = (await api('GET', '/api/me')).email || ''; } catch (e) { if (e.unauthorized) throw e; } }
       const r = range(), j = await api('GET', `/api/factory-log?from=${r.from}&to=${r.to}`);
       logs = j.logs || []; openLogs = j.open || []; loaded = true;
       setStatus(`불러옴 ${nowHm()} · 이 달 ${logs.length}건`);
       if (showMsg) toast('공장 일지를 불러왔습니다.', 'success');
     } catch (e) {
       loaded = false; lastError = e.message; setStatus('불러오기 실패');
-      if (showMsg || !e.unauthorized) toast('공장 일지 불러오기 실패: ' + e.message, 'error');
+      toast('공장 일지 불러오기 실패: ' + e.message, 'error');
     } finally { loading = false; render(); }
   }
 
@@ -117,13 +120,15 @@
     // 일지 창이 열려 있으면 뒤 화면을 다시 그리지 않음(쓰던 칸의 커서가 풀리지 않게). 창을 닫을 때 그림
     const mh = document.getElementById('flModal'); if (cur && mh && mh.firstChild) { pendingRender = true; return; } pendingRender = false;
     const y = Number(ym.slice(0, 4)), m = Number(ym.slice(5, 7)), ok = loaded && !lastError;
-    const badge = loading ? 'bg-amber-50 text-amber-900 border-amber-200' : ok ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100' : 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100';
-    const guide = !loading && lastError ? `<div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900"><b>공장 일지 DB에 연결하지 못했습니다.</b> ${esc(lastError)}<div class="mt-1 text-xs text-rose-800">공장 일지는 구글 시트가 아니라 Cloudflare 서버에 저장합니다. 서버 주소: <span class="font-mono">${esc(getUrl())}</span> · 주소가 다르면 오른쪽 위 상태 표시를 눌러 바꿀 수 있습니다.</div></div>` : '';
+    const badge = loading || API_BASE === null ? 'bg-amber-50 text-amber-900 border-amber-200' : ok ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100' : 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100';
+    const guide = API_BASE === null
+      ? `<div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"><b>공장 일지는 새 주소에서만 쓸 수 있습니다.</b> 허용한 구글 계정으로 로그인해야 열리는 주소입니다.<div class="mt-1.5"><a href="${CLOUD_SITE}" class="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-extrabold bg-stone-900 hover:bg-stone-800 text-white">새 주소로 가기 → <span class="font-mono font-semibold opacity-80">${esc(CLOUD_SITE.replace('https://', ''))}</span></a></div></div>`
+      : !loading && lastError ? `<div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900"><b>공장 일지 DB에 연결하지 못했습니다.</b> ${esc(lastError)}</div>` : '';
     el.innerHTML = `
       <div class="bg-stone-100/90 border-b border-stone-200"><div class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-2">
         <div class="flex flex-wrap items-baseline gap-x-2"><h2 class="text-base font-extrabold text-stone-900">공장 일지</h2><span class="text-xs text-stone-500">기계 고장·수리, 누수처럼 공장에서 있었던 일 · 일지마다 [저장]을 누르면 DB에 올라갑니다</span></div>
         <div class="flex items-center gap-2">
-          <button type="button" onclick="FactoryLog.openDbModal()" title="공장 일지 DB (Cloudflare) 설정" class="flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-semibold border cursor-pointer whitespace-nowrap ${badge}"><span class="w-1.5 h-1.5 rounded-full ${loading ? 'bg-amber-500' : ok ? 'bg-emerald-500' : 'bg-rose-500'}"></span><span id="flStatusText">${esc(statusText)}</span><i data-lucide="settings" class="w-3.5 h-3.5 opacity-60"></i></button>
+          <span title="공장 일지 DB: Cloudflare (글 D1 · 사진 R2)${me ? ' · 로그인 ' + esc(me) : ''}" class="flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-semibold border whitespace-nowrap ${badge.replace(/hover:\S+/g, '')}"><span class="w-1.5 h-1.5 rounded-full ${loading || API_BASE === null ? 'bg-amber-500' : ok ? 'bg-emerald-500' : 'bg-rose-500'}"></span><span id="flStatusText">${esc(statusText)}</span></span>${me ? `<span class="hidden md:inline text-xs text-stone-500 whitespace-nowrap">${esc(me)}</span>` : ''}
           <button type="button" onclick="FactoryLog.pull(true)" title="새로 불러오기" class="flex items-center justify-center w-9 h-9 rounded-xl bg-white border border-stone-200 text-stone-700 hover:bg-stone-50 cursor-pointer"><i data-lucide="refresh-cw" class="w-4 h-4"></i></button>
         </div>
       </div></div>
@@ -155,10 +160,10 @@
   const snap = () => JSON.stringify([cur, newPhotos.map((p) => p.tmp), delPhotos]);
   const isDirty = () => !!cur && snap() !== curSaved;
   function startEdit(l) {
-    cur = { id: l.id || '', rev: l.rev || 0, start: l.start, end: l.end, title: l.title || '', happened: l.happened || '', action: l.action || '', assignees: (l.assignees || []).slice(), checklist: (l.checklist || []).map((c) => Object.assign({}, c)), photos: (l.photos || []).slice() };
+    cur = { id: l.id || '', rev: l.rev || 0, by: l.id ? [l.createdBy || '', l.updatedBy || '', String(l.createdAt || '').slice(0, 10), String(l.updatedAt || '').slice(0, 10)] : null, start: l.start, end: l.end, title: l.title || '', happened: l.happened || '', action: l.action || '', assignees: (l.assignees || []).slice(), checklist: (l.checklist || []).map((c) => Object.assign({}, c)), photos: (l.photos || []).slice() };
     newPhotos.forEach((p) => { try { URL.revokeObjectURL(p.url); } catch (e) {} }); newPhotos = []; delPhotos = []; curSaved = snap(); busy = false; renderEditor();
   }
-  function newAt(d) { if (cur && isDirty() && !confirm('쓰던 일지가 저장되지 않았습니다. 버리고 새로 쓸까요?')) return; const day = d || (today().slice(0, 7) === ym ? today() : ym + '-01'); startEdit({ start: day, end: day }); setTimeout(() => { const t = document.getElementById('flTitle'); if (t) t.focus(); }, 30); }
+  function newAt(d) { if (API_BASE === null) { toast('공장 일지는 새 주소에서만 쓸 수 있습니다.', 'error'); return; } if (cur && isDirty() && !confirm('쓰던 일지가 저장되지 않았습니다. 버리고 새로 쓸까요?')) return; const day = d || (today().slice(0, 7) === ym ? today() : ym + '-01'); startEdit({ start: day, end: day }); setTimeout(() => { const t = document.getElementById('flTitle'); if (t) t.focus(); }, 30); }
   function open(id) { const l = logs.find((x) => x.id === id) || openLogs.find((x) => x.id === id); if (!l) return; if (cur && isDirty() && !confirm('쓰던 일지가 저장되지 않았습니다. 버리고 이 일지를 열까요?')) return; startEdit(l); }
   function close(force) { if (!cur) return; if (busy) return; if (!force && isDirty() && !confirm('저장하지 않은 내용이 있습니다. 닫을까요?')) return; newPhotos.forEach((p) => { try { URL.revokeObjectURL(p.url); } catch (e) {} }); cur = null; newPhotos = []; delPhotos = []; const h = document.getElementById('flModal'); if (h) h.innerHTML = ''; if (pendingRender) render(); }
   const staffNames = () => { try { return window.Prod && typeof window.Prod.staffNames === 'function' ? window.Prod.staffNames() : []; } catch (e) { return []; } };
@@ -220,6 +225,7 @@
         </div>
         <div class="px-5 py-3 border-t border-stone-200 flex flex-wrap items-center gap-2">
           ${isNew ? '' : `<button type="button" onclick="FactoryLog.remove()" class="flex items-center gap-1.5 px-3 h-10 rounded-xl text-xs font-bold bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i>이 일지 삭제</button>`}
+          ${cur.by && (cur.by[0] || cur.by[1]) ? `<span class="text-xs text-stone-400 leading-tight">작성 ${esc(cur.by[0] || '-')} ${esc(cur.by[2])}${cur.by[1] && (cur.by[1] !== cur.by[0] || cur.by[3] !== cur.by[2]) ? `<br>수정 ${esc(cur.by[1])} ${esc(cur.by[3])}` : ''}</span>` : ''}
           <span id="flDirty" class="ml-auto text-xs font-bold text-amber-700"></span>
           <button type="button" onclick="FactoryLog.close()" class="flex items-center justify-center px-4 h-10 rounded-xl text-sm font-bold bg-white border border-stone-300 text-stone-700 hover:bg-stone-50 cursor-pointer">닫기</button>
           <button type="button" id="flSaveBtn" onclick="FactoryLog.save()">저장</button>
@@ -300,36 +306,6 @@
     catch (e) { busy = false; paintSave(); toast('삭제 실패: ' + e.message, 'error'); }
   }
 
-  // ---------- DB 설정 ----------
-  function openDbModal() {
-    const host = document.getElementById('flModal'); if (!host) return; if (cur) return;
-    let saved = ''; try { saved = localStorage.getItem(URL_KEY) || ''; } catch (e) {}
-    host.innerHTML = `<div class="fixed inset-0 bg-stone-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4" onmousedown="if(event.target===this)FactoryLog.closeDbModal()"><div class="bg-white rounded-2xl shadow-2xl w-full max-w-[560px]">
-      <div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold text-stone-900">공장 일지 DB (Cloudflare)</h3></div>
-      <div class="px-5 py-4 text-sm text-stone-700 flex flex-col gap-2">
-        <p>공장 일지는 구글 시트가 아니라 Cloudflare 서버(글은 D1, 사진은 R2)에 저장합니다. 접속 코드는 다른 메뉴와 같은 코드를 씁니다.</p>
-        <label class="${LABEL} mt-1" for="flUrlIn">서버 주소 <span class="font-semibold text-stone-400">비우면 기본 주소</span></label>
-        <input id="flUrlIn" type="url" value="${esc(saved)}" placeholder="${esc(DEFAULT_URL)}" class="${INPUT} font-mono text-xs">
-        <div id="flHealth" class="text-xs text-stone-500">지금 주소: <span class="font-mono">${esc(getUrl())}</span></div>
-      </div>
-      <div class="px-5 py-3 border-t border-stone-200 flex items-center justify-end gap-2"><button type="button" onclick="FactoryLog.checkHealth()" class="${BTN} !h-10 mr-auto">연결 확인</button><button type="button" onclick="FactoryLog.closeDbModal()" class="flex items-center justify-center px-4 h-10 rounded-xl text-sm font-bold bg-white border border-stone-300 text-stone-700 hover:bg-stone-50 cursor-pointer">닫기</button><button type="button" onclick="FactoryLog.saveDbUrl()" class="flex items-center justify-center px-5 h-10 rounded-xl text-sm font-extrabold bg-stone-900 hover:bg-stone-800 text-white cursor-pointer">주소 저장</button></div>
-    </div></div>`;
-  }
-  function closeDbModal() { if (cur) return; const h = document.getElementById('flModal'); if (h) h.innerHTML = ''; }
-  function saveDbUrl() {
-    const v = String((document.getElementById('flUrlIn') || {}).value || '').trim().replace(/\/+$/, '');
-    if (v && !/^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(v)) { toast('주소 형식이 맞지 않습니다 (예: https://baroga-total.xxxx.workers.dev).', 'error'); return; }
-    try { if (v) localStorage.setItem(URL_KEY, v); else localStorage.removeItem(URL_KEY); } catch (e) {}
-    closeDbModal(); toast('서버 주소를 저장했습니다.', 'success'); pull(true);
-  }
-  async function checkHealth() {
-    const out = document.getElementById('flHealth'); if (!out) return; out.textContent = '확인하는 중...';
-    try {
-      const res = await fetch(getUrl() + '/api/health'), j = await res.json();
-      out.innerHTML = j && j.ok ? `서버 응답 정상 · 접속 코드 ${j.accessCode ? '설정됨' : '<b class="text-rose-700">미설정</b>'} · DB ${j.db ? '연결됨' : '<b class="text-rose-700">미연결</b>'} · 사진 저장소 ${j.photos ? '연결됨' : '<b class="text-rose-700">미연결</b>'}` : '<b class="text-rose-700">서버가 응답했지만 상태가 정상이 아닙니다.</b>';
-    } catch (e) { out.innerHTML = `<b class="text-rose-700">연결하지 못했습니다.</b> 서버가 아직 배포되지 않았거나 주소가 다릅니다. (<span class="font-mono">${esc(getUrl())}</span>)`; }
-  }
-
   function move(n) { const d = dateOf(ym + '-01'); d.setMonth(d.getMonth() + n); ym = ymd(d).slice(0, 7); render(); pull(false); }
   function mount() { render(); if (!mounted) { mounted = true; pull(false); } }
   window.mountFactoryLogApp = mount;
@@ -345,7 +321,7 @@
     removeItem: (i) => { if (!cur) return; cur.checklist.splice(i, 1); part('flChecklist', checklistHtml()); },
     pickPhotos, viewPhoto,
     removePhoto: (pid, tmp) => { if (!cur) return; if (tmp) { const p = newPhotos.find((x) => x.tmp === tmp); if (p) { try { URL.revokeObjectURL(p.url); } catch (e) {} } newPhotos = newPhotos.filter((x) => x.tmp !== tmp); } else if (pid && !delPhotos.includes(pid)) delPhotos.push(pid); part('flPhotos', photosHtml()); },
-    openDbModal, closeDbModal, saveDbUrl, checkHealth, isDirty,
+    isDirty,
     _debug: () => ({ ym, logs, openLogs, loaded, lastError, cur, newPhotos: newPhotos.length, delPhotos }),
   };
   window.addEventListener('beforeunload', (e) => { if (isDirty()) { e.preventDefault(); e.returnValue = ''; } });
