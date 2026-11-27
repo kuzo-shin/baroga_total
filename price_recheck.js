@@ -35,15 +35,16 @@
     if (r.grade === 'X' || KEEP_GRADE.has(r.grade) || !isNum(r.price) || !isNum(r.m12)) return r.grade;
     if (r.m12 <= -500000 && (r.same === '동일' || r.same === '유사')) return 'A';
     if (r.m12 <= -100000) return 'B';
-    if (r.m12 < 0) return 'C';
+    if (r.m12 < 0 || (r.m12 === 0 && isNum(r.diff) && r.diff < 0)) return 'C'; // 월 사용량이 0 이라 연 차액이 0 이어도 kg당 더 싸면 C
     return '-';
   }
   const GROUPS = ['row.grade', 'row.rank', 'item.nA', 'item.nB', 'item.bestDiff', 'item.bestVendor', 'item.bestM12', 'item.realSave', 'item.meritRank', 'sum.merit', 'sum.sumM12', 'sum.sumM1', 'sum.A', 'sum.B'];
+  // skip: { 묶음: Set(품목코드 또는 '코드#후보번호', 합계는 '*') } — 그 칸은 계산하지 않고 원래 값을 둠
   function recompute(doc, skip) {
-    const on = (g) => !skip || !skip.has(g);
+    const off = (g, id) => !!(skip && skip[g] && (skip[g].has('*') || skip[g].has(id)));
     (doc.items || []).forEach((it) => {
-      const rows = it.rows || [];
-      if (on('row.grade')) rows.forEach((r) => { r.grade = gradeOf(r); });
+      const rows = it.rows || [], on = (g) => !off(g, it.code);
+      rows.forEach((r, ri) => { if (!off('row.grade', it.code) && !off('row.grade', it.code + '#' + ri)) r.grade = gradeOf(r); });
       if (on('row.rank')) {
         rows.forEach((r) => { if (!rankable(r)) r.rank = null; });
         rows.filter(rankable).sort((a, b) => a.wkg - b.wkg).forEach((r, i) => { r.rank = i + 1; });
@@ -54,10 +55,11 @@
       if (best) {
         if (on('item.bestDiff')) it.bestDiff = best.diff;
         if (on('item.bestVendor')) it.bestVendor = best.vendor;
-        if (on('item.bestM12')) it.bestM12 = best.m12;
+        if (on('item.bestM12')) it.bestM12 = isNum(best.m12) && best.m12 < 0 ? -best.m12 : 0; // 1순위의 연 절감액(양수), 더 비싸면 0
         if (on('item.realSave')) it.realSave = isNum(best.m12) && best.m12 < 0 ? -best.m12 : 0;
       }
     });
+    const on = (g) => !off(g, '*');
     if (on('item.meritRank')) {
       (doc.items || []).forEach((it) => { it.meritRank = null; });
       (doc.items || []).filter((it) => isNum(it.realSave) && it.realSave > 0).sort((a, b) => b.realSave - a.realSave).forEach((it, i) => { it.meritRank = i + 1; });
@@ -71,20 +73,22 @@
     if (on('sum.B')) s.B = (doc.items || []).reduce((a, it) => a + (it.rows || []).filter((r) => r.grade === 'B').length, 0);
     return doc;
   }
-  // 바꾸기 전 자료에 계산을 해 봤을 때 원래 값과 다른 칸 묶음 → 이번에는 계산하지 않음
+  // 바꾸기 전 자료에 계산을 해 봤을 때 원래 값과 다른 칸 → 이번에는 그 칸(품목·후보 단위)만 계산하지 않음
+  //  묶음 하나씩만 계산해 보고 원래 값과 비교 (순위는 등급(X)에 따라 달라지므로 등급과 함께)
   function verify(doc) {
-    const bad = new Set(), detail = {};
+    const skip = {}, detail = {};
     GROUPS.forEach((g) => {
-      const t = recompute(clone(doc), new Set(GROUPS.filter((x) => x !== g && !(g === 'row.rank' && x === 'row.grade')))); // 순위는 등급(X)에 따라 달라지므로 등급 계산을 함께 둠
-      const [lv, key] = g.split('.'), miss = [];
-      if (lv === 'sum') { if (JSON.stringify(t.sum[key]) !== JSON.stringify((doc.sum || {})[key])) miss.push(`${(doc.sum || {})[key]} → ${t.sum[key]}`); }
+      const others = {}; GROUPS.forEach((x) => { if (x !== g && !(g === 'row.rank' && x === 'row.grade')) others[x] = new Set(['*']); });
+      const t = recompute(clone(doc), others), [lv, key] = g.split('.'), miss = [], ids = new Set();
+      const eq = (a, b) => JSON.stringify(a === undefined ? null : a) === JSON.stringify(b === undefined ? null : b);
+      if (lv === 'sum') { if (!eq((doc.sum || {})[key], t.sum[key])) { ids.add('*'); miss.push(`${(doc.sum || {})[key]} → ${t.sum[key]}`); } }
       else (doc.items || []).forEach((it, ii) => {
-        if (lv === 'item') { const a = it[key] === undefined ? null : it[key], b = t.items[ii][key] === undefined ? null : t.items[ii][key]; if (JSON.stringify(a) !== JSON.stringify(b)) miss.push(`${it.code} ${a} → ${b}`); }
-        else (it.rows || []).forEach((r, ri) => { const a = r[key] === undefined ? null : r[key], b = t.items[ii].rows[ri][key] === undefined ? null : t.items[ii].rows[ri][key]; if (JSON.stringify(a) !== JSON.stringify(b)) miss.push(`${it.code}#${ri} ${a} → ${b}`); });
+        if (lv === 'item') { if (!eq(it[key], t.items[ii][key])) { ids.add(g === 'item.meritRank' ? '*' : it.code); miss.push(`${it.code} ${it[key]} → ${t.items[ii][key]}`); } }
+        else (it.rows || []).forEach((r, ri) => { if (!eq(r[key], t.items[ii].rows[ri][key])) { ids.add(g === 'row.rank' ? it.code : it.code + '#' + ri); miss.push(`${it.code}#${ri} ${r[key]} → ${t.items[ii].rows[ri][key]}`); } });
       });
-      if (miss.length) { bad.add(g); detail[g] = { count: miss.length, examples: miss.slice(0, 5) }; }
+      if (ids.size) { skip[g] = ids; detail[g] = { count: miss.length, examples: miss.slice(0, 8) }; }
     });
-    return { bad, detail };
+    return { skip, detail };
   }
 
   // ---------- 2. 결과 반영 ----------
@@ -125,7 +129,7 @@
       } else if (selling) { r.stock = `판매중(${md} 재확인)`; r.at = stamp; stockN++; }
       lines.push({ it, r, x, act, old, np, pct, wkg0, sold, selling });
     });
-    recompute(doc, v.bad);
+    recompute(doc, v.skip);
     let touched = 0, vchg = 0;
     doc.items.forEach((it) => {
       const now1 = (it.rows || []).map((r) => r.rank == null ? null : r.rank);
@@ -143,7 +147,7 @@
     const count = (a) => a.reduce((m, l) => (m[l.act] = (m[l.act] || 0) + 1, m), {});
     const report = {
       stamp, checked: lines.length, acts: count(lines), stockUpdated: stockN, touched, vchg,
-      kept: [...v.bad], keptDetail: v.detail,
+      kept: Object.keys(v.skip), keptDetail: v.detail,
       bigMoves: lines.filter((l) => l.pct != null && l.act !== 'confirm').sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct)).slice(0, 5).map((l) => ({ code: l.it.code, name: l.it.name, vendor: l.r.vendor, old: l.old, new: l.np, pct: l.pct, act: l.act })),
       review: lines.filter((l) => l.act === 'review').map((l) => ({ code: l.it.code, name: l.it.name, vendor: l.r.vendor, old: l.old, new: l.np, pct: l.pct, judge: l.x.judge || '' })),
       newSoldOut: lines.filter((l) => l.sold).map((l) => ({ code: l.it.code, name: l.it.name, vendor: l.r.vendor })),
