@@ -1,10 +1,10 @@
-// [VERSION: factory_log.js v1.2 - 2026-11-27 접속 코드 대신 로그인(Cloudflare Access) · 새 주소에서만 동작 · 작성자/수정자 표시 / v1.1 - 2026-11-27 서버 기본 주소를 실제 만든 Worker(baroga-total)로 / v1.0 - 2026-11-27 신규: 공장 일지(달력 · 일어난 일/사후 대처 · 담당자 · 체크리스트 · 사진), DB는 Cloudflare(D1 + R2)]
+// [VERSION: factory_log.js v1.3 - 2026-11-27 담당자는 직접 입력만, 일지 창 키움(일어난 일·사후 대처 칸 크게), 달력 막대 앞 색 띠 없앰 / v1.2 - 2026-11-27 접속 코드 대신 로그인(Cloudflare Access) · 새 주소에서만 동작 · 작성자/수정자 표시 / v1.1 - 2026-11-27 서버 기본 주소를 실제 만든 Worker(baroga-total)로 / v1.0 - 2026-11-27 신규: 공장 일지(달력 · 일어난 일/사후 대처 · 담당자 · 체크리스트 · 사진), DB는 Cloudflare(D1 + R2)]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - 공장 일지 (factory_log.js)
 //  - 생산과 상관없이 공장에서 있었던 일(기계 고장·수리, 누수 등)을 달력에 기록
 //  - 달력: 월~일, 일지 한 건 = 시작일~종료일 막대 하나(제목만). 날짜 칸을 누르면 새 일지, 막대를 누르면 내용
 //  - 일지 한 건: 제목 · 기간 · 담당자(여러 명) · 일어난 일 · 사후 대처 · 체크리스트 · 사진
-//  - 담당자 명단: 생산일지 '작업 인원'의 재직자 + 직접 입력
+//  - 담당자: 직접 입력 (v1.3 — 명단 고르기 없앰)
 //  - 저장: 일지 창의 [저장]을 누르면 그 일지 한 건이 바로 DB에 올라감 (자동 저장 없음)
 //  - DB: Cloudflare Worker(cloud/src/index.js) — 글은 D1, 사진은 R2. 다른 메뉴의 구글 시트 DB와 따로
 //  - 로그인: Cloudflare Access(허용한 구글 계정). 화면과 서버가 같은 주소라 따로 코드를 보내지 않음
@@ -96,7 +96,7 @@
       const s = l.start < ws ? 0 : Math.round((dateOf(l.start) - dateOf(ws)) / 86400000), e = l.end > we ? 6 : Math.round((dateOf(l.end) - dateOf(ws)) / 86400000);
       let lane = lanes.findIndex((end) => end < s); if (lane < 0) { lane = lanes.length; lanes.push(e); } else lanes[lane] = e;
       const T = tone(l), n = (l.checklist || []).length, cl = l.start < ws, cr = l.end > we, ph = (l.photos || []).length;
-      return `<button type="button" onclick="FactoryLog.open('${esc(l.id)}')" title="${esc(l.title)}${l.start !== l.end ? ` (${md(l.start)}~${md(l.end)})` : ''}" style="grid-column:${s + 1} / span ${e - s + 1};grid-row:${lane + 2}" class="z-10 h-[22px] flex items-center gap-1.5 px-2 text-xs font-bold border-l-[3px] cursor-pointer min-w-0 text-left ${T.bar} ${cl ? 'ml-0 border-dotted' : 'ml-1 rounded-l-md'} ${cr ? 'mr-0' : 'mr-1 rounded-r-md'}"><span class="truncate">${esc(l.title)}</span>${n ? `<span class="ml-auto shrink-0 tabular-nums opacity-70">${n - openCount(l)}/${n}</span>` : ''}${ph ? `<i data-lucide="image" class="w-3 h-3 shrink-0 opacity-60 ${n ? '' : 'ml-auto'}"></i>` : ''}</button>`;
+      return `<button type="button" onclick="FactoryLog.open('${esc(l.id)}')" title="${esc(l.title)}${l.start !== l.end ? ` (${md(l.start)}~${md(l.end)})` : ''}" style="grid-column:${s + 1} / span ${e - s + 1};grid-row:${lane + 2}" class="z-10 h-[22px] flex items-center gap-1.5 px-2 text-xs font-bold cursor-pointer min-w-0 text-left ${T.bar} ${cl ? 'ml-0' : 'ml-1 rounded-l-md'} ${cr ? 'mr-0' : 'mr-1 rounded-r-md'}"><span class="truncate">${esc(l.title)}</span>${n ? `<span class="ml-auto shrink-0 tabular-nums opacity-70">${n - openCount(l)}/${n}</span>` : ''}${ph ? `<i data-lucide="image" class="w-3 h-3 shrink-0 opacity-60 ${n ? '' : 'ml-auto'}"></i>` : ''}</button>`;
     }).join('');
     const days = [0, 1, 2, 3, 4, 5, 6].map((i) => {
       const d = addDays(ws, i), out = Number(d.slice(5, 7)) !== monthNo, isT = d === t, col = i === 6 ? 'text-rose-600' : i === 5 ? 'text-blue-600' : 'text-stone-700';
@@ -166,15 +166,12 @@
   function newAt(d) { if (API_BASE === null) { toast('공장 일지는 새 주소에서만 쓸 수 있습니다.', 'error'); return; } if (cur && isDirty() && !confirm('쓰던 일지가 저장되지 않았습니다. 버리고 새로 쓸까요?')) return; const day = d || (today().slice(0, 7) === ym ? today() : ym + '-01'); startEdit({ start: day, end: day }); setTimeout(() => { const t = document.getElementById('flTitle'); if (t) t.focus(); }, 30); }
   function open(id) { const l = logs.find((x) => x.id === id) || openLogs.find((x) => x.id === id); if (!l) return; if (cur && isDirty() && !confirm('쓰던 일지가 저장되지 않았습니다. 버리고 이 일지를 열까요?')) return; startEdit(l); }
   function close(force) { if (!cur) return; if (busy) return; if (!force && isDirty() && !confirm('저장하지 않은 내용이 있습니다. 닫을까요?')) return; newPhotos.forEach((p) => { try { URL.revokeObjectURL(p.url); } catch (e) {} }); cur = null; newPhotos = []; delPhotos = []; const h = document.getElementById('flModal'); if (h) h.innerHTML = ''; if (pendingRender) render(); }
-  const staffNames = () => { try { return window.Prod && typeof window.Prod.staffNames === 'function' ? window.Prod.staffNames() : []; } catch (e) { return []; } };
 
   function assigneesHtml() {
-    const names = staffNames().filter((n) => !cur.assignees.includes(n));
     const chips = cur.assignees.map((n, i) => `<span class="inline-flex items-center gap-1 pl-2.5 pr-1 h-7 rounded-lg bg-stone-900 text-white text-xs font-bold">${esc(n)}<button type="button" onclick="FactoryLog.removeAssignee(${i})" title="빼기" class="w-5 h-5 inline-flex items-center justify-center rounded hover:bg-white/20 cursor-pointer">×</button></span>`).join('');
     return `<div class="flex flex-wrap items-center gap-1.5">${chips || '<span class="text-xs text-stone-400">지정한 담당자가 없습니다.</span>'}</div>
       <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
-        <select onchange="if(this.value){FactoryLog.addAssignee(this.value);}" class="border border-stone-300 rounded-lg px-2 h-8 text-xs bg-white cursor-pointer max-w-[200px]"><option value="">${names.length || cur.assignees.length ? '명단에서 고르기' : '작업 인원 명단 없음'}</option>${names.map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join('')}</select>
-        <input id="flAssigneeIn" type="text" maxlength="30" placeholder="명단에 없는 사람 직접 입력" onkeydown="if(event.key==='Enter'){event.preventDefault();FactoryLog.addAssignee(this.value);}" class="border border-stone-300 rounded-lg px-2.5 h-8 text-xs w-52">
+        <input id="flAssigneeIn" type="text" maxlength="30" placeholder="담당자 이름 입력 후 Enter" onkeydown="if(event.key==='Enter'){event.preventDefault();FactoryLog.addAssignee(this.value);}" class="border border-stone-300 rounded-lg px-2.5 h-8 text-xs w-52">
         <button type="button" onclick="FactoryLog.addAssignee(document.getElementById('flAssigneeIn').value)" class="${BTN} !h-8">추가</button>
       </div>`;
   }
@@ -207,7 +204,7 @@
     const host = document.getElementById('flModal'); if (!host || !cur) return;
     const isNew = !cur.id;
     host.innerHTML = `<div class="fixed inset-0 bg-stone-950/60 backdrop-blur-xs z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto" onmousedown="if(event.target===this)FactoryLog.close()">
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[860px] flex flex-col max-h-[calc(100vh-16px)] sm:max-h-[calc(100vh-32px)]">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[1280px] flex flex-col max-h-[calc(100vh-16px)] sm:max-h-[calc(100vh-32px)]">
         <div class="px-5 py-3 border-b border-stone-200 flex items-center justify-between gap-2"><h3 class="text-base font-extrabold text-stone-900">${isNew ? '새 공장 일지' : '공장 일지'}</h3><button type="button" onclick="FactoryLog.close()" title="닫기" class="w-8 h-8 inline-flex items-center justify-center rounded-lg text-stone-500 hover:bg-stone-100 cursor-pointer text-lg">×</button></div>
         <div class="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
           <div><label class="${LABEL}" for="flTitle">제목 <span class="text-rose-600">*</span> <span class="font-semibold text-stone-400">달력 막대에 보이는 글</span></label><input id="flTitle" type="text" maxlength="100" value="${esc(cur.title)}" oninput="FactoryLog.set('title', this.value)" placeholder="예: 론도 벨트 끊어짐" class="${INPUT} font-bold"></div>
@@ -217,8 +214,8 @@
             <div><span class="${LABEL}">담당자 <span class="font-semibold text-stone-400">여러 명 지정 가능</span></span><div id="flAssignees">${assigneesHtml()}</div></div>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div><label class="${LABEL}" for="flHappened">일어난 일</label><textarea id="flHappened" rows="7" maxlength="5000" oninput="FactoryLog.set('happened', this.value)" placeholder="언제, 어디서, 무엇이 어떻게 됐는지" class="${INPUT} resize-y leading-relaxed">${esc(cur.happened)}</textarea></div>
-            <div><label class="${LABEL}" for="flAction">사후 대처</label><textarea id="flAction" rows="7" maxlength="5000" oninput="FactoryLog.set('action', this.value)" placeholder="어떻게 조치했는지, 비용·업체, 재발 방지" class="${INPUT} resize-y leading-relaxed">${esc(cur.action)}</textarea></div>
+            <div><label class="${LABEL}" for="flHappened">일어난 일</label><textarea id="flHappened" rows="16" maxlength="5000" oninput="FactoryLog.set('happened', this.value)" placeholder="언제, 어디서, 무엇이 어떻게 됐는지" class="${INPUT} resize-y leading-relaxed min-h-[320px]">${esc(cur.happened)}</textarea></div>
+            <div><label class="${LABEL}" for="flAction">사후 대처</label><textarea id="flAction" rows="16" maxlength="5000" oninput="FactoryLog.set('action', this.value)" placeholder="어떻게 조치했는지, 비용·업체, 재발 방지" class="${INPUT} resize-y leading-relaxed min-h-[320px]">${esc(cur.action)}</textarea></div>
           </div>
           <div><span class="${LABEL}">체크리스트 <span class="font-semibold text-stone-400">이 일로 생긴 할 일 · 나중에 다 했는지 확인</span></span><div id="flChecklist">${checklistHtml()}</div></div>
           <div><span class="${LABEL}">사진</span><div id="flPhotos">${photosHtml()}</div></div>
