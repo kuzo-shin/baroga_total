@@ -1,4 +1,4 @@
-// [VERSION: cloud/src/store.js v1.0 - 2026-11-27 신규: 메뉴별 자료 보관소(조각 저장 + 지난 판 보관) · 구글 DB 원본 백업]
+// [VERSION: cloud/src/store.js v1.1 - 2026-11-27 메뉴별 전환 표시(active): 켜진 메뉴만 화면이 Cloudflare 를 읽고 씀 / v1.0 - 2026-11-27 신규: 메뉴별 자료 보관소(조각 저장 + 지난 판 보관) · 구글 DB 원본 백업]
 // ============================================================================
 // 메뉴별 자료 보관소 — 구글 시트 DB(메뉴마다 JSON 한 덩어리)를 옮겨 오는 곳
 //  - 메뉴(domain)의 자료를 '조각(section)'으로 나눠 보관: 달별 기록, 품목별 레시피처럼. 바뀐 조각만 올림
@@ -8,7 +8,8 @@
 //    · 180일이 지난 지난 판은 저장할 때 조금씩 지움
 //  - 한 번 저장에 조각 150개·합계 6MB·조각 하나 1.5MB 까지 (D1 한 줄 2MB 제한). 여러 조각을 한 문장에 묶어 쿼리 수를 줄임(무료 요금제 요청당 50개)
 //
-//   GET  /api/store                         메뉴별 판·조각 수·크기
+//   GET  /api/store                         메뉴별 판·조각 수·크기 + 전환된 메뉴 목록(active)
+//   PUT  /api/store-active                  { domain, on } 메뉴 전환 켜기·끄기 (관리자 = ADMIN_EMAILS 만)
 //   GET  /api/store/:domain[?rev=N]         조각 전부 (rev 를 주면 그 판 때의 모습)
 //   PUT  /api/store/:domain                 { baseRev, put:{조각이름:글자}, del:[조각이름], note }
 //   PUT  /api/backup/:domain                구글 DB 원본 응답을 그대로 R2 에 보관 (본문 = JSON 글자)
@@ -19,6 +20,7 @@ export const STORE_SCHEMA = [
   `CREATE TABLE IF NOT EXISTS store_sections (domain TEXT NOT NULL, key TEXT NOT NULL, rev INTEGER NOT NULL, data TEXT NOT NULL, bytes INTEGER NOT NULL, updated_at TEXT NOT NULL, updated_by TEXT NOT NULL DEFAULT '', PRIMARY KEY (domain, key))`,
   `CREATE TABLE IF NOT EXISTS store_history (domain TEXT NOT NULL, key TEXT NOT NULL, rev INTEGER NOT NULL, data TEXT, updated_at TEXT NOT NULL, updated_by TEXT NOT NULL DEFAULT '', PRIMARY KEY (domain, key, rev))`,
   'CREATE INDEX IF NOT EXISTS store_history_time ON store_history (updated_at)',
+  `CREATE TABLE IF NOT EXISTS store_flags (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL, updated_by TEXT NOT NULL DEFAULT '')`,
 ];
 export const DOMAINS = ['raw', 'recipe', 'price', 'production', 'ms_inbound', 'ms_stock', 'invoice', 'price_compare'];
 const MAX = { sections: 150, sectionBytes: 1500000, totalBytes: 6000000, key: 200, backupBytes: 20000000, historyDays: 180 };
@@ -32,7 +34,23 @@ export async function listDomains(env) {
   const a = await env.DB.prepare('SELECT domain, rev, updated_at, updated_by, note FROM store_domains ORDER BY domain').all();
   const b = await env.DB.prepare('SELECT domain, COUNT(*) AS sections, SUM(bytes) AS bytes FROM store_sections GROUP BY domain').all();
   const size = Object.fromEntries(b.results.map((r) => [r.domain, r]));
-  return { ok: true, domains: a.results.map((r) => ({ domain: r.domain, rev: r.rev, updatedAt: r.updated_at, updatedBy: r.updated_by, note: r.note, sections: (size[r.domain] || {}).sections || 0, bytes: (size[r.domain] || {}).bytes || 0 })) };
+  return { ok: true, active: await activeList(env), domains: a.results.map((r) => ({ domain: r.domain, rev: r.rev, updatedAt: r.updated_at, updatedBy: r.updated_by, note: r.note, sections: (size[r.domain] || {}).sections || 0, bytes: (size[r.domain] || {}).bytes || 0 })) };
+}
+
+async function activeList(env) {
+  const r = await env.DB.prepare("SELECT value FROM store_flags WHERE key = 'active'").first();
+  try { const a = JSON.parse(r ? r.value : '[]'); return Array.isArray(a) ? a.filter((d) => DOMAINS.includes(d)) : []; } catch (e) { return []; }
+}
+// 메뉴 전환: 켜면 그 메뉴는 화면이 Cloudflare 를 읽고 씀. 자료가 비어 있는 메뉴는 켤 수 없음
+export async function setActive(env, request, email) {
+  const admins = String(env.ADMIN_EMAILS || '').toLowerCase().split(',').map((x) => x.trim()).filter(Boolean);
+  if (!admins.includes(email)) throw new StoreError(403, '관리자만 메뉴 전환을 바꿀 수 있습니다.');
+  let b; try { b = await request.json(); } catch (e) { throw bad('보낸 자료를 읽을 수 없습니다.'); }
+  const domain = domainOf(String((b && b.domain) || '')), on = !!(b && b.on);
+  if (on) { const h = await env.DB.prepare('SELECT rev FROM store_domains WHERE domain = ?').bind(domain).first(); if (!h || !h.rev) throw bad('이 메뉴는 Cloudflare 에 자료가 없어 전환할 수 없습니다. 먼저 가져오기를 해 주세요.'); }
+  const cur = await activeList(env), next = on ? [...new Set([...cur, domain])] : cur.filter((d) => d !== domain), now = new Date().toISOString();
+  await env.DB.prepare("INSERT OR REPLACE INTO store_flags (key, value, updated_at, updated_by) VALUES ('active', ?, ?, ?)").bind(JSON.stringify(next), now, email).run();
+  return { ok: true, active: next };
 }
 
 export async function readDomain(env, domain, url) {

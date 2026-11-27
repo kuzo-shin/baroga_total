@@ -1,4 +1,4 @@
-// [VERSION: cloud/src/index.js v1.2 - 2026-11-27 메뉴별 자료 보관소(/api/store)·구글 DB 원본 백업(/api/backup) 추가 / v1.1 - 2026-11-27 접속 코드 대신 Cloudflare Access 로그인(허용한 구글 계정) · 작성자/수정자 기록 · 화면 파일도 이 서버에서 제공 / v1.0 - 2026-11-27 신규: 공장 일지 API (D1 + R2)]
+// [VERSION: cloud/src/index.js v1.3 - 2026-11-27 메뉴 전환 표시(/api/store-active) / v1.2 - 2026-11-27 메뉴별 자료 보관소(/api/store)·구글 DB 원본 백업(/api/backup) 추가 / v1.1 - 2026-11-27 접속 코드 대신 Cloudflare Access 로그인(허용한 구글 계정) · 작성자/수정자 기록 · 화면 파일도 이 서버에서 제공 / v1.0 - 2026-11-27 신규: 공장 일지 API (D1 + R2)]
 // ============================================================================
 // 바로가 공장 ERP — Cloudflare Worker (DB: D1, 사진: R2, 화면: assets)
 //  - 화면 파일(index.html·*.js)과 /api/* 를 같은 주소에서 제공
@@ -18,7 +18,7 @@
 //   DELETE /api/photos/:id                                    사진 한 장 삭제
 // ============================================================================
 import { getEmail } from './auth.js';
-import { STORE_SCHEMA, StoreError, listDomains, readDomain, writeDomain, putBackup, listBackups } from './store.js';
+import { STORE_SCHEMA, StoreError, listDomains, readDomain, writeDomain, putBackup, listBackups, setActive } from './store.js';
 
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS factory_log (
@@ -181,6 +181,7 @@ export default {
       if ((mm = path.match(/^\/api\/photos\/([A-Za-z0-9-]{1,40})$/)) && m === 'DELETE') return json(await deletePhoto(env, mm[1]));
       // 메뉴별 자료 보관소 (cloud/src/store.js)
       if (path === '/api/store' && m === 'GET') return json(await listDomains(env));
+      if (path === '/api/store-active' && m === 'PUT') return json(await setActive(env, request, email));
       if ((mm = path.match(/^\/api\/store\/([a-z_]{1,30})$/)) && m === 'GET') return json(await readDomain(env, mm[1], url));
       if ((mm = path.match(/^\/api\/store\/([a-z_]{1,30})$/)) && m === 'PUT') return json(await writeDomain(env, mm[1], request, email));
       if ((mm = path.match(/^\/api\/backup\/([a-z_]{1,30})$/)) && m === 'PUT') return json(await putBackup(env, mm[1], request, email));

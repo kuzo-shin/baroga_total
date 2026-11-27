@@ -1,4 +1,4 @@
-// [VERSION: cloud_store.js v1.0 - 2026-11-27 신규: Cloudflare 자료 보관소 연결(조각으로 나누기·합치기·검증) + 구글 DB에서 가져오기]
+// [VERSION: cloud_store.js v1.1 - 2026-11-27 메뉴별 전환: 구글 DB와 같은 말투로 답하는 연결(gas) · 전환 표시(active) · 옛 주소 차단 목록(MOVED) / v1.0 - 2026-11-27 신규: Cloudflare 자료 보관소 연결(조각으로 나누기·합치기·검증) + 구글 DB에서 가져오기]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - Cloudflare 자료 보관소 (cloud_store.js)
 //  구글 시트 DB는 메뉴마다 자료 전체를 JSON 한 덩어리로 저장했음. Cloudflare에서는 같은 자료를 '조각'으로 나눠 보관
@@ -8,6 +8,11 @@
 //   · 나눈 조각을 다시 합친 결과가 원본과 글자 그대로 같은지 매번 확인. 다르면 올리지 않고 오류
 //   · 올린 뒤 서버에서 다시 읽어 합친 결과가 원본과 같은지 확인
 //   · 서버는 조각의 지난 판을 보관하고(되돌려 읽기 가능), 가져올 때 구글 DB 원본 응답도 통째로 백업
+//  메뉴 전환 (구글 DB → Cloudflare)
+//   · 각 메뉴는 지금처럼 { action: 'getAll' } / { action: 'replaceAll', baseRevision, payload } 로 요청하고, CloudStore.gas(메뉴, 구글로 보내는 함수)가
+//     전환된 메뉴면 Cloudflare 에서, 아니면 구글 DB 에서 같은 모양의 답을 돌려줌 → 메뉴 쪽 코드는 그대로
+//   · 전환 표시(active)는 서버에 있음: 관리자가 켜는 순간부터 새 주소의 그 메뉴는 Cloudflare 를 읽고 씀
+//   · MOVED: 전환이 끝난 메뉴. 옛 주소(github.io)에서는 이 메뉴를 막음(구글 DB에 따로 저장돼 자료가 갈라지지 않게)
 //  이 파일은 브라우저(window.CloudStore)와 시험(node)에서 함께 씀
 // ============================================================================
 (function (root, factory) { if (typeof module === 'object' && module.exports) module.exports = factory(); else root.CloudStore = factory(); })(typeof self !== 'undefined' ? self : this, function () {
@@ -25,6 +30,8 @@
     price_compare: {},
   };
   const DOMAINS = Object.keys(RULES);
+  const MOVED = []; // 전환이 끝난 메뉴 (옛 주소에서 막음). 전환할 때마다 여기에 더함
+  const CLOUD_SITE = 'https://baroga-total.kuzo0909.workers.dev';
   // 구글 DB 응답에서 '화면이 쓰는 자료'가 들어 있는 칸
   const GAS_PICK = { raw: (j) => ({ orders: j.orders }), recipe: (j) => ({ data: j.data }), ms_inbound: (j) => j.data };
   const GAS_URL = {
@@ -185,5 +192,71 @@
     const g = await readGas(domain, opt && opt.url), back = await load(domain), text = JSON.stringify(g.doc);
     return { domain, gasRev: g.gasRev, cloudRev: back.rev, equal: back.text === text, bytesGas: new TextEncoder().encode(text).length, bytesCloud: new TextEncoder().encode(back.text).length };
   }
-  return { DOMAINS, RULES, split, join, splitChecked, diff, sha256, load, save, importFromGas, compareWithGas, available, gasUrl, _api: api };
+
+  // ---------- 메뉴 전환: 구글 DB와 같은 말투의 연결 ----------
+  let flagsP = null;
+  const state = {}; // 메뉴별 마지막으로 불러온(저장한) 판과 조각
+  function flags(force) { // 전환된 메뉴 목록 (서버). 한 번 읽어 두고 씀
+    if (!flagsP || force) flagsP = api('GET', '/api/store').then((j) => (Array.isArray(j.active) ? j.active : [])).catch((e) => { flagsP = null; throw e; });
+    return flagsP;
+  }
+  async function isActive(domain) { if (!available()) return false; const a = await flags(); return a.includes(domain) || MOVED.includes(domain); }
+  async function setActive(domain, on) { const j = await api('PUT', '/api/store-active', { domain, on: !!on }); flagsP = Promise.resolve(j.active); return j.active; }
+  const kst = (iso) => { const d = iso ? new Date(iso) : new Date(); if (isNaN(d)) return ''; return new Date(d.getTime() + 9 * 3600000).toISOString().replace('T', ' ').slice(0, 19); };
+  const CONFLICT_MSG = '다른 곳에서 먼저 저장된 데이터가 있습니다. 새로고침 후 다시 시도하세요.';
+  const conflictOut = (rev) => ({ ok: false, status: 'error', conflict: true, revision: rev, error: CONFLICT_MSG, message: CONFLICT_MSG });
+  function wrapOut(domain, doc, rev, updatedAt) { // 구글 DB의 getAll 응답과 같은 모양
+    if (domain === 'raw') return { ok: true, revision: rev, spreadsheetName: 'Cloudflare', sheetName: 'store', count: doc.orders.length, orders: doc.orders };
+    if (domain === 'recipe') return { ok: true, status: 'ok', revision: rev, data: doc.data };
+    if (domain === 'ms_inbound') return { ok: true, revision: rev, source: 'CLOUDFLARE', updatedAt: kst(updatedAt), data: doc };
+    return { ok: true, status: 'ok', revision: rev, source: 'CLOUDFLARE', updatedAt: kst(updatedAt), payload: doc };
+  }
+  function docFromBody(domain, body) { // 저장 요청에서 자료 꺼내기 (구글 DB 스크립트와 같은 규칙)
+    if (domain === 'raw') { const list = Array.isArray(body.orders) ? body.orders : (Array.isArray(body.data) ? body.data : null); return list ? { orders: list } : null; }
+    if (domain === 'recipe') {
+      const list = Array.isArray(body.data) ? body.data : (Array.isArray(body.recipes) ? body.recipes : null); if (!list || !Array.isArray(body.images)) return null;
+      const img = {}; body.images.forEach((x) => { if (x && x.id && x.data) img[String(x.id)] = String(x.data); });
+      return { data: list.map((r) => { const o = Object.assign({}, r); delete o.imageData; if (o.id && img[String(o.id)]) o.imageData = img[String(o.id)]; return o; }) };
+    }
+    return isObj(body.payload) ? body.payload : null;
+  }
+  async function emulate(domain, body) {
+    const action = (body && body.action) || '';
+    if (action === 'getAll') {
+      const l = await load(domain);
+      if (l.empty) { state[domain] = { rev: l.rev, sections: l.sections }; return domain === 'raw' ? { ok: true, revision: l.rev, count: 0, orders: [] } : domain === 'recipe' ? { ok: true, status: 'empty', revision: l.rev, data: [] } : { ok: true, status: 'empty', revision: l.rev }; }
+      state[domain] = { rev: l.rev, sections: l.sections };
+      return wrapOut(domain, l.doc, l.rev, l.updatedAt);
+    }
+    if (action !== 'replaceAll' && !(domain === 'raw' && body && (Array.isArray(body.orders) || Array.isArray(body.data)))) return { ok: false, status: 'error', error: '지원하지 않는 작업입니다: ' + action, message: '지원하지 않는 작업입니다: ' + action };
+    const doc = docFromBody(domain, body);
+    if (!doc) return { ok: false, status: 'error', error: '저장할 데이터 형식이 올바르지 않습니다.', message: '저장할 데이터 형식이 올바르지 않습니다.' };
+    const hasBase = body.baseRevision !== undefined && body.baseRevision !== null, base = Number(body.baseRevision);
+    let st = state[domain];
+    if (!st || !hasBase || st.rev !== base) { const cur = await api('GET', '/api/store/' + domain); st = state[domain] = { rev: cur.rev, sections: cur.sections || {} }; }
+    if (!hasBase || st.rev !== base) return conflictOut(st.rev);
+    let r;
+    try { r = await save(domain, doc, base, st.sections, body.note || ''); }
+    catch (e) { if (e.conflict) { delete state[domain]; return conflictOut(e.data && e.data.rev); } throw e; }
+    state[domain] = { rev: r.rev, sections: r.sections };
+    const out = { ok: true, status: 'ok', revision: r.rev, updatedAt: kst(), source: 'CLOUDFLARE', changed: r.changed, warning: '' };
+    if (domain === 'raw') out.count = doc.orders.length; if (domain === 'recipe') { out.count = doc.data.length; out.images = doc.data.filter((x) => x.imageData).length; }
+    if (domain === 'ms_inbound') { out.records = (doc.records || []).length; out.returns = (doc.returns || []).length; }
+    return out;
+  }
+  // 메뉴가 쓰는 연결. viaGas = 지금까지처럼 구글 DB로 보내는 함수(body, ms)
+  function gas(domain, viaGas) {
+    if (!RULES[domain]) throw new Error('없는 메뉴입니다: ' + domain);
+    return async function (body, ms) {
+      if (!available()) { // 옛 주소
+        if (MOVED.includes(domain)) throw new Error('이 메뉴의 자료는 새 주소로 옮겼습니다. 새 주소에서 사용해 주세요 → ' + CLOUD_SITE);
+        return viaGas(body, ms);
+      }
+      // 새 주소: 전환 여부를 모르면(서버에 못 닿으면) 구글 DB로 넘기지 않고 멈춤 — 전환된 메뉴를 구글에 저장하는 일을 막기 위해
+      if (await isActive(domain)) return emulate(domain, body);
+      return viaGas(body, ms);
+    };
+  }
+
+  return { DOMAINS, RULES, MOVED, CLOUD_SITE, split, join, splitChecked, diff, sha256, load, save, importFromGas, compareWithGas, available, gasUrl, gas, isActive, setActive, flags, _api: api, _emulate: emulate };
 });
