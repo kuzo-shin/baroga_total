@@ -19,7 +19,7 @@ r = await call('boss@example.com', 'PUT', '/api/perms', { users: { 'not-an-email
 r = await call('kim@example.com', 'GET', '/api/me'); assert.deepStrictEqual([r.j.levels.price, r.j.levels.raw, r.j.levels.invoice, r.j.levels.recipe], ['view', 'view', 'none', 'edit']);
 r = await call('lee@example.com', 'GET', '/api/me'); assert.strictEqual(r.j.levels.price, 'none'); assert.strictEqual(r.j.levels.raw, 'edit'); // 목록에 없는 계정 = 기본값
 r = await call('boss@example.com', 'GET', '/api/me'); assert.strictEqual(r.j.admin, true); assert.strictEqual(r.j.levels.price, 'edit'); // 관리자는 항상 수정
-r = await put1('kim@example.com', 'price', 1); assert.strictEqual(r.s, 403); assert.ok(/보기 권한/.test(r.j.error));
+r = await put1('kim@example.com', 'price', 1); assert.strictEqual(r.s, 403); assert.ok(/조회 권한/.test(r.j.error));
 r = await put1('kim@example.com', 'price_compare', 0); assert.strictEqual(r.s, 403); // 단가 비교는 원재료 권한을 따름
 r = await put1('kim@example.com', 'invoice', 0); assert.strictEqual(r.s, 403);
 r = await put1('lee@example.com', 'price', 1); assert.strictEqual(r.s, 403);

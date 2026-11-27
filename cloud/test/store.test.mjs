@@ -51,8 +51,8 @@ const round = (domain, doc) => { const text = JSON.stringify(doc), s = CS.split(
   round('ms_inbound', { records: [], returns: [], unitPrices: {}, recipeLinks: {}, updatedAt: '' });
   round('price_compare', { items: [{ a: 1 }], hand: 'x', sum: {} });
   assert.throws(() => CS.split('nope', {}));
-  assert.throws(() => CS.join('raw', { _manifest: JSON.stringify({ v: 1, top: ['orders'], parts: { orders: { type: 'arrayByMonth', runs: [['2026-11', 2]] } } }), 'p:orders:2026-11': '[{"id":1}]' }), /모자랍니다/, '조각이 모자라면 오류');
-  assert.throws(() => CS.join('raw', { _manifest: JSON.stringify({ v: 1, top: ['orders'], parts: {} }) }), /조각이 없습니다/);
+  assert.throws(() => CS.join('raw', { _manifest: JSON.stringify({ v: 1, top: ['orders'], parts: { orders: { type: 'arrayByMonth', runs: [['2026-11', 2]] } } }), 'p:orders:2026-11': '[{"id":1}]' }), /개수가 맞지 않습니다/, '조각이 모자라면 오류');
+  assert.throws(() => CS.join('raw', { _manifest: JSON.stringify({ v: 1, top: ['orders'], parts: {} }) }), /찾을 수 없습니다/);
   { const c = CS.splitChecked('raw', { orders: [], f: () => 1, n: NaN, u: undefined }); assert.strictEqual(c.text, '{"orders":[],"n":null}', '함수·undefined 는 빠지고 NaN 은 null (구글 DB에 저장할 때와 같음)'); }
   const d = CS.diff({ a: '1', b: '2', c: '3' }, { a: '1', b: '9', d: '4' }); assert.deepStrictEqual([Object.keys(d.put).sort(), d.del], [['b', 'd'], ['c']]);
 }

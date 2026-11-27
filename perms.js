@@ -1,4 +1,4 @@
-// [VERSION: perms.js v1.1 - 2026-11-27 계정 이름 칸(권한 관리 창) — 화면의 이메일을 이름으로 표시(Perms.nameOf) / v1.0 - 2026-11-27 신규: 계정별 메뉴 권한 적용(숨김·보기·수정) + 관리자용 권한 관리 창]
+// [VERSION: perms.js v1.2 - 2026-11-27 문구: 보기 → 조회 / v1.1 - 2026-11-27 계정 이름 칸(권한 관리 창) — 화면의 이메일을 이름으로 표시(Perms.nameOf) / v1.0 - 2026-11-27 신규: 계정별 메뉴 권한 적용(숨김·보기·수정) + 관리자용 권한 관리 창]
 // ============================================================================
 // 바로가 공장 ERP — 계정별 메뉴 권한 (window.Perms)
 //  - 서버 /api/me 가 알려 주는 내 권한을 화면에 적용: 숨김 = 상단 메뉴에서 가림, 보기 = 메뉴는 보이지만 저장 불가(서버가 거부), 수정 = 지금과 같음
@@ -12,7 +12,7 @@
   if (/(^|\.)github\.io$/i.test(location.hostname) || location.protocol === 'file:') { window.Perms = { level: () => 'edit', nameOf: (e) => String(e || ''), canEdit: () => true, admin: false }; return; }
   const MENUS = [['raw', '원재료'], ['recipe', '레시피'], ['price', '제품단가'], ['production', '생산일지 · 생산 재고'], ['ms_inbound', '제품 출고'], ['ms_stock', '엠즈 재고'], ['invoice', '거래명세서'], ['factory_log', '공장 일지']];
   const TAB_MENU = { RAW: 'raw', RECIPE: 'recipe', PRODUCT_PRICE: 'price', PRODUCTION: 'production', PROD_STOCK: 'production', MS_INBOUND: 'ms_inbound', MS_STOCK: 'ms_stock', INVOICE: 'invoice', FACTORY_LOG: 'factory_log' };
-  const LV = [['edit', '수정'], ['view', '보기'], ['none', '숨김']];
+  const LV = [['edit', '수정'], ['view', '조회'], ['none', '숨김']];
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const toast = (m, t) => { try { if (typeof window.showToast === 'function') window.showToast(m, t || 'info'); } catch (e) {} };
   let me = { email: '', admin: false, levels: {}, names: {} }, ready = false;
@@ -31,7 +31,7 @@
     const lv = level(TAB_MENU[tab] || '');
     if (lv !== 'view') { if (el) el.remove(); return; }
     if (!el) { el = document.createElement('div'); el.id = 'permViewBadge'; el.className = 'fixed bottom-4 left-4 z-40 px-3 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold shadow-lg'; document.body.appendChild(el); }
-    el.textContent = '보기 권한 — 이 메뉴는 고쳐도 저장되지 않습니다';
+    el.textContent = '조회 전용 — 수정 내용은 저장되지 않습니다';
   }
   function apply() {
     Object.entries(TAB_MENU).forEach(([tab, menu]) => { const b = document.getElementById('masterTab_' + tab); if (b) b.style.display = level(menu) === 'none' ? 'none' : ''; });
@@ -67,7 +67,7 @@
       <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[1180px] flex flex-col max-h-[calc(100vh-32px)]">
         <div class="px-5 py-3 border-b border-stone-200 flex items-center justify-between gap-2"><h3 class="text-base font-extrabold text-stone-900">권한 관리 <span class="text-xs font-bold text-stone-500">계정별 · 메뉴별</span></h3><button type="button" onclick="Perms.close()" title="닫기" class="w-8 h-8 inline-flex items-center justify-center rounded-lg text-stone-500 hover:bg-stone-100 cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button></div>
         <div class="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
-          <div class="text-xs text-stone-600 leading-relaxed"><b class="text-emerald-800">수정</b> = 보고 저장할 수 있음 · <b class="text-amber-800">보기</b> = 볼 수만 있음(저장하면 서버가 거부) · <b class="text-rose-800">숨김</b> = 상단 메뉴에서 안 보임.<br>원재료 권한에는 '원재료 단가 비교'가 포함됩니다. <b>이름</b>을 적으면 화면(로그인 표시·저장 기록·공장 일지)에 이메일 대신 이름이 나옵니다. 로그인할 수 있는 계정 자체는 Cloudflare 접속 허용 목록에서 따로 정합니다(여기에 적어도 접속 허용이 되지는 않습니다).</div>
+          <div class="text-xs text-stone-600 leading-relaxed"><b class="text-emerald-800">수정</b> = 조회·저장 가능 · <b class="text-amber-800">조회</b> = 조회만 가능(저장 불가) · <b class="text-rose-800">숨김</b> = 상단 메뉴에 표시되지 않음.<br>원재료 권한에는 '원재료 단가 비교'가 포함됩니다. <b>이름</b>을 적으면 화면(로그인 표시·저장 기록·공장 일지)에 이메일 대신 이름이 나옵니다. 로그인할 수 있는 계정 자체는 Cloudflare 접속 허용 목록에서 따로 정합니다(여기에 적어도 접속 허용이 되지는 않습니다).</div>
           <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm min-w-[1080px]"><thead><tr class="bg-stone-100 text-xs font-extrabold text-stone-600"><th class="py-2 px-2">계정</th><th class="py-2 px-1.5">이름</th>${head}<th class="w-9"></th></tr></thead><tbody>${adminRows}${defRow}${rows || `<tr><td colspan="${MENUS.length + 3}" class="py-4 text-center text-sm text-stone-400">따로 정한 계정이 없습니다. 모두 기본값을 따릅니다.</td></tr>`}</tbody></table></div>
           <div class="flex flex-wrap items-center gap-2"><input id="permsEmailIn" type="email" placeholder="이메일 주소 (예: name@gmail.com)" onkeydown="if(event.key==='Enter'){event.preventDefault();Perms._add(this.value);}" class="border border-stone-300 rounded-lg px-3 h-9 text-sm w-80 max-w-full"><button type="button" onclick="Perms._add(document.getElementById('permsEmailIn').value)" class="px-3 h-9 rounded-xl border border-stone-300 bg-white text-xs font-extrabold text-stone-700 hover:bg-stone-50 cursor-pointer">계정 추가</button></div>
         </div>

@@ -302,7 +302,7 @@
       }
     } catch (e) {
       busy = false;
-      if (e.status === 409) toast('다른 사람이 먼저 고쳤습니다. 닫고 새로 불러온 뒤 다시 고쳐 주세요.', 'error'); else toast('저장 실패: ' + e.message, 'error');
+      if (e.status === 409) toast('다른 사용자가 먼저 수정했습니다. 닫고 새로고침 후 다시 입력해 주세요.', 'error'); else toast('저장 실패: ' + e.message, 'error');
       paintSave(); return;
     }
     busy = false;

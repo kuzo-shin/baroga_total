@@ -1,4 +1,4 @@
-// [VERSION: cloud/src/store.js v1.4 - 2026-11-27 계정 이름(권한 설정에 names) — /api/me 로 모두에게 내려 주어 화면에 이메일 대신 이름 표시 / v1.3 - 2026-11-27 저장 기록(/history: 판별 시각·사람·바뀐 조각, /changes?rev=N: 그 판에서 바뀐 조각의 전·후) / v1.2 - 2026-11-27 계정별 메뉴 권한(수정·보기·숨김) — 저장은 '수정' 권한만 / v1.1 - 2026-11-27 메뉴별 전환 표시(active): 켜진 메뉴만 화면이 Cloudflare 를 읽고 씀 / v1.0 - 2026-11-27 신규: 메뉴별 자료 보관소(조각 저장 + 지난 판 보관) · 구글 DB 원본 백업]
+// [VERSION: cloud/src/store.js v1.5 - 2026-11-27 안내·오류 문구 정리('판'·'조각' 표현 삭제, 보기→조회) / v1.4 - 2026-11-27 계정 이름(권한 설정에 names) — /api/me 로 모두에게 내려 주어 화면에 이메일 대신 이름 표시 / v1.3 - 2026-11-27 저장 기록(/history: 판별 시각·사람·바뀐 조각, /changes?rev=N: 그 판에서 바뀐 조각의 전·후) / v1.2 - 2026-11-27 계정별 메뉴 권한(수정·보기·숨김) — 저장은 '수정' 권한만 / v1.1 - 2026-11-27 메뉴별 전환 표시(active): 켜진 메뉴만 화면이 Cloudflare 를 읽고 씀 / v1.0 - 2026-11-27 신규: 메뉴별 자료 보관소(조각 저장 + 지난 판 보관) · 구글 DB 원본 백업]
 // ============================================================================
 // 메뉴별 자료 보관소 — 구글 시트 DB(메뉴마다 JSON 한 덩어리)를 옮겨 오는 곳
 //  - 메뉴(domain)의 자료를 '조각(section)'으로 나눠 보관: 달별 기록, 품목별 레시피처럼. 바뀐 조각만 올림
@@ -56,7 +56,7 @@ export async function permsFor(env, email) {
 }
 export async function requireLevel(env, email, menu, need) { // need: 'edit' | 'view'
   const lv = (await permsFor(env, email)).levels[menu] || 'edit';
-  if (need === 'edit' && lv !== 'edit') throw new StoreError(403, lv === 'view' ? '이 메뉴는 보기 권한만 있어 저장할 수 없습니다. 관리자에게 수정 권한을 요청해 주세요.' : '이 메뉴를 쓸 권한이 없습니다.', { forbidden: true });
+  if (need === 'edit' && lv !== 'edit') throw new StoreError(403, lv === 'view' ? '이 메뉴는 조회 권한만 있어 저장할 수 없습니다. 관리자에게 수정 권한을 요청해 주세요.' : '이 메뉴를 쓸 권한이 없습니다.', { forbidden: true });
   if (need === 'view' && lv === 'none') throw new StoreError(403, '이 메뉴를 볼 권한이 없습니다.', { forbidden: true });
 }
 export async function getPerms(env, email) {
@@ -144,7 +144,7 @@ export async function historyChanges(env, domain, url) {
   if (!Number.isInteger(R) || R < 1) throw bad('rev 가 필요합니다.');
   const { results: after } = await env.DB.prepare(`SELECT key, data, updated_at, updated_by FROM store_sections WHERE domain = ?1 AND rev = ?2
       UNION ALL SELECT key, data, updated_at, updated_by FROM store_history WHERE domain = ?1 AND rev = ?2`.replace(/\s+/g, ' ')).bind(domain, R).all();
-  if (!after.length) throw new StoreError(404, '이 판의 기록이 없습니다(보관 기간이 지났을 수 있습니다).');
+  if (!after.length) throw new StoreError(404, '이 저장 기록을 찾을 수 없습니다(보관 기간이 지났을 수 있습니다).');
   const rows = after.filter((r) => r.key !== '_manifest');
   const base = { ok: true, domain, rev: R, at: after[0].updated_at, by: after[0].updated_by };
   let bytes = rows.reduce((s, r) => s + (r.data ? r.data.length : 0), 0);
@@ -163,23 +163,23 @@ export async function writeDomain(env, domain, request, email) {
   let b; try { b = await request.json(); } catch (e) { throw bad('보낸 자료를 읽을 수 없습니다.'); }
   const put = b && b.put && typeof b.put === 'object' && !Array.isArray(b.put) ? b.put : {}, del = Array.isArray(b && b.del) ? b.del.map(String) : [];
   const putKeys = Object.keys(put), baseRev = Number(b && b.baseRev);
-  if (!Number.isInteger(baseRev) || baseRev < 0) throw bad('baseRev(불러온 판)이 필요합니다.');
-  if (!putKeys.length && !del.length) throw bad('바뀐 조각이 없습니다.');
-  if (putKeys.length + del.length > MAX.sections) throw bad(`한 번에 조각 ${MAX.sections}개까지 저장할 수 있습니다.`);
+  if (!Number.isInteger(baseRev) || baseRev < 0) throw bad('저장 요청에 불러온 저장 번호가 없습니다. 새로고침 후 다시 시도해 주세요.');
+  if (!putKeys.length && !del.length) throw bad('변경된 내용이 없습니다.');
+  if (putKeys.length + del.length > MAX.sections) throw bad('한 번에 저장할 수 있는 양을 넘었습니다. 관리자에게 알려 주세요.');
   let total = 0; const sizes = {};
-  for (const k of [...putKeys, ...del]) { if (!k || k.length > MAX.key) throw bad('조각 이름이 비었거나 너무 깁니다.'); }
-  if (del.some((k) => putKeys.includes(k))) throw bad('같은 조각을 넣으면서 지울 수 없습니다.');
+  for (const k of [...putKeys, ...del]) { if (!k || k.length > MAX.key) throw bad('저장 요청 형식이 올바르지 않습니다. 관리자에게 알려 주세요.'); }
+  if (del.some((k) => putKeys.includes(k))) throw bad('저장 요청 형식이 올바르지 않습니다(같은 자료를 저장하면서 삭제). 관리자에게 알려 주세요.');
   for (const k of putKeys) {
-    if (typeof put[k] !== 'string') throw bad(`조각 '${k}' 은(는) JSON 글자여야 합니다.`);
-    try { JSON.parse(put[k]); } catch (e) { throw bad(`조각 '${k}' 이(가) 올바른 JSON 이 아닙니다.`); }
+    if (typeof put[k] !== 'string') throw bad(`저장할 자료의 형식이 올바르지 않습니다. 관리자에게 알려 주세요. (${k})`);
+    try { JSON.parse(put[k]); } catch (e) { throw bad(`저장할 자료의 형식이 올바르지 않습니다. 관리자에게 알려 주세요. (${k})`); }
     sizes[k] = byteLen(put[k]); total += sizes[k];
-    if (sizes[k] > MAX.sectionBytes) throw new StoreError(413, `조각 '${k}' 이(가) 너무 큽니다 (${sizes[k]}바이트, 한도 ${MAX.sectionBytes}).`);
+    if (sizes[k] > MAX.sectionBytes) throw new StoreError(413, `저장할 자료가 너무 큽니다. 관리자에게 알려 주세요. (${k} ${sizes[k]}바이트)`);
   }
-  if (total > MAX.totalBytes) throw new StoreError(413, `한 번에 보낼 수 있는 크기를 넘었습니다 (${total}바이트, 한도 ${MAX.totalBytes}).`);
+  if (total > MAX.totalBytes) throw new StoreError(413, `저장할 자료가 너무 큽니다. 관리자에게 알려 주세요. (${total}바이트)`);
 
   const head = await env.DB.prepare('SELECT rev FROM store_domains WHERE domain = ?').bind(domain).first();
   const curRev = head ? head.rev : 0;
-  if (curRev !== baseRev) throw new StoreError(409, '다른 사람이 먼저 저장했습니다. 새로 불러온 뒤 다시 저장해 주세요.', { conflict: true, rev: curRev });
+  if (curRev !== baseRev) throw new StoreError(409, '다른 사용자가 먼저 저장했습니다. 새로고침 후 다시 입력해 주세요.', { conflict: true, rev: curRev });
   const newRev = curRev + 1, now = new Date().toISOString(), token = crypto.randomUUID(), note = String((b && b.note) || '').slice(0, 200);
   // 첫 문장이 '판이 그대로일 때만' 판을 올리고 표식(token)을 남김. 뒤 문장들은 그 표식이 있을 때만 실행 → 동시에 저장해도 한쪽만 들어감
   const guard = 'EXISTS (SELECT 1 FROM store_domains WHERE domain = ? AND rev = ? AND token = ?)';
@@ -215,7 +215,7 @@ export async function writeDomain(env, domain, request, email) {
   const res = await env.DB.batch(st);
   if (!res[0] || !res[0].meta || res[0].meta.changes !== 1) {
     const now2 = await env.DB.prepare('SELECT rev FROM store_domains WHERE domain = ?').bind(domain).first();
-    throw new StoreError(409, '다른 사람이 먼저 저장했습니다. 새로 불러온 뒤 다시 저장해 주세요.', { conflict: true, rev: now2 ? now2.rev : 0 });
+    throw new StoreError(409, '다른 사용자가 먼저 저장했습니다. 새로고침 후 다시 입력해 주세요.', { conflict: true, rev: now2 ? now2.rev : 0 });
   }
   return { ok: true, domain, rev: newRev, updatedAt: now, put: putKeys.length, del: del.length, bytes: total };
 }
