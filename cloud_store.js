@@ -1,4 +1,4 @@
-// [VERSION: cloud_store.js v1.3 - 2026-11-27 8개 메뉴 모두 전환 완료(MOVED) → 옛 주소에서는 DB를 쓰는 메뉴를 막음 / v1.2 - 2026-11-27 거래명세서 전환 완료(MOVED) / v1.1 - 2026-11-27 메뉴별 전환: 구글 DB와 같은 말투로 답하는 연결(gas) · 전환 표시(active) · 옛 주소 차단 목록(MOVED) / v1.0 - 2026-11-27 신규: Cloudflare 자료 보관소 연결(조각으로 나누기·합치기·검증) + 구글 DB에서 가져오기]
+// [VERSION: cloud_store.js v1.4 - 2026-11-27 새 주소의 'DB 연결' 버튼은 구글 주소 입력 대신 Cloudflare 저장 상태 안내(dbInfo) / v1.3 - 2026-11-27 8개 메뉴 모두 전환 완료(MOVED) → 옛 주소에서는 DB를 쓰는 메뉴를 막음 / v1.2 - 2026-11-27 거래명세서 전환 완료(MOVED) / v1.1 - 2026-11-27 메뉴별 전환: 구글 DB와 같은 말투로 답하는 연결(gas) · 전환 표시(active) · 옛 주소 차단 목록(MOVED) / v1.0 - 2026-11-27 신규: Cloudflare 자료 보관소 연결(조각으로 나누기·합치기·검증) + 구글 DB에서 가져오기]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - Cloudflare 자료 보관소 (cloud_store.js)
 //  구글 시트 DB는 메뉴마다 자료 전체를 JSON 한 덩어리로 저장했음. Cloudflare에서는 같은 자료를 '조각'으로 나눠 보관
@@ -259,5 +259,40 @@
     };
   }
 
-  return { DOMAINS, RULES, MOVED, CLOUD_SITE, split, join, splitChecked, diff, sha256, load, save, importFromGas, compareWithGas, available, gasUrl, gas, isActive, setActive, flags, _api: api, _emulate: emulate };
+  // ---------- 새 주소의 'DB 연결' 안내 ----------
+  // 전환된 메뉴는 설정할 DB 주소가 없음 → 구글 주소 입력 창 대신 저장 상태(판·마지막 저장 시각·저장한 사람)를 보여 줌
+  // 돌려주는 값: 안내 창을 띄웠으면 true (메뉴는 원래 창을 열지 않음), 옛 주소 등이면 false
+  const NAMES = { raw: '원재료', recipe: '레시피', price: '제품단가', production: '생산일지 · 생산 재고', ms_inbound: '제품 출고', ms_stock: '엠즈 재고', invoice: '거래명세서', price_compare: '원재료 단가 비교' };
+  const escH = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  function closeInfo() { const el = document.getElementById('cloudDbInfo'); if (el) el.remove(); }
+  function dbInfo(domain) {
+    if (!available() || !MOVED.includes(domain) || typeof document === 'undefined') return false;
+    closeInfo();
+    const el = document.createElement('div');
+    el.id = 'cloudDbInfo';
+    el.className = 'fixed inset-0 bg-stone-950/60 backdrop-blur-xs z-[70] flex items-center justify-center p-4';
+    el.onclick = (e) => { if (e.target === el) closeInfo(); };
+    const body = (inner) => `<div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden text-sm">
+      <div class="px-5 py-3 border-b border-stone-200 flex items-center justify-between"><h3 class="text-base font-extrabold text-stone-900">${escH(NAMES[domain] || domain)} DB</h3>
+        <button type="button" data-close class="text-stone-400 hover:text-stone-700 cursor-pointer" aria-label="닫기"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+      <div class="p-5 space-y-3 text-stone-700">
+        <p>이 메뉴의 자료는 <b>Cloudflare DB</b>에 저장됩니다. 따로 넣을 DB 주소나 접속 코드는 없습니다.</p>
+        ${inner}
+      </div>
+      <div class="px-5 py-3 border-t border-stone-200 flex justify-end"><button type="button" data-close class="px-4 h-9 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold cursor-pointer">닫기</button></div></div>`;
+    const paint = (inner) => { el.innerHTML = body(inner); el.querySelectorAll('[data-close]').forEach((b) => { b.onclick = closeInfo; }); try { if (window.lucide) window.lucide.createIcons(); } catch (e) {} };
+    paint('<p class="text-stone-500">저장 상태를 불러오는 중…</p>');
+    document.body.appendChild(el);
+    api('GET', '/api/store').then((j) => {
+      const d = (j.domains || []).find((x) => x.domain === domain);
+      if (!d) { paint('<p class="text-rose-700 font-bold">서버에 이 메뉴의 자료가 없습니다.</p>'); return; }
+      const kb = d.bytes >= 1048576 ? (d.bytes / 1048576).toFixed(2) + ' MB' : Math.round(d.bytes / 1024).toLocaleString() + ' KB';
+      const row = (k, v) => `<div class="flex gap-3"><dt class="w-24 shrink-0 text-stone-500">${k}</dt><dd class="font-bold text-stone-900 break-all">${v}</dd></div>`;
+      paint(`<dl class="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 space-y-1.5">${row('판', escH(d.rev))}${row('마지막 저장', escH(kst(d.updatedAt)))}${row('저장한 사람', escH(d.updatedBy || '-'))}${row('크기', escH(kb) + ' · 조각 ' + escH(d.sections))}</dl>
+        <p class="text-xs text-stone-500">저장할 때마다 이전 내용도 서버에 보관됩니다.</p>`);
+    }).catch((e) => paint(`<p class="text-rose-700 font-bold">${escH(e && e.message ? e.message : e)}</p>`));
+    return true;
+  }
+
+  return { DOMAINS, RULES, MOVED, CLOUD_SITE, split, join, splitChecked, diff, sha256, load, save, importFromGas, compareWithGas, available, gasUrl, gas, isActive, setActive, flags, _api: api, _emulate: emulate, dbInfo, NAMES };
 });

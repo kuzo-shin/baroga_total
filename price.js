@@ -1,5 +1,5 @@
 // ============================================================================
-// [VERSION: price.js v1.19 - 2026-11-27 DB 요청을 CloudStore 경유로(전환되면 Cloudflare, 그 전에는 구글 DB 그대로) / v1.18 - 2026-11-26 UI 통일: 이모지를 선 아이콘으로 · 탭 높이 맞춤 / v1.17 - 2026-11-24 자동 저장 삭제: [DB 저장](Ctrl+S)을 눌러야 DB에 저장 · 저장 안 된 변경은 상태 배지에 표시, 새로고침 전 확인 / v1.16 - 2026-11-21 PK단위 원가표 행 삭제(중복·공정 DB에 없는 행), 행 추가 시 중복 생성 방지 / v1.15 - 2026-11-21 생산일지 손실 분석용 1배합 실생산(ea)·원재료비 제공 / v1.14 - 2026-11-21 생산일지용 품목 목록(PK 총생산원가 포함) 제공 / v1.13 - 2026-11-20 공정 상세 원재료비 카드도 레시피 실시간 값 표시 / v1.12 3~5단계 (레시피 재료비 실시간 반영·매장 수수료율 설정화·퇴직금 표기 정리) / v1.11 2단계 보안 (급여·고정비·매출·단가 기본값 코드에서 제거, DB 값만 사용) / v1.10 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 빈 DB 자동 덮어쓰기 제거)]
+// [VERSION: price.js v1.20 - 2026-11-27 새 주소에서는 DB 버튼이 Cloudflare 저장 상태 안내 · '구글 시트' 문구를 'DB'로 / price.js v1.19 - 2026-11-27 DB 요청을 CloudStore 경유로(전환되면 Cloudflare, 그 전에는 구글 DB 그대로) / v1.18 - 2026-11-26 UI 통일: 이모지를 선 아이콘으로 · 탭 높이 맞춤 / v1.17 - 2026-11-24 자동 저장 삭제: [DB 저장](Ctrl+S)을 눌러야 DB에 저장 · 저장 안 된 변경은 상태 배지에 표시, 새로고침 전 확인 / v1.16 - 2026-11-21 PK단위 원가표 행 삭제(중복·공정 DB에 없는 행), 행 추가 시 중복 생성 방지 / v1.15 - 2026-11-21 생산일지 손실 분석용 1배합 실생산(ea)·원재료비 제공 / v1.14 - 2026-11-21 생산일지용 품목 목록(PK 총생산원가 포함) 제공 / v1.13 - 2026-11-20 공정 상세 원재료비 카드도 레시피 실시간 값 표시 / v1.12 3~5단계 (레시피 재료비 실시간 반영·매장 수수료율 설정화·퇴직금 표기 정리) / v1.11 2단계 보안 (급여·고정비·매출·단가 기본값 코드에서 제거, DB 값만 사용) / v1.10 1단계 데이터 손실 방지 (저장 응답 확인 · 리비전 충돌 방지 · 불러오기 실패 시 저장 중지 · 빈 DB 자동 덮어쓰기 제거)]
 // 바로가 공장 통합 관리 시스템 - 제품단가 전용 모듈 (price.js)
 // ============================================================================
 (function () {
@@ -1488,6 +1488,7 @@
       };
 
       const openPriceDbConfigModal = () => {
+        if (window.CloudStore && window.CloudStore.dbInfo && window.CloudStore.dbInfo('price')) return; // 새 주소: Cloudflare 저장 상태 안내
         setDraftPriceGasUrl(priceGasUrl || DEFAULT_PRICE_GAS_WEB_APP_URL);
         setIsPriceDbModalOpen(true);
       };
@@ -1580,7 +1581,7 @@
             setSyncStatus('SUCCESS');
             setPriceSyncedKind('저장됨');
             setLastSyncedAt(nowHm());
-            if (!silent) showToast('제품단가 구글 스프레드시트 DB에 저장되었습니다!');
+            if (!silent) showToast('제품단가 DB에 저장되었습니다!');
             if (parsed.warning) showToast(`저장은 완료됐지만 ${parsed.warning}`);
           } else if (parsed && parsed.conflict) {
             priceDbLoadedRef.current = false;
@@ -1599,7 +1600,7 @@
           markPriceError(isTimeout ? '저장 확인 필요' : 'DB 저장 실패');
           showToast(isTimeout
             ? '저장 응답이 없습니다(시간 초과). ↻ 불러오기로 실제 저장 여부를 확인해 주세요.'
-            : `구글 시트 저장 실패: ${err && err.message ? err.message : err} — 변경 내용은 이 기기에만 있습니다.`);
+            : `DB 저장 실패: ${err && err.message ? err.message : err} — 변경 내용은 이 기기에만 있습니다.`);
         } finally {
           priceSavingRef.current = false;
           if (!saveOk) priceFailedJsonRef.current = sentJson;
@@ -1702,7 +1703,7 @@
             setPriceSyncedKind('불러옴');
             setPriceLoadTick((t) => t + 1);
             if (!silentOnEmpty) {
-              showToast('제품단가 구글 스프레드시트에서 최신 DB를 불러왔습니다!');
+              showToast('제품단가 DB에서 최신 자료를 불러왔습니다!');
             }
           } else {
             throw new Error(result?.message || '인식할 수 없는 응답 형식');
@@ -2178,7 +2179,7 @@
         const totalMatched = codeMatchedCnt + nameMatchedCnt;
         if (totalMatched > 0) {
           showToast(
-            `[레시피 연동 완료] 총 ${totalMatched}종 반영 (품목코드 일치 ${codeMatchedCnt}건 · 이름 일치 ${nameMatchedCnt}건) — [구글시트 저장]을 눌러 확정하세요!`
+            `[레시피 연동 완료] 총 ${totalMatched}종 반영 (품목코드 일치 ${codeMatchedCnt}건 · 이름 일치 ${nameMatchedCnt}건) — [DB 저장]을 눌러 확정하세요!`
           );
         } else {
           showToast(
@@ -3708,7 +3709,7 @@
                       type: "button",
                       onClick: () => handleLoadFromGoogleSheet(false),
                       disabled: syncStatus === 'LOADING' || syncStatus === 'SAVING',
-                      title: "구글 시트 새로고침",
+                      title: "DB 새로고침",
                       className: "flex items-center justify-center w-9 h-9 rounded-xl border border-stone-200 bg-white hover:bg-stone-100 text-stone-700 transition cursor-pointer disabled:opacity-50"
                     },
                       React.createElement("span", { className: `inline-flex items-center justify-center ${syncStatus === 'LOADING' ? 'animate-spin' : ''}` },
