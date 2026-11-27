@@ -1,4 +1,4 @@
-// [VERSION: factory_log.js v1.0 - 2026-11-27 신규: 공장 일지(달력 · 일어난 일/사후 대처 · 담당자 · 체크리스트 · 사진), DB는 Cloudflare(D1 + R2)]
+// [VERSION: factory_log.js v1.1 - 2026-11-27 서버 기본 주소를 실제 만든 Worker(baroga-total)로 / v1.0 - 2026-11-27 신규: 공장 일지(달력 · 일어난 일/사후 대처 · 담당자 · 체크리스트 · 사진), DB는 Cloudflare(D1 + R2)]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - 공장 일지 (factory_log.js)
 //  - 생산과 상관없이 공장에서 있었던 일(기계 고장·수리, 누수 등)을 달력에 기록
@@ -11,7 +11,7 @@
 // ============================================================================
 (function () {
   'use strict';
-  const DEFAULT_URL = 'https://baroga-erp.kuzo0909.workers.dev'; // Cloudflare 서버 주소 (다른 주소를 쓸 때만 [DB 설정]에서 바꿈)
+  const DEFAULT_URL = 'https://baroga-total.kuzo0909.workers.dev'; // Cloudflare 서버 주소 (다른 주소를 쓸 때만 [DB 설정]에서 바꿈)
   const URL_KEY = 'baroga_cloud_api_url', CODE_KEY = 'baroga_access_code';
   const PHOTO_MAX = 20, PHOTO_EDGE = 2000, PHOTO_Q = 0.85;
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -318,7 +318,7 @@
   function closeDbModal() { if (cur) return; const h = document.getElementById('flModal'); if (h) h.innerHTML = ''; }
   function saveDbUrl() {
     const v = String((document.getElementById('flUrlIn') || {}).value || '').trim().replace(/\/+$/, '');
-    if (v && !/^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(v)) { toast('주소 형식이 맞지 않습니다 (예: https://baroga-erp.xxxx.workers.dev).', 'error'); return; }
+    if (v && !/^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(v)) { toast('주소 형식이 맞지 않습니다 (예: https://baroga-total.xxxx.workers.dev).', 'error'); return; }
     try { if (v) localStorage.setItem(URL_KEY, v); else localStorage.removeItem(URL_KEY); } catch (e) {}
     closeDbModal(); toast('서버 주소를 저장했습니다.', 'success'); pull(true);
   }

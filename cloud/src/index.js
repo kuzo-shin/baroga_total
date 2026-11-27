@@ -179,7 +179,7 @@ export default {
     const cors = corsHeaders(request, env), url = new URL(request.url), path = url.pathname.replace(/\/+$/, '') || '/', m = request.method;
     if (m === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     try {
-      if (path === '/api/health' && m === 'GET') return json({ ok: true, service: 'baroga-erp', accessCode: !!env.ACCESS_CODE, db: !!env.DB, photos: !!env.PHOTOS }, 200, cors);
+      if (path === '/api/health' && m === 'GET') return json({ ok: true, service: 'baroga-total', accessCode: !!env.ACCESS_CODE, db: !!env.DB, photos: !!env.PHOTOS }, 200, cors);
       if (!path.startsWith('/api/')) return json({ ok: false, error: '바로가 공장 ERP 서버입니다. 화면은 ERP 사이트에서 열어 주세요.' }, 404, cors);
       checkAccess(request, env);
       await ensureSchema(env);
