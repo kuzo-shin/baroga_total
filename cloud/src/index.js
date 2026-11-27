@@ -1,4 +1,4 @@
-// [VERSION: cloud/src/index.js v1.5 - 2026-11-27 저장 기록(/api/store/:메뉴/history · /changes) / v1.4 - 2026-11-27 계정별 메뉴 권한(/api/perms, /api/me 에 권한 포함, 공장 일지 저장·삭제는 수정 권한만) / v1.3 - 2026-11-27 메뉴 전환 표시(/api/store-active) / v1.2 - 2026-11-27 메뉴별 자료 보관소(/api/store)·구글 DB 원본 백업(/api/backup) 추가 / v1.1 - 2026-11-27 접속 코드 대신 Cloudflare Access 로그인(허용한 구글 계정) · 작성자/수정자 기록 · 화면 파일도 이 서버에서 제공 / v1.0 - 2026-11-27 신규: 공장 일지 API (D1 + R2)]
+// [VERSION: cloud/src/index.js v1.6 - 2026-11-27 /api/me 에 계정 이름(names) / v1.5 - 2026-11-27 저장 기록(/api/store/:메뉴/history · /changes) / v1.4 - 2026-11-27 계정별 메뉴 권한(/api/perms, /api/me 에 권한 포함, 공장 일지 저장·삭제는 수정 권한만) / v1.3 - 2026-11-27 메뉴 전환 표시(/api/store-active) / v1.2 - 2026-11-27 메뉴별 자료 보관소(/api/store)·구글 DB 원본 백업(/api/backup) 추가 / v1.1 - 2026-11-27 접속 코드 대신 Cloudflare Access 로그인(허용한 구글 계정) · 작성자/수정자 기록 · 화면 파일도 이 서버에서 제공 / v1.0 - 2026-11-27 신규: 공장 일지 API (D1 + R2)]
 // ============================================================================
 // 바로가 공장 ERP — Cloudflare Worker (DB: D1, 사진: R2, 화면: assets)
 //  - 화면 파일(index.html·*.js)과 /api/* 를 같은 주소에서 제공
@@ -172,7 +172,7 @@ export default {
       try { email = await getEmail(request, env); }
       catch (e) { throw new HttpError(e.status || 401, e.message, e.status === 503 ? {} : { unauthorized: true }); }
       await ensureSchema(env);
-      if (path === '/api/me' && m === 'GET') { const p = await permsFor(env, email); return json({ ok: true, email, db: !!env.DB, photos: !!env.PHOTOS, admin: p.admin, levels: p.levels }); }
+      if (path === '/api/me' && m === 'GET') { const p = await permsFor(env, email); return json({ ok: true, email, db: !!env.DB, photos: !!env.PHOTOS, admin: p.admin, levels: p.levels, names: p.names }); }
       if (path === '/api/perms' && m === 'GET') return json(await getPerms(env, email));
       if (path === '/api/perms' && m === 'PUT') return json(await putPerms(env, request, email));
       let mm;

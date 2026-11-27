@@ -34,3 +34,8 @@ await call('boss@example.com', 'PUT', '/api/perms', { users: { 'kim@example.com'
 r = await call('kim@example.com', 'GET', '/api/factory-log?from=2026-11-01&to=2026-11-30'); assert.strictEqual(r.s, 403);
 r = await put1('kim@example.com', 'price', 2); assert.strictEqual(r.s, 200); // 설정에서 빠지면 다시 기본(수정)
 console.log('perms.test: 모두 통과');
+// 계정 이름: 목록에 있는 계정·관리자만, 30자까지. /api/me 로 모두에게 내려감
+r = await call('boss@example.com', 'PUT', '/api/perms', { users: { 'kim@example.com': {} }, names: { 'Kim@Example.com': ' 김철수 ', 'boss@example.com': '대표', 'ghost@example.com': '없는사람', 'x@example.com': '' } });
+assert.deepStrictEqual(r.j.names, { 'kim@example.com': '김철수', 'boss@example.com': '대표' });
+r = await call('lee@example.com', 'GET', '/api/me'); assert.deepStrictEqual(r.j.names, { 'kim@example.com': '김철수', 'boss@example.com': '대표' });
+console.log('perms.test(이름): 통과');

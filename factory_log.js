@@ -1,4 +1,4 @@
-// [VERSION: factory_log.js v1.6 - 2026-11-27 위 카드를 반으로: 왼쪽 미완료 일감(노랑), 오른쪽 완료된 일감(초록, 보고 있는 달력 기간) / v1.5 - 2026-11-27 달력 토·일 열을 좁게, 월~금을 넓게 / v1.4 - 2026-11-27 이름 바꿈(미완료 일감·완료된 일감·미완료 일감 체크리스트) · 미완료 일감 체크리스트를 달력 위로 / v1.3 - 2026-11-27 담당자는 직접 입력만, 일지 창 키움(일어난 일·사후 대처 칸 크게), 달력 막대 앞 색 띠 없앰 / v1.2 - 2026-11-27 접속 코드 대신 로그인(Cloudflare Access) · 새 주소에서만 동작 · 작성자/수정자 표시 / v1.1 - 2026-11-27 서버 기본 주소를 실제 만든 Worker(baroga-total)로 / v1.0 - 2026-11-27 신규: 공장 일지(달력 · 일어난 일/사후 대처 · 담당자 · 체크리스트 · 사진), DB는 Cloudflare(D1 + R2)]
+// [VERSION: factory_log.js v1.7 - 2026-11-27 작성·수정한 사람을 이름으로 표시 / v1.6 - 2026-11-27 위 카드를 반으로: 왼쪽 미완료 일감(노랑), 오른쪽 완료된 일감(초록, 보고 있는 달력 기간) / v1.5 - 2026-11-27 달력 토·일 열을 좁게, 월~금을 넓게 / v1.4 - 2026-11-27 이름 바꿈(미완료 일감·완료된 일감·미완료 일감 체크리스트) · 미완료 일감 체크리스트를 달력 위로 / v1.3 - 2026-11-27 담당자는 직접 입력만, 일지 창 키움(일어난 일·사후 대처 칸 크게), 달력 막대 앞 색 띠 없앰 / v1.2 - 2026-11-27 접속 코드 대신 로그인(Cloudflare Access) · 새 주소에서만 동작 · 작성자/수정자 표시 / v1.1 - 2026-11-27 서버 기본 주소를 실제 만든 Worker(baroga-total)로 / v1.0 - 2026-11-27 신규: 공장 일지(달력 · 일어난 일/사후 대처 · 담당자 · 체크리스트 · 사진), DB는 Cloudflare(D1 + R2)]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - 공장 일지 (factory_log.js)
 //  - 생산과 상관없이 공장에서 있었던 일(기계 고장·수리, 누수 등)을 달력에 기록
@@ -84,6 +84,7 @@
   const openCount = (l) => (l.checklist || []).filter((c) => !c.done).length;
   // 달력 열 너비 (v1.5): 월~금 넓게, 토·일(업무 없음)은 좁게. 막대가 주말에 걸쳐도 이어지도록 7열은 그대로 둠
   const COLS = 'repeat(5, minmax(0, 1fr)) minmax(56px, 0.32fr) minmax(56px, 0.32fr)';
+  const who = (email) => { try { return window.Perms && window.Perms.nameOf ? window.Perms.nameOf(email) : email; } catch (e) { return email; } }; // 권한 관리에 적은 이름
   function tone(l) { // 막대 색: 체크리스트가 남음 = 노랑, 다 끝남 = 초록, 체크리스트 없음 = 회색
     const n = (l.checklist || []).length, o = openCount(l);
     if (n && o) return { bar: 'bg-amber-100 border-amber-500 text-amber-950 hover:bg-amber-200', dot: 'bg-amber-500' };
@@ -178,7 +179,7 @@
   const snap = () => JSON.stringify([cur, newPhotos.map((p) => p.tmp), delPhotos]);
   const isDirty = () => !!cur && snap() !== curSaved;
   function startEdit(l) {
-    cur = { id: l.id || '', rev: l.rev || 0, by: l.id ? [l.createdBy || '', l.updatedBy || '', String(l.createdAt || '').slice(0, 10), String(l.updatedAt || '').slice(0, 10)] : null, start: l.start, end: l.end, title: l.title || '', happened: l.happened || '', action: l.action || '', assignees: (l.assignees || []).slice(), checklist: (l.checklist || []).map((c) => Object.assign({}, c)), photos: (l.photos || []).slice() };
+    cur = { id: l.id || '', rev: l.rev || 0, by: l.id ? [who(l.createdBy || ''), who(l.updatedBy || ''), String(l.createdAt || '').slice(0, 10), String(l.updatedAt || '').slice(0, 10)] : null, start: l.start, end: l.end, title: l.title || '', happened: l.happened || '', action: l.action || '', assignees: (l.assignees || []).slice(), checklist: (l.checklist || []).map((c) => Object.assign({}, c)), photos: (l.photos || []).slice() };
     newPhotos.forEach((p) => { try { URL.revokeObjectURL(p.url); } catch (e) {} }); newPhotos = []; delPhotos = []; curSaved = snap(); busy = false; renderEditor();
   }
   function newAt(d) { if (API_BASE === null) { toast('공장 일지는 새 주소에서만 쓸 수 있습니다.', 'error'); return; } if (cur && isDirty() && !confirm('쓰던 일지가 저장되지 않았습니다. 버리고 새로 쓸까요?')) return; const day = d || (today().slice(0, 7) === ym ? today() : ym + '-01'); startEdit({ start: day, end: day }); setTimeout(() => { const t = document.getElementById('flTitle'); if (t) t.focus(); }, 30); }

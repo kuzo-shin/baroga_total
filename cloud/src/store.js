@@ -1,4 +1,4 @@
-// [VERSION: cloud/src/store.js v1.3 - 2026-11-27 저장 기록(/history: 판별 시각·사람·바뀐 조각, /changes?rev=N: 그 판에서 바뀐 조각의 전·후) / v1.2 - 2026-11-27 계정별 메뉴 권한(수정·보기·숨김) — 저장은 '수정' 권한만 / v1.1 - 2026-11-27 메뉴별 전환 표시(active): 켜진 메뉴만 화면이 Cloudflare 를 읽고 씀 / v1.0 - 2026-11-27 신규: 메뉴별 자료 보관소(조각 저장 + 지난 판 보관) · 구글 DB 원본 백업]
+// [VERSION: cloud/src/store.js v1.4 - 2026-11-27 계정 이름(권한 설정에 names) — /api/me 로 모두에게 내려 주어 화면에 이메일 대신 이름 표시 / v1.3 - 2026-11-27 저장 기록(/history: 판별 시각·사람·바뀐 조각, /changes?rev=N: 그 판에서 바뀐 조각의 전·후) / v1.2 - 2026-11-27 계정별 메뉴 권한(수정·보기·숨김) — 저장은 '수정' 권한만 / v1.1 - 2026-11-27 메뉴별 전환 표시(active): 켜진 메뉴만 화면이 Cloudflare 를 읽고 씀 / v1.0 - 2026-11-27 신규: 메뉴별 자료 보관소(조각 저장 + 지난 판 보관) · 구글 DB 원본 백업]
 // ============================================================================
 // 메뉴별 자료 보관소 — 구글 시트 DB(메뉴마다 JSON 한 덩어리)를 옮겨 오는 곳
 //  - 메뉴(domain)의 자료를 '조각(section)'으로 나눠 보관: 달별 기록, 품목별 레시피처럼. 바뀐 조각만 올림
@@ -44,14 +44,15 @@ async function permsRaw(env) {
   const r = await env.DB.prepare("SELECT value, updated_at, updated_by FROM store_flags WHERE key = 'perms'").first();
   let v = {}; try { v = JSON.parse(r ? r.value : '{}') || {}; } catch (e) { v = {}; }
   const users = {}; Object.entries(v.users && typeof v.users === 'object' ? v.users : {}).forEach(([e, l]) => { users[String(e).toLowerCase()] = cleanLevels(l); });
-  return { def: cleanLevels(v.def), users, updatedAt: r ? r.updated_at : '', updatedBy: r ? r.updated_by : '' };
+  const names = {}; Object.entries(v.names && typeof v.names === 'object' ? v.names : {}).forEach(([e, n]) => { const t = String(n || '').trim().slice(0, 30); if (t) names[String(e).toLowerCase()] = t; });
+  return { def: cleanLevels(v.def), users, names, updatedAt: r ? r.updated_at : '', updatedBy: r ? r.updated_by : '' };
 }
 export async function permsFor(env, email) {
-  const admin = isAdmin(env, email), levels = {};
-  if (admin) { MENUS.forEach((m) => { levels[m] = 'edit'; }); return { admin, levels }; }
-  const p = await permsRaw(env), u = p.users[String(email || '').toLowerCase()] || {};
+  const admin = isAdmin(env, email), levels = {}, p = await permsRaw(env);
+  if (admin) { MENUS.forEach((m) => { levels[m] = 'edit'; }); return { admin, levels, names: p.names }; }
+  const u = p.users[String(email || '').toLowerCase()] || {};
   MENUS.forEach((m) => { levels[m] = u[m] || p.def[m] || 'edit'; });
-  return { admin, levels };
+  return { admin, levels, names: p.names };
 }
 export async function requireLevel(env, email, menu, need) { // need: 'edit' | 'view'
   const lv = (await permsFor(env, email)).levels[menu] || 'edit';
@@ -61,7 +62,7 @@ export async function requireLevel(env, email, menu, need) { // need: 'edit' | '
 export async function getPerms(env, email) {
   if (!isAdmin(env, email)) throw new StoreError(403, '관리자만 권한 설정을 볼 수 있습니다.');
   const p = await permsRaw(env);
-  return { ok: true, menus: MENUS, levels: LEVELS, admins: adminList(env), def: p.def, users: p.users, updatedAt: p.updatedAt, updatedBy: p.updatedBy };
+  return { ok: true, menus: MENUS, levels: LEVELS, admins: adminList(env), def: p.def, users: p.users, names: p.names, updatedAt: p.updatedAt, updatedBy: p.updatedBy };
 }
 export async function putPerms(env, request, email) {
   if (!isAdmin(env, email)) throw new StoreError(403, '관리자만 권한 설정을 바꿀 수 있습니다.');
@@ -74,7 +75,9 @@ export async function putPerms(env, request, email) {
     users[em] = cleanLevels(l);
   }
   if (Object.keys(users).length > 200) throw bad('계정은 200개까지 넣을 수 있습니다.');
-  const value = JSON.stringify({ def: cleanLevels(b && b.def), users }), now = new Date().toISOString();
+  const names = {}, nsrc = b && b.names && typeof b.names === 'object' && !Array.isArray(b.names) ? b.names : {};
+  for (const [e, n] of Object.entries(nsrc)) { const em = String(e).trim().toLowerCase(), t = String(n || '').trim().slice(0, 30); if (t && (users[em] || adminList(env).includes(em))) names[em] = t; }
+  const value = JSON.stringify({ def: cleanLevels(b && b.def), users, names }), now = new Date().toISOString();
   await env.DB.prepare("INSERT OR REPLACE INTO store_flags (key, value, updated_at, updated_by) VALUES ('perms', ?, ?, ?)").bind(value, now, email).run();
   return getPerms(env, email);
 }

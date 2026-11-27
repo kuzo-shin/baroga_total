@@ -1,4 +1,4 @@
-// [VERSION: cloud_store.js v1.5 - 2026-11-27 DB 창에 '저장 기록'(판별 시각·사람·바뀐 부분) + [바뀐 내용 보기](항목별 전 → 후) / v1.4 - 2026-11-27 새 주소의 'DB 연결' 버튼은 구글 주소 입력 대신 Cloudflare 저장 상태 안내(dbInfo) / v1.3 - 2026-11-27 8개 메뉴 모두 전환 완료(MOVED) → 옛 주소에서는 DB를 쓰는 메뉴를 막음 / v1.2 - 2026-11-27 거래명세서 전환 완료(MOVED) / v1.1 - 2026-11-27 메뉴별 전환: 구글 DB와 같은 말투로 답하는 연결(gas) · 전환 표시(active) · 옛 주소 차단 목록(MOVED) / v1.0 - 2026-11-27 신규: Cloudflare 자료 보관소 연결(조각으로 나누기·합치기·검증) + 구글 DB에서 가져오기]
+// [VERSION: cloud_store.js v1.6 - 2026-11-27 저장한 사람을 이름으로 표시(권한 관리에 적은 이름) / v1.5 - 2026-11-27 DB 창에 '저장 기록'(판별 시각·사람·바뀐 부분) + [바뀐 내용 보기](항목별 전 → 후) / v1.4 - 2026-11-27 새 주소의 'DB 연결' 버튼은 구글 주소 입력 대신 Cloudflare 저장 상태 안내(dbInfo) / v1.3 - 2026-11-27 8개 메뉴 모두 전환 완료(MOVED) → 옛 주소에서는 DB를 쓰는 메뉴를 막음 / v1.2 - 2026-11-27 거래명세서 전환 완료(MOVED) / v1.1 - 2026-11-27 메뉴별 전환: 구글 DB와 같은 말투로 답하는 연결(gas) · 전환 표시(active) · 옛 주소 차단 목록(MOVED) / v1.0 - 2026-11-27 신규: Cloudflare 자료 보관소 연결(조각으로 나누기·합치기·검증) + 구글 DB에서 가져오기]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - Cloudflare 자료 보관소 (cloud_store.js)
 //  구글 시트 DB는 메뉴마다 자료 전체를 JSON 한 덩어리로 저장했음. Cloudflare에서는 같은 자료를 '조각'으로 나눠 보관
@@ -265,6 +265,7 @@
   const NAMES = { raw: '원재료', recipe: '레시피', price: '제품단가', production: '생산일지 · 생산 재고', ms_inbound: '제품 출고', ms_stock: '엠즈 재고', invoice: '거래명세서', price_compare: '원재료 단가 비교' };
   const escH = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   function closeInfo() { const el = document.getElementById('cloudDbInfo'); if (el) el.remove(); }
+  const who = (email) => { try { return (typeof window !== 'undefined' && window.Perms && window.Perms.nameOf) ? window.Perms.nameOf(email) : String(email || ''); } catch (e) { return String(email || ''); } };
   // ---------- 저장 기록: 무엇이 바뀌었나 (v1.5) ----------
   const TOP_KO = { days: '생산일지', pack: '포장 완료', crew: '작업 인원', scrap: '파지', semiItems: '반제품 목록', stockBase: '재고 실사', stockAdjusts: '재고 조정', loss: '손실 기준', crewCfg: '인원 설정', orders: '발주·재고 기록', data: '레시피', categoryDbs: '제품단가', settings: '설정', pkCostRows: 'PK 원가표', records: '출고 기록', returns: '회송', unitPrices: '매입가', recipeLinks: '레시피 연결', hist: '발주 이력', docs: '거래명세서', items: '품목', calls: '전화 목록', quotes: '견적', vendors: '업체', recheck: '재확인 기록', sum: '요약' };
   const FIELD_KO = { actual: '실행', actualPk: '실행 PK', target: '목표', targetPk: '목표 PK', pk: '포장 PK', memo: '메모', note: '비고', lines: '품목', semi: '반제품', items: '품목', off: '휴무', offLabel: '휴무 이름', pkManual: 'PK 직접 입력', pricePk: '단가', pkPerBatch: '1배합 PK', name: '이름', unit: '단위', price: '가격', qty: '수량', weightG: '중량(g)', unitPrice: '단가', colB: '품목', colC: '규격', colD: '수량', amount: '금액', date: '날짜', used: '사용', waste: '폐기', stock: '재고', title: '제목', batchOutputEa: '1배합 생산 개수', pkQuantityEa: 'PK당 개수', productName: '제품명', sellingPrice: '판매가', divisionWeight: '분할 중량', lossRatio: '손실률', ingredients: '재료', ingredientsJson: '재료' };
@@ -342,7 +343,7 @@
     if (!j.revs.length) return '<p class="text-xs text-stone-500">저장 기록이 없습니다.</p>';
     return `<div class="rounded-xl border border-stone-200 divide-y divide-stone-100 max-h-[46vh] overflow-y-auto">${j.revs.map((r) => {
       const tops = [...new Set(r.keys.filter((k) => k !== 'k:updatedAt' && k !== 'k:importedAt').map((k) => sectionLabel(k)[0] + (/^p:[^:]+:(\d{4}-\d{2})/.test(k) ? ' ' + RegExp.$1 : '')))];
-      return `<div class="px-3 py-2"><div class="flex flex-wrap items-center gap-x-3 gap-y-1"><b class="tabular-nums text-stone-900">판 ${escH(r.rev)}</b><span class="tabular-nums text-stone-600">${escH(kst(r.at))}</span><span class="text-stone-600">${escH(r.by || '-')}</span><button type="button" data-rev="${escH(r.rev)}" class="ml-auto px-2.5 h-7 rounded-lg border border-stone-300 bg-white text-xs font-bold text-stone-700 hover:bg-stone-50 cursor-pointer">바뀐 내용 보기</button></div>
+      return `<div class="px-3 py-2"><div class="flex flex-wrap items-center gap-x-3 gap-y-1"><b class="tabular-nums text-stone-900">판 ${escH(r.rev)}</b><span class="tabular-nums text-stone-600">${escH(kst(r.at))}</span><span class="text-stone-600" title="${escH(r.by || '')}">${escH(who(r.by) || '-')}</span><button type="button" data-rev="${escH(r.rev)}" class="ml-auto px-2.5 h-7 rounded-lg border border-stone-300 bg-white text-xs font-bold text-stone-700 hover:bg-stone-50 cursor-pointer">바뀐 내용 보기</button></div>
         <div class="mt-0.5 text-xs text-stone-500">바뀐 부분: ${tops.slice(0, 8).map(escH).join(' · ') || '-'}${tops.length > 8 ? ` 외 ${tops.length - 8}` : ''}${r.note ? ` · 메모: ${escH(r.note)}` : ''}</div><div data-changes="${escH(r.rev)}"></div></div>`;
     }).join('')}</div><p class="text-xs text-stone-500">최근 ${j.revs.length}판 · 지난 내용은 180일 동안 보관됩니다. 2026-11-27 Cloudflare 전환 이전 기록은 없습니다.</p>`;
   }
@@ -370,7 +371,7 @@
       if (!d) { paint('<p class="text-rose-700 font-bold">서버에 이 메뉴의 자료가 없습니다.</p>'); return; }
       const kb = d.bytes >= 1048576 ? (d.bytes / 1048576).toFixed(2) + ' MB' : Math.round(d.bytes / 1024).toLocaleString() + ' KB';
       const row = (k, v) => `<div class="flex gap-3"><dt class="w-24 shrink-0 text-stone-500">${k}</dt><dd class="font-bold text-stone-900 break-all">${v}</dd></div>`;
-      paint(`<dl class="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 space-y-1.5">${row('판', escH(d.rev))}${row('마지막 저장', escH(kst(d.updatedAt)))}${row('저장한 사람', escH(d.updatedBy || '-'))}${row('크기', escH(kb) + ' · 조각 ' + escH(d.sections))}</dl>
+      paint(`<dl class="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 space-y-1.5">${row('판', escH(d.rev))}${row('마지막 저장', escH(kst(d.updatedAt)))}${row('저장한 사람', escH(who(d.updatedBy) || '-'))}${row('크기', escH(kb) + ' · 조각 ' + escH(d.sections))}</dl>
         <div class="text-sm font-extrabold text-stone-900 pt-1">저장 기록</div><div id="cloudDbHist" class="space-y-2"><p class="text-xs text-stone-500">불러오는 중…</p></div>`);
       const hh = el.querySelector('#cloudDbHist');
       api('GET', `/api/store/${domain}/history`).then((h) => {
