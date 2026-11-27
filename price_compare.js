@@ -1,4 +1,4 @@
-// [VERSION: price_compare.js v1.5 - 2026-11-27 새 주소에서는 DB 연결 버튼이 Cloudflare 저장 상태 안내 / price_compare.js v1.4 - 2026-11-27 DB 요청을 CloudStore 경유로(전환되면 Cloudflare, 그 전에는 구글 DB 그대로) / v1.3 - 2026-11-26 UI 통일: 표 머리 · 최소 글자 12px / v1.2 - 2026-11-23 품목명 줄바꿈 없이 넓게, 1·2순위 업체명 한 줄로 자름, '더 듦'→'더 비쌈' / v1.1 - 2026-11-23 기본 DB 주소 등록 / v1.0 - 2026-11-23 신규: 원재료 > 5. 원재료 단가 비교 (Claude 조사 HTML 8개 탭 이관, 시스템 디자인)]
+// [VERSION: price_compare.js v1.6 - 2026-11-27 후보 가격 재확인을 화면에서 반영(recheckTargets·recheckApply → 확인 창 → [DB에 저장]은 사람이) / v1.5 - 2026-11-27 새 주소에서는 DB 연결 버튼이 Cloudflare 저장 상태 안내 / price_compare.js v1.4 - 2026-11-27 DB 요청을 CloudStore 경유로(전환되면 Cloudflare, 그 전에는 구글 DB 그대로) / v1.3 - 2026-11-26 UI 통일: 표 머리 · 최소 글자 12px / v1.2 - 2026-11-23 품목명 줄바꿈 없이 넓게, 1·2순위 업체명 한 줄로 자름, '더 듦'→'더 비쌈' / v1.1 - 2026-11-23 기본 DB 주소 등록 / v1.0 - 2026-11-23 신규: 원재료 > 5. 원재료 단가 비교 (Claude 조사 HTML 8개 탭 이관, 시스템 디자인)]
 //  - 자료(후보 가격·업체 연락처·견적 메일·재확인 기록)는 공개 저장소에 두지 않고 '원재료 단가 비교 DB'(GAS 6_price_compare.gs)에만 저장
 //  - [자료 가져오기]: Claude가 만든 단가 비교 HTML(baroga_price_compare.html) 또는 JSON 파일을 골라 → 내용 확인 → DB에 통째로 저장
 //  - 화면은 읽기 전용 (전화·메일·구매는 이 화면에서 하지 않음)
@@ -43,7 +43,7 @@
 
   // ---------- 상태 ----------
   let data = null; // DB에 저장된 자료 { items, calls, quotes, summary, diffs, vendors, recheck, sum, hand, notes, source, importedAt }
-  let dbRevision = null, loaded = false, loading = false, saving = false, statusText = '', pending = null;
+  let dbRevision = null, loaded = false, loading = false, saving = false, statusText = '', pending = null, pendingReport = null;
   let view = 'rank', filt = 'pri30', q = '', cq = '', qf = 'sheet', qq = '', rcq = '', rcf = '', dq = '', vq = '';
   const open = new Set();
   const root = () => document.getElementById('priceCompareRoot');
@@ -100,7 +100,7 @@
         d.items.forEach((it) => { delete it.curPhoto; (it.rows || []).forEach((v) => { delete v.img; }); });
         d.importedAt = new Date().toISOString();
         d.source = Object.assign({}, d.source, { file: f.name });
-        pending = d;
+        pending = d; pendingReport = null;
         openImportModal();
       } catch (e) { toast('파일을 읽지 못했습니다: ' + e.message, 'error'); }
     };
@@ -139,8 +139,41 @@
       ${row('품목', d.items.length, cur && cur.items.length)}${row('업체별 연락처', d.calls.length, cur && cur.calls.length)}${row('견적 메일 초안', d.quotes.length, cur && cur.quotes.length)}
       ${row('최근 재확인 줄', d.recheck.length, cur && cur.recheck.length)}${row('1순위 요약', d.summary.length, cur && cur.summary.length)}${row('125품목 차액', d.diffs.length, cur && cur.diffs.length)}
       ${row('거래처 전체', d.vendors.length, cur && cur.vendors.length)}${row('인계서 글자 수', d.hand.length.toLocaleString('ko-KR'), cur && cur.hand.length.toLocaleString('ko-KR'))}${row('업데이트 메모', d.notes.length, cur && cur.notes.length)}</table>
+      ${reportHtml(pendingReport)}
       <p class="mt-3 text-xs text-stone-500">저장하면 DB의 단가 비교 자료 전체가 이 파일 내용으로 바뀝니다. 제품 사진은 용량 때문에 저장하지 않습니다(업체 이름을 누르면 상품 페이지가 열립니다).</p></div>
       <div class="px-5 py-3 border-t border-stone-200 flex justify-end gap-2"><button type="button" onclick="PriceCmp.closeModal()" class="px-4 py-2 rounded-xl border border-stone-300 text-sm font-bold cursor-pointer">취소</button><button type="button" onclick="PriceCmp.saveImport()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">DB에 저장</button></div>`);
+  }
+  // 후보 가격 재확인 결과 요약 (확인 창 안)
+  function reportHtml(r) {
+    if (!r) return '';
+    const a = r.acts || {}, li = (t) => `<li>${t}</li>`;
+    const rv = (r.review || []).slice(0, 12).map((x) => li(`${esc(x.name)} · ${esc(x.vendor)} ${won(x.old)} → ${won(x.new)}원 (${x.pct > 0 ? '+' : ''}${esc(x.pct)}%)${x.judge ? ' — ' + esc(x.judge) : ''}`)).join('');
+    const vc = (r.vendorChanged || []).map((x) => li(`${esc(x.name)}: ${esc(x.from || '-')} → ${esc(x.to || '-')}`)).join('');
+    const so = (r.newSoldOut || []).map((x) => li(`${esc(x.name)} · ${esc(x.vendor)}`)).join('');
+    return `<div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-950 space-y-1.5">
+      <div class="font-extrabold text-sm">후보 가격 재확인 ${esc(r.stamp)} · ${esc(r.checked)}건</div>
+      <div>자동 반영 <b>${a.apply || 0}</b> · 가격 같음 <b>${a.confirm || 0}</b> · 확인 필요 <b>${a.review || 0}</b> · 확인 불가 <b>${a.none || 0}</b> · 재고 칸 갱신 ${esc(r.stockUpdated)} · 순위 바뀐 품목 ${esc(r.touched)} · 1순위 업체 바뀐 품목 ${esc(r.vchg)}</div>
+      ${rv ? `<div><b>확인 필요 (값은 그대로 둠)</b><ul class="list-disc pl-5">${rv}</ul></div>` : ''}
+      ${vc ? `<div><b>1순위 업체가 바뀐 품목</b><ul class="list-disc pl-5">${vc}</ul></div>` : ''}
+      ${so ? `<div><b>새로 품절</b><ul class="list-disc pl-5">${so}</ul></div>` : ''}
+      ${(r.kept || []).length ? `<div class="text-amber-800">원래 값이 계산 규칙과 달라 그대로 둔 칸: ${esc(r.kept.join(', '))}</div>` : ''}
+    </div>`;
+  }
+  // ---------- 후보 가격 재확인 (Claude 가 크롬에서 실행: 목록 꺼내기 → 상품 페이지 확인 → 반영. 저장은 사람이 [DB에 저장]) ----------
+  function recheckTargets(maxPri) {
+    if (!loaded || !data) throw new Error('먼저 원재료 단가 비교 자료를 불러와야 합니다');
+    if (!window.PriceRecheck) throw new Error('재확인 계산 모듈(price_recheck.js)이 없습니다');
+    return window.PriceRecheck.targets(data, maxPri);
+  }
+  function recheckApply(results, opt) {
+    if (!loaded || !data) throw new Error('먼저 원재료 단가 비교 자료를 불러와야 합니다');
+    if (!window.PriceRecheck) throw new Error('재확인 계산 모듈(price_recheck.js)이 없습니다');
+    const out = window.PriceRecheck.apply(data, results, opt);
+    pending = normalize(out.doc); pending.importedAt = new Date().toISOString(); pendingReport = out.report;
+    // 원재료 → 5. 원재료 단가 비교 화면으로 옮긴 뒤 확인 창을 띄움 (화면을 다시 그리면 창이 지워지므로 나중에)
+    try { if (typeof window.switchMasterDomain === 'function') window.switchMasterDomain('RAW'); if (typeof window.switchWorkspace === 'function') window.switchWorkspace('COMPARE'); } catch (e) {}
+    openImportModal();
+    return out.report;
   }
   async function saveImport() {
     if (!pending || saving) return;
@@ -152,7 +185,7 @@
         throw new Error((json && (json.message || json.error)) || '저장 실패');
       }
       dbRevision = Number(json.revision) || dbRevision;
-      data = pending; pending = null;
+      data = pending; pending = null; pendingReport = null;
       setStatus('저장됨 ' + nowHm() + ' · ' + data.items.length + '품목');
       toast('단가 비교 자료를 DB에 저장했습니다.' + (json.warning ? ' (' + json.warning + ')' : ''), 'success');
     } catch (e) {
@@ -618,5 +651,5 @@
     if (first && getUrl() && !loaded && !loading) { first = false; pull(false); }
   }
 
-  window.PriceCmp = { mount, pull, pickFile, saveImport, openDbModal, saveDbUrl, closeModal, setView, setFilter, setQf, toggle, openItem, expandAll, collapseAll };
+  window.PriceCmp = { mount, pull, pickFile, saveImport, recheckTargets, recheckApply, isLoaded: () => loaded && !!data, openDbModal, saveDbUrl, closeModal, setView, setFilter, setQf, toggle, openItem, expandAll, collapseAll };
 })();
