@@ -46,7 +46,7 @@
       const rows = it.rows || [], on = (g) => !off(g, it.code);
       rows.forEach((r, ri) => { if (!off('row.grade', it.code) && !off('row.grade', it.code + '#' + ri)) r.grade = gradeOf(r); });
       if (on('row.rank')) {
-        rows.forEach((r) => { if (!rankable(r)) r.rank = null; });
+        rows.forEach((r) => { if (!rankable(r) && r.rank != null) r.rank = null; }); // 순위가 없던 후보(칸 없음)는 그대로
         rows.filter(rankable).sort((a, b) => a.wkg - b.wkg).forEach((r, i) => { r.rank = i + 1; });
       }
       const best = rows.find((r) => r.rank === 1);
