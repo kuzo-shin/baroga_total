@@ -1,22 +1,21 @@
 # 바로가 공장 ERP — Cloudflare 서버 (cloud/)
 
-공장 ERP의 DB를 구글 시트에서 Cloudflare로 순서대로 옮기는 첫 단계입니다. 지금은 **공장 일지** 메뉴만 이 서버를 씁니다. 나머지 메뉴는 그대로 구글 시트 DB를 씁니다.
+공장 ERP를 구글 시트 DB에서 Cloudflare로 순서대로 옮기는 중입니다. 화면과 서버를 한 주소에서 제공하고, 허용한 구글 계정으로 로그인한 사람만 열 수 있습니다.
 
+- **주소**: `https://baroga-total.kuzo0909.workers.dev` (새 주소, 로그인 필요). 옛 주소(GitHub Pages)는 이식이 끝날 때까지 함께 둠
 - **서버**: Cloudflare Worker `baroga-total` (`cloud/src/index.js`, 설정은 저장소 맨 위 `wrangler.jsonc`)
-- **글**: D1 `baroga-erp-db` · **사진**: R2 `baroga-erp-photos` (둘 다 첫 배포 때 자동으로 만들어짐)
-- **화면**: 지금처럼 GitHub Pages (`factory_log.js`). 화면이 이 서버를 불러 자료를 주고받음
-- **보호**: 다른 메뉴와 같은 접속 코드. 서버 쪽 코드는 Cloudflare 화면에서 비밀값 `ACCESS_CODE`로 넣음 (저장소에는 적지 않음). 넣기 전에는 서버가 모든 요청을 거부
-- **주소**: `https://baroga-total.kuzo0909.workers.dev`
+- **화면**: 배포할 때 `index.html`·`*.js`·`*.png`만 `.site/`로 모아 함께 올림
+- **글**: D1 `baroga-erp-db` · **사진**: R2 `baroga-erp-photos`
+- **로그인**: Cloudflare Access. Worker → Access 탭의 정책에 든 계정만 통과. 서버는 요청마다 Access 토큰의 서명·대상·만료를 다시 확인(`cloud/src/auth.js`)하고 이메일을 작성자·수정자로 남김
+  - `wrangler.jsonc`의 `ACCESS_TEAM_DOMAIN`·`ACCESS_AUD`는 Access 탭의 Application values 값(비밀값 아님). 없으면 서버가 모든 요청을 거부
+- **이식 현황**: 공장 일지 = Cloudflare. 원재료·레시피·제품단가·생산일지·생산 재고·제품 출고·엠즈 재고·거래명세서 = 아직 구글 시트(접속 코드 그대로)
 
-## 처음 배포 (한 번만)
-
-1. **R2 켜기**: Cloudflare 화면 왼쪽 **R2 Object Storage** → 사용 시작 (2026-11-27 켜져 있음 확인)
-2. **저장소 연결**: **Workers & Pages → Create → Continue with GitHub** → `baroga_total` (2026-11-27 Worker `baroga-total`로 연결됨)
-   - Build command 비움 · Deploy command `npx wrangler deploy` · Root directory 비움
-   - **Protect with Cloudflare Access는 켜지 않음** (화면이 github.io에서 불러야 해서, 켜면 막힘)
-3. main에 머지하면 자동 배포. 저장소 맨 위 `wrangler.jsonc`를 읽어 서버 코드만 올리고 D1·R2를 자동으로 만듦. 표(테이블)는 서버가 첫 요청 때 만듦
-4. **접속 코드 넣기**: Worker `baroga-total` → **Settings → Variables and Secrets → Add** → Type **Secret**, 이름 `ACCESS_CODE`, 값 = ERP 사이트 접속 코드 → 저장(Deploy)
-5. **확인**: 브라우저에서 `https://baroga-total.kuzo0909.workers.dev/api/health` → `"accessCode":true,"db":true,"photos":true` 이면 정상
+## 설정 기록 (2026-11-27)
+1. R2 켜짐, Worker `baroga-total`이 저장소에 연결됨 (Build command 비움 · Deploy command `npx wrangler deploy` · Root directory 비움)
+2. main에 머지하면 자동 배포. D1·R2는 첫 배포 때 자동 생성됨
+3. Worker → **Access** 탭 → Protect this Worker behind Access → Scope **All traffic**, 정책 **Cloudflare account members**(계정 주인만) 로 시작
+4. 직원을 들이려면: Zero Trust → Access controls → Policies 에서 공장용 정책(Allow · Emails)을 만들어 이 Worker에 연결
+5. 구글 로그인 버튼: Zero Trust → Integrations → Identity providers 에 Google 추가(Google Cloud 콘솔에서 OAuth 클라이언트를 만들어 Client ID·Secret 입력). 추가 전에는 이메일 코드(One-time PIN)로 로그인
 
 주의: `wrangler.jsonc`의 `name`은 Cloudflare에 만든 Worker 이름과 같아야 합니다.
 
@@ -24,14 +23,14 @@
 
 | 방식 | 주소 | 하는 일 |
 |---|---|---|
-| GET | `/api/health` | 서버 상태 (접속 코드 없이, 자료 없음) |
+| GET | `/api/me` | 로그인한 사람의 이메일 |
 | GET | `/api/factory-log?from=&to=` | 그 기간에 걸친 일지 + 체크리스트가 남은 일지 |
 | PUT | `/api/factory-log` | 일지 한 건 새로 만들기·고치기 (고칠 때 `id`·`rev`) |
 | DELETE | `/api/factory-log/:id` | 일지와 그 사진 삭제 |
 | POST | `/api/factory-log/:id/photos?name=` | 사진 한 장 올리기 (JPG·PNG·WEBP, 8MB까지, 일지당 20장) |
 | GET · DELETE | `/api/photos/:id` | 사진 내려받기 · 삭제 |
 
-모든 요청(health 제외)은 머리말 `X-Access-Code: encodeURIComponent(접속 코드)`가 필요합니다. 여러 사람이 같은 일지를 고치면 `rev`가 다른 쪽은 거부됩니다(409).
+모든 요청은 로그인(Access)을 거쳐야 합니다. 여러 사람이 같은 일지를 고치면 `rev`가 다른 쪽은 거부됩니다(409).
 
 ## 시험
 
