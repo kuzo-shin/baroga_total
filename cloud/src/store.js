@@ -1,4 +1,4 @@
-// [VERSION: cloud/src/store.js v1.2 - 2026-11-27 계정별 메뉴 권한(수정·보기·숨김) — 저장은 '수정' 권한만 / v1.1 - 2026-11-27 메뉴별 전환 표시(active): 켜진 메뉴만 화면이 Cloudflare 를 읽고 씀 / v1.0 - 2026-11-27 신규: 메뉴별 자료 보관소(조각 저장 + 지난 판 보관) · 구글 DB 원본 백업]
+// [VERSION: cloud/src/store.js v1.3 - 2026-11-27 저장 기록(/history: 판별 시각·사람·바뀐 조각, /changes?rev=N: 그 판에서 바뀐 조각의 전·후) / v1.2 - 2026-11-27 계정별 메뉴 권한(수정·보기·숨김) — 저장은 '수정' 권한만 / v1.1 - 2026-11-27 메뉴별 전환 표시(active): 켜진 메뉴만 화면이 Cloudflare 를 읽고 씀 / v1.0 - 2026-11-27 신규: 메뉴별 자료 보관소(조각 저장 + 지난 판 보관) · 구글 DB 원본 백업]
 // ============================================================================
 // 메뉴별 자료 보관소 — 구글 시트 DB(메뉴마다 JSON 한 덩어리)를 옮겨 오는 곳
 //  - 메뉴(domain)의 자료를 '조각(section)'으로 나눠 보관: 달별 기록, 품목별 레시피처럼. 바뀐 조각만 올림
@@ -121,6 +121,37 @@ export async function readDomain(env, domain, url) {
   const { results } = await env.DB.prepare('SELECT key, data FROM store_sections WHERE domain = ?').bind(domain).all();
   const sections = {}; results.forEach((r) => { sections[r.key] = r.data; });
   return { ok: true, domain, rev: head.rev, updatedAt: head.updated_at, updatedBy: head.updated_by, note: head.note, sections };
+}
+
+// 저장 기록: 판마다 언제·누가·어느 조각을 바꿨는지 (지난 판 보관 기간 안에서, 최근 60판)
+export async function historyList(env, domain) {
+  domainOf(domain);
+  const head = await env.DB.prepare('SELECT rev, note FROM store_domains WHERE domain = ?').bind(domain).first();
+  if (!head) return { ok: true, domain, rev: 0, revs: [] };
+  const { results } = await env.DB.prepare(`SELECT rev, MIN(updated_at) AS at, MAX(updated_by) AS by, COUNT(*) AS n, SUM(CASE WHEN data IS NULL THEN 1 ELSE 0 END) AS removed, GROUP_CONCAT(key, char(10)) AS keys FROM (
+      SELECT key, rev, data, updated_at, updated_by FROM store_sections WHERE domain = ?1
+      UNION ALL SELECT key, rev, data, updated_at, updated_by FROM store_history WHERE domain = ?1
+    ) GROUP BY rev ORDER BY rev DESC LIMIT 60`.replace(/[ \t]*\n[ \t]*/g, ' ')).bind(domain).all();
+  return { ok: true, domain, rev: head.rev, revs: results.map((r) => ({ rev: r.rev, at: r.at, by: r.by, sections: r.n, removed: r.removed, keys: String(r.keys || '').split('\n').filter((k) => k && k !== '_manifest').slice(0, 40), note: r.rev === head.rev ? head.note : '' })) };
+}
+// 그 판에서 바뀐 조각의 전(바로 앞 판 때 내용)·후. 조각이 많은 판(처음 가져오기 등)은 조각 이름만
+export async function historyChanges(env, domain, url) {
+  domainOf(domain);
+  const R = Number(url.searchParams.get('rev'));
+  if (!Number.isInteger(R) || R < 1) throw bad('rev 가 필요합니다.');
+  const { results: after } = await env.DB.prepare(`SELECT key, data, updated_at, updated_by FROM store_sections WHERE domain = ?1 AND rev = ?2
+      UNION ALL SELECT key, data, updated_at, updated_by FROM store_history WHERE domain = ?1 AND rev = ?2`.replace(/\s+/g, ' ')).bind(domain, R).all();
+  if (!after.length) throw new StoreError(404, '이 판의 기록이 없습니다(보관 기간이 지났을 수 있습니다).');
+  const rows = after.filter((r) => r.key !== '_manifest');
+  const base = { ok: true, domain, rev: R, at: after[0].updated_at, by: after[0].updated_by };
+  let bytes = rows.reduce((s, r) => s + (r.data ? r.data.length : 0), 0);
+  if (rows.length > 12 || bytes > 3000000) return { ...base, tooBig: true, keys: rows.map((r) => r.key).slice(0, 200), count: rows.length };
+  const changes = [];
+  for (const r of rows) {
+    const prev = await env.DB.prepare('SELECT data, rev FROM store_history WHERE domain = ? AND key = ? AND rev < ? ORDER BY rev DESC LIMIT 1').bind(domain, r.key, R).first();
+    changes.push({ key: r.key, before: prev ? prev.data : null, beforeRev: prev ? prev.rev : null, after: r.data });
+  }
+  return { ...base, changes };
 }
 
 export async function writeDomain(env, domain, request, email) {

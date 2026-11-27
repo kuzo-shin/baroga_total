@@ -1,4 +1,4 @@
-// [VERSION: cloud_store.js v1.4 - 2026-11-27 새 주소의 'DB 연결' 버튼은 구글 주소 입력 대신 Cloudflare 저장 상태 안내(dbInfo) / v1.3 - 2026-11-27 8개 메뉴 모두 전환 완료(MOVED) → 옛 주소에서는 DB를 쓰는 메뉴를 막음 / v1.2 - 2026-11-27 거래명세서 전환 완료(MOVED) / v1.1 - 2026-11-27 메뉴별 전환: 구글 DB와 같은 말투로 답하는 연결(gas) · 전환 표시(active) · 옛 주소 차단 목록(MOVED) / v1.0 - 2026-11-27 신규: Cloudflare 자료 보관소 연결(조각으로 나누기·합치기·검증) + 구글 DB에서 가져오기]
+// [VERSION: cloud_store.js v1.5 - 2026-11-27 DB 창에 '저장 기록'(판별 시각·사람·바뀐 부분) + [바뀐 내용 보기](항목별 전 → 후) / v1.4 - 2026-11-27 새 주소의 'DB 연결' 버튼은 구글 주소 입력 대신 Cloudflare 저장 상태 안내(dbInfo) / v1.3 - 2026-11-27 8개 메뉴 모두 전환 완료(MOVED) → 옛 주소에서는 DB를 쓰는 메뉴를 막음 / v1.2 - 2026-11-27 거래명세서 전환 완료(MOVED) / v1.1 - 2026-11-27 메뉴별 전환: 구글 DB와 같은 말투로 답하는 연결(gas) · 전환 표시(active) · 옛 주소 차단 목록(MOVED) / v1.0 - 2026-11-27 신규: Cloudflare 자료 보관소 연결(조각으로 나누기·합치기·검증) + 구글 DB에서 가져오기]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - Cloudflare 자료 보관소 (cloud_store.js)
 //  구글 시트 DB는 메뉴마다 자료 전체를 JSON 한 덩어리로 저장했음. Cloudflare에서는 같은 자료를 '조각'으로 나눠 보관
@@ -265,6 +265,81 @@
   const NAMES = { raw: '원재료', recipe: '레시피', price: '제품단가', production: '생산일지 · 생산 재고', ms_inbound: '제품 출고', ms_stock: '엠즈 재고', invoice: '거래명세서', price_compare: '원재료 단가 비교' };
   const escH = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   function closeInfo() { const el = document.getElementById('cloudDbInfo'); if (el) el.remove(); }
+  // ---------- 저장 기록: 무엇이 바뀌었나 (v1.5) ----------
+  const TOP_KO = { days: '생산일지', pack: '포장 완료', crew: '작업 인원', scrap: '파지', semiItems: '반제품 목록', stockBase: '재고 실사', stockAdjusts: '재고 조정', loss: '손실 기준', crewCfg: '인원 설정', orders: '발주·재고 기록', data: '레시피', categoryDbs: '제품단가', settings: '설정', pkCostRows: 'PK 원가표', records: '출고 기록', returns: '회송', unitPrices: '매입가', recipeLinks: '레시피 연결', hist: '발주 이력', docs: '거래명세서', items: '품목', calls: '전화 목록', quotes: '견적', vendors: '업체', recheck: '재확인 기록', sum: '요약' };
+  const FIELD_KO = { actual: '실행', actualPk: '실행 PK', target: '목표', targetPk: '목표 PK', pk: '포장 PK', memo: '메모', note: '비고', lines: '품목', semi: '반제품', items: '품목', off: '휴무', offLabel: '휴무 이름', pkManual: 'PK 직접 입력', pricePk: '단가', pkPerBatch: '1배합 PK', name: '이름', unit: '단위', price: '가격', qty: '수량', weightG: '중량(g)', unitPrice: '단가', colB: '품목', colC: '규격', colD: '수량', amount: '금액', date: '날짜', used: '사용', waste: '폐기', stock: '재고', title: '제목', batchOutputEa: '1배합 생산 개수', pkQuantityEa: 'PK당 개수', productName: '제품명', sellingPrice: '판매가', divisionWeight: '분할 중량', lossRatio: '손실률', ingredients: '재료', ingredientsJson: '재료' };
+  const SKIP = new Set(['updatedAt', 'importedAt', 'at', 'savedAt']);
+  const lab = (o) => (isObj(o) ? (o.name || o.productName || o.item || o.title || o.colB || o.vendor || '') : '');
+  const idOf = (o) => (isObj(o) ? (o.id != null ? o.id : o.rowId != null ? o.rowId : o.code != null ? o.code : o.productCode != null ? o.productCode : null) : null);
+  const short = (v) => { if (v === undefined) return '(없음)'; if (v === null) return '(비움)'; if (v === '') return '(빈칸)'; if (typeof v === 'boolean') return v ? '예' : '아니오'; const t = typeof v === 'object' ? (lab(v) ? `${lab(v)} …` : JSON.stringify(v)) : String(v); return t.length > 70 ? t.slice(0, 70) + '…' : t; };
+  const maybeJson = (v) => { if (typeof v !== 'string' || !/^\s*[[{]/.test(v)) return v; try { return JSON.parse(v); } catch (e) { return v; } };
+  function walkDiff(a, b, path, out) {
+    if (out.length >= 300) return;
+    a = maybeJson(a); b = maybeJson(b);
+    if (Array.isArray(a) && Array.isArray(b)) {
+      const keyed = (arr) => arr.length > 0 && arr.every((x) => idOf(x) != null) && new Set(arr.map((x) => String(idOf(x)))).size === arr.length;
+      if ((keyed(a) || !a.length) && (keyed(b) || !b.length) && (a.length || b.length)) {
+        const ma = new Map(a.map((x) => [String(idOf(x)), x])), mb = new Map(b.map((x) => [String(idOf(x)), x]));
+        b.forEach((x) => { const k = String(idOf(x)), o = ma.get(k); if (!o) out.push({ path: path.concat(lab(x) || k), kind: 'add', b: x }); else walkDiff(o, x, path.concat(lab(x) || k), out); });
+        a.forEach((x) => { const k = String(idOf(x)); if (!mb.has(k)) out.push({ path: path.concat(lab(x) || k), kind: 'del', a: x }); });
+        return;
+      }
+      if (a.length === b.length) { a.forEach((x, i) => walkDiff(x, b[i], path.concat(lab(b[i]) || lab(x) || `${i + 1}번째`), out)); return; }
+      if (JSON.stringify(a) !== JSON.stringify(b)) out.push({ path, kind: 'set', a: `${a.length}줄`, b: `${b.length}줄` });
+      return;
+    }
+    if (isObj(a) && isObj(b)) {
+      new Set([...Object.keys(a), ...Object.keys(b)]).forEach((k) => {
+        if (SKIP.has(k)) return;
+        const seg = FIELD_KO[k] || k;
+        if (!(k in a)) { if (isObj(b[k]) || Array.isArray(b[k])) out.push({ path: path.concat(lab(b[k]) ? `${seg} ${lab(b[k])}` : seg), kind: 'add', b: b[k] }); else if (b[k] !== '' && b[k] !== null && b[k] !== 0 && b[k] !== false) out.push({ path: path.concat(seg), kind: 'set', a: undefined, b: b[k] }); }
+        else if (!(k in b)) out.push({ path: path.concat(seg), kind: 'del', a: a[k] });
+        else walkDiff(a[k], b[k], path.concat(seg), out);
+      });
+      return;
+    }
+    if (JSON.stringify(a) !== JSON.stringify(b)) out.push({ path, kind: 'set', a, b });
+  }
+  // 조각 이름 → 사람이 읽는 이름
+  function sectionLabel(key, sample) {
+    const m = /^([kp]):([^:]+)(?::(.*))?$/.exec(key); if (!m) return [key];
+    const top = TOP_KO[m[2]] || m[2];
+    if (m[1] === 'k' || !m[3] || /^\d{4}-\d{2}/.test(m[3])) return [top];
+    return [top, lab(sample) || m[3]];
+  }
+  function changesOf(list) { // list: [{ key, before, after }] (JSON 글자) → [{ path:[], kind, a, b }]
+    const out = [];
+    (list || []).forEach((c) => {
+      const a = c.before == null ? undefined : JSON.parse(c.before), b = c.after == null ? undefined : JSON.parse(c.after), pre = sectionLabel(c.key, b !== undefined ? b : a);
+      if (a === undefined) out.push({ path: pre, kind: 'add', b }); else if (b === undefined) out.push({ path: pre, kind: 'del', a }); else walkDiff(a, b, pre, out);
+    });
+    return out;
+  }
+  function changesHtml(ch) {
+    if (!ch.length) return '<div class="text-xs text-stone-500">내용 차이가 없습니다(순서·저장 시각만 바뀜).</div>';
+    const tag = { add: '<span class="px-1.5 rounded bg-emerald-100 text-emerald-800 font-bold">추가</span>', del: '<span class="px-1.5 rounded bg-rose-100 text-rose-800 font-bold">삭제</span>' };
+    const rows = ch.slice(0, 200).map((c) => `<div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 py-1 border-b border-stone-100 last:border-0"><span class="text-stone-500">${c.path.map(escH).join(' › ')}</span>${c.kind === 'set' ? `<span class="font-bold text-stone-500 line-through decoration-stone-300">${escH(short(c.a))}</span><span class="text-stone-400">→</span><b class="text-stone-900">${escH(short(c.b))}</b>` : `${tag[c.kind]}<span class="text-stone-700">${escH(short(c.kind === 'add' ? c.b : c.a))}</span>`}</div>`).join('');
+    return `<div class="text-xs">${rows}${ch.length > 200 ? `<div class="pt-1 text-stone-500">외 ${ch.length - 200}곳</div>` : ''}</div>`;
+  }
+  async function showChanges(domain, rev, host) {
+    if (host.dataset.open === '1') { host.dataset.open = ''; host.innerHTML = ''; return; }
+    host.dataset.open = '1'; host.innerHTML = '<div class="text-xs text-stone-500 py-1">불러오는 중…</div>';
+    try {
+      const j = await api('GET', `/api/store/${domain}/changes?rev=${rev}`);
+      if (j.tooBig) { host.innerHTML = `<div class="text-xs text-stone-500 py-1">한 번에 조각 ${escH(j.count)}개가 저장된 판입니다(처음 가져오기·통째 교체). 항목별 비교는 생략합니다.</div>`; return; }
+      const ch = changesOf(j.changes);
+      host.innerHTML = `<div class="mt-1 rounded-lg border border-stone-200 bg-white px-3 py-1.5 max-h-72 overflow-y-auto"><div class="text-xs font-bold text-stone-500 pb-1">바뀐 곳 ${ch.length}곳${ch.length >= 300 ? ' 이상' : ''}</div>${changesHtml(ch)}</div>`;
+    } catch (e) { host.innerHTML = `<div class="text-xs text-rose-700 font-bold py-1">${escH(e.message || e)}</div>`; }
+  }
+  function historyHtml(domain, j) {
+    if (!j.revs.length) return '<p class="text-xs text-stone-500">저장 기록이 없습니다.</p>';
+    return `<div class="rounded-xl border border-stone-200 divide-y divide-stone-100 max-h-[46vh] overflow-y-auto">${j.revs.map((r) => {
+      const tops = [...new Set(r.keys.map((k) => sectionLabel(k)[0] + (/^p:[^:]+:(\d{4}-\d{2})/.test(k) ? ' ' + RegExp.$1 : '')))];
+      return `<div class="px-3 py-2"><div class="flex flex-wrap items-center gap-x-3 gap-y-1"><b class="tabular-nums text-stone-900">판 ${escH(r.rev)}</b><span class="tabular-nums text-stone-600">${escH(kst(r.at))}</span><span class="text-stone-600">${escH(r.by || '-')}</span><button type="button" data-rev="${escH(r.rev)}" class="ml-auto px-2.5 h-7 rounded-lg border border-stone-300 bg-white text-xs font-bold text-stone-700 hover:bg-stone-50 cursor-pointer">바뀐 내용 보기</button></div>
+        <div class="mt-0.5 text-xs text-stone-500">바뀐 부분: ${tops.slice(0, 8).map(escH).join(' · ') || '-'}${tops.length > 8 ? ` 외 ${tops.length - 8}` : ''}${r.note ? ` · 메모: ${escH(r.note)}` : ''}</div><div data-changes="${escH(r.rev)}"></div></div>`;
+    }).join('')}</div><p class="text-xs text-stone-500">최근 ${j.revs.length}판 · 지난 내용은 180일 동안 보관됩니다. 2026-11-27 Cloudflare 전환 이전 기록은 없습니다.</p>`;
+  }
+
   function dbInfo(domain) {
     if (!available() || !MOVED.includes(domain) || typeof document === 'undefined') return false;
     closeInfo();
@@ -272,7 +347,7 @@
     el.id = 'cloudDbInfo';
     el.className = 'fixed inset-0 bg-stone-950/60 backdrop-blur-xs z-[70] flex items-center justify-center p-4';
     el.onclick = (e) => { if (e.target === el) closeInfo(); };
-    const body = (inner) => `<div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden text-sm">
+    const body = (inner) => `<div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[calc(100vh-32px)] overflow-y-auto text-sm">
       <div class="px-5 py-3 border-b border-stone-200 flex items-center justify-between"><h3 class="text-base font-extrabold text-stone-900">${escH(NAMES[domain] || domain)} DB</h3>
         <button type="button" data-close class="text-stone-400 hover:text-stone-700 cursor-pointer" aria-label="닫기"><i data-lucide="x" class="w-5 h-5"></i></button></div>
       <div class="p-5 space-y-3 text-stone-700">
@@ -289,10 +364,16 @@
       const kb = d.bytes >= 1048576 ? (d.bytes / 1048576).toFixed(2) + ' MB' : Math.round(d.bytes / 1024).toLocaleString() + ' KB';
       const row = (k, v) => `<div class="flex gap-3"><dt class="w-24 shrink-0 text-stone-500">${k}</dt><dd class="font-bold text-stone-900 break-all">${v}</dd></div>`;
       paint(`<dl class="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 space-y-1.5">${row('판', escH(d.rev))}${row('마지막 저장', escH(kst(d.updatedAt)))}${row('저장한 사람', escH(d.updatedBy || '-'))}${row('크기', escH(kb) + ' · 조각 ' + escH(d.sections))}</dl>
-        <p class="text-xs text-stone-500">저장할 때마다 이전 내용도 서버에 보관됩니다.</p>`);
+        <div class="text-sm font-extrabold text-stone-900 pt-1">저장 기록</div><div id="cloudDbHist" class="space-y-2"><p class="text-xs text-stone-500">불러오는 중…</p></div>`);
+      const hh = el.querySelector('#cloudDbHist');
+      api('GET', `/api/store/${domain}/history`).then((h) => {
+        if (!hh || !hh.isConnected) return;
+        hh.innerHTML = historyHtml(domain, h);
+        hh.querySelectorAll('button[data-rev]').forEach((b) => { b.onclick = () => showChanges(domain, b.dataset.rev, hh.querySelector(`[data-changes="${b.dataset.rev}"]`)); });
+      }).catch((e) => { if (hh) hh.innerHTML = `<p class="text-xs text-rose-700 font-bold">저장 기록을 불러오지 못했습니다: ${escH(e.message || e)}</p>`; });
     }).catch((e) => paint(`<p class="text-rose-700 font-bold">${escH(e && e.message ? e.message : e)}</p>`));
     return true;
   }
 
-  return { DOMAINS, RULES, MOVED, CLOUD_SITE, split, join, splitChecked, diff, sha256, load, save, importFromGas, compareWithGas, available, gasUrl, gas, isActive, setActive, flags, _api: api, _emulate: emulate, dbInfo, NAMES };
+  return { DOMAINS, RULES, MOVED, CLOUD_SITE, split, join, splitChecked, diff, sha256, load, save, importFromGas, compareWithGas, available, gasUrl, gas, isActive, setActive, flags, _api: api, _emulate: emulate, dbInfo, NAMES, _changesOf: changesOf };
 });
