@@ -19,7 +19,19 @@
   "vars": {
     // Cloudflare Access (Worker → Access 탭의 Application values). 서버가 로그인 토큰의 서명·대상을 확인할 때 씀. 비밀값 아님
     "ACCESS_TEAM_DOMAIN": "nameless-band-cc7c.cloudflareaccess.com",
-    "ACCESS_AUD": "4247fc17eee4908e07be912968bd9229a54364c155f1e28d99580ae517c92b3e"
+    "ACCESS_AUD": "4247fc17eee4908e07be912968bd9229a54364c155f1e28d99580ae517c92b3e",
+      // 메뉴 전환(구글 DB → Cloudflare)을 켜고 끌 수 있는 사람 (쉼표로 여러 명)
+      "ADMIN_EMAILS": "kuzo0909@gmail.com"
+  },
+  // PR(브랜치)마다 Cloudflare가 만드는 미리보기 서버용 설정. 운영 자료를 건드리지 않도록 시험용 DB·저장소를 따로 씀 (2026-11-27 Cloudflare 화면에서 만듦)
+  "previews": {
+    "vars": {
+      "ACCESS_TEAM_DOMAIN": "nameless-band-cc7c.cloudflareaccess.com",
+      "ACCESS_AUD": "4247fc17eee4908e07be912968bd9229a54364c155f1e28d99580ae517c92b3e",
+      "ADMIN_EMAILS": "kuzo0909@gmail.com"
+    },
+    "d1_databases": [{ "binding": "DB", "database_name": "baroga-erp-db-preview", "database_id": "fdbae274-2936-449e-a3b8-4d399f9a5004" }],
+    "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "baroga-erp-photos-preview" }]
   },
   "observability": { "enabled": true }
 }

@@ -1,4 +1,4 @@
-// [VERSION: invoice.js v1.3 - 2026-11-26 UI 통일: 상단 버튼 크기 · [DB 저장] 초록 / v1.2 - 2026-11-25 품목 칸 뒤에 로고 워터마크 / v1.1 - 2026-11-25 납기일 기본값 = 발주일(따로 고르기 전에는 발주일을 따라감) · 글꼴 굵게 · 기본 정보(등록번호·대표자명·주소·업태/종목·연락처·참고사항)는 DB에서 자동 채움 / v1.0 - 2026-11-25 신규: 거래명세서 작성(A4) · PDF 다운로드 · 인쇄 · DB 저장]
+// [VERSION: invoice.js v1.4 - 2026-11-27 DB 연결을 CloudStore 경유로(전환되면 Cloudflare, 그 전에는 구글 DB 그대로) / v1.3 - 2026-11-26 UI 통일: 상단 버튼 크기 · [DB 저장] 초록 / v1.2 - 2026-11-25 품목 칸 뒤에 로고 워터마크 / v1.1 - 2026-11-25 납기일 기본값 = 발주일(따로 고르기 전에는 발주일을 따라감) · 글꼴 굵게 · 기본 정보(등록번호·대표자명·주소·업태/종목·연락처·참고사항)는 DB에서 자동 채움 / v1.0 - 2026-11-25 신규: 거래명세서 작성(A4) · PDF 다운로드 · 인쇄 · DB 저장]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - 거래명세서 (invoice.js)
 //  - A4 거래명세서를 화면에서 바로 작성하고 PDF로 내려받거나 인쇄
@@ -43,7 +43,9 @@
   }
   async function api(body, ms) {
     if (typeof window.barogaApi !== 'function') throw new Error('접속 도구를 찾을 수 없습니다');
-    return window.barogaApi(getUrl(), body, ms || 60000);
+    const viaGas = (b, m) => window.barogaApi(getUrl(), b, m || 60000);
+    // Cloudflare 로 전환된 뒤에는 CloudStore 가 같은 모양의 답을 돌려줌 (전환 전에는 그대로 구글 DB)
+    return window.CloudStore && typeof window.CloudStore.gas === 'function' ? window.CloudStore.gas('invoice', viaGas)(body, ms || 60000) : viaGas(body, ms || 60000);
   }
 
   // ---------- 명세서 ----------
