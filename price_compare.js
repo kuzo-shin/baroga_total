@@ -1,4 +1,4 @@
-// [VERSION: price_compare.js v1.4 - 2026-11-27 DB 요청을 CloudStore 경유로(전환되면 Cloudflare, 그 전에는 구글 DB 그대로) / v1.3 - 2026-11-26 UI 통일: 표 머리 · 최소 글자 12px / v1.2 - 2026-11-23 품목명 줄바꿈 없이 넓게, 1·2순위 업체명 한 줄로 자름, '더 듦'→'더 비쌈' / v1.1 - 2026-11-23 기본 DB 주소 등록 / v1.0 - 2026-11-23 신규: 원재료 > 5. 원재료 단가 비교 (Claude 조사 HTML 8개 탭 이관, 시스템 디자인)]
+// [VERSION: price_compare.js v1.5 - 2026-11-27 새 주소에서는 DB 연결 버튼이 Cloudflare 저장 상태 안내 / price_compare.js v1.4 - 2026-11-27 DB 요청을 CloudStore 경유로(전환되면 Cloudflare, 그 전에는 구글 DB 그대로) / v1.3 - 2026-11-26 UI 통일: 표 머리 · 최소 글자 12px / v1.2 - 2026-11-23 품목명 줄바꿈 없이 넓게, 1·2순위 업체명 한 줄로 자름, '더 듦'→'더 비쌈' / v1.1 - 2026-11-23 기본 DB 주소 등록 / v1.0 - 2026-11-23 신규: 원재료 > 5. 원재료 단가 비교 (Claude 조사 HTML 8개 탭 이관, 시스템 디자인)]
 //  - 자료(후보 가격·업체 연락처·견적 메일·재확인 기록)는 공개 저장소에 두지 않고 '원재료 단가 비교 DB'(GAS 6_price_compare.gs)에만 저장
 //  - [자료 가져오기]: Claude가 만든 단가 비교 HTML(baroga_price_compare.html) 또는 JSON 파일을 골라 → 내용 확인 → DB에 통째로 저장
 //  - 화면은 읽기 전용 (전화·메일·구매는 이 화면에서 하지 않음)
@@ -163,6 +163,7 @@
 
   // ---------- DB 연결 ----------
   function openDbModal() {
+    if (window.CloudStore && window.CloudStore.dbInfo && window.CloudStore.dbInfo('price_compare')) return; // 새 주소: Cloudflare 저장 상태 안내
     modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold">원재료 단가 비교 DB 연결</h3><div class="text-xs text-stone-500 mt-0.5">기본 주소(바로가 원재료 단가 비교 DB)가 들어 있습니다. 다른 DB를 쓸 때만 바꾸세요. 접속 코드는 다른 탭과 같습니다.</div></div>
       <div class="p-4"><input id="pcUrlInput" type="text" value="${esc(getUrl())}" placeholder="https://script.google.com/macros/s/.../exec" class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm font-mono"></div>
       <div class="px-5 py-3 border-t border-stone-200 flex justify-end gap-2"><button type="button" onclick="PriceCmp.closeModal()" class="px-4 py-2 rounded-xl border border-stone-300 text-sm font-bold cursor-pointer">취소</button><button type="button" onclick="PriceCmp.saveDbUrl()" class="px-4 py-2 rounded-xl bg-stone-900 text-white text-sm font-extrabold cursor-pointer">저장 후 불러오기</button></div>`);

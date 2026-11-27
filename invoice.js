@@ -1,4 +1,4 @@
-// [VERSION: invoice.js v1.4 - 2026-11-27 DB 연결을 CloudStore 경유로(전환되면 Cloudflare, 그 전에는 구글 DB 그대로) / v1.3 - 2026-11-26 UI 통일: 상단 버튼 크기 · [DB 저장] 초록 / v1.2 - 2026-11-25 품목 칸 뒤에 로고 워터마크 / v1.1 - 2026-11-25 납기일 기본값 = 발주일(따로 고르기 전에는 발주일을 따라감) · 글꼴 굵게 · 기본 정보(등록번호·대표자명·주소·업태/종목·연락처·참고사항)는 DB에서 자동 채움 / v1.0 - 2026-11-25 신규: 거래명세서 작성(A4) · PDF 다운로드 · 인쇄 · DB 저장]
+// [VERSION: invoice.js v1.5 - 2026-11-27 새 주소에서는 DB 버튼이 Cloudflare 저장 상태 안내 / invoice.js v1.4 - 2026-11-27 DB 연결을 CloudStore 경유로(전환되면 Cloudflare, 그 전에는 구글 DB 그대로) / v1.3 - 2026-11-26 UI 통일: 상단 버튼 크기 · [DB 저장] 초록 / v1.2 - 2026-11-25 품목 칸 뒤에 로고 워터마크 / v1.1 - 2026-11-25 납기일 기본값 = 발주일(따로 고르기 전에는 발주일을 따라감) · 글꼴 굵게 · 기본 정보(등록번호·대표자명·주소·업태/종목·연락처·참고사항)는 DB에서 자동 채움 / v1.0 - 2026-11-25 신규: 거래명세서 작성(A4) · PDF 다운로드 · 인쇄 · DB 저장]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - 거래명세서 (invoice.js)
 //  - A4 거래명세서를 화면에서 바로 작성하고 PDF로 내려받거나 인쇄
@@ -294,6 +294,7 @@
   function modal(html) { const m = document.getElementById('invModal'); if (m) m.innerHTML = `<div class="fixed inset-0 z-[60] bg-stone-950/60 backdrop-blur-xs flex items-center justify-center p-4" onclick="if(event.target===this)Invoice.closeModal()"><div class="bg-white rounded-2xl shadow-xl w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col">${html}</div></div>`; }
   function closeModal() { const m = document.getElementById('invModal'); if (m) m.innerHTML = ''; }
   function openDbModal() {
+    if (window.CloudStore && window.CloudStore.dbInfo && window.CloudStore.dbInfo('invoice')) return; // 새 주소: Cloudflare 저장 상태 안내
     modal(`<div class="px-5 py-3 border-b border-stone-200"><h3 class="text-base font-extrabold text-stone-900">거래명세서 구글 스프레드시트 DB 설정</h3><div class="text-xs text-stone-500 mt-0.5 leading-relaxed">구글 시트에 <span class="font-mono">8_invoice.gs</span>를 배포한 뒤 웹 앱 주소(…/exec)를 넣어 주세요. 접속 코드는 다른 DB와 같은 코드를 씁니다.</div></div>
       <div class="p-5"><label class="text-xs font-bold text-stone-700 block mb-1">Google Apps Script 웹 앱 URL</label><input id="invUrlInput" type="url" value="${esc(getUrl())}" placeholder="https://script.google.com/macros/s/.../exec" class="w-full border border-stone-300 focus:border-emerald-600 focus:outline-none rounded-xl px-3 py-2 text-xs font-mono bg-stone-50 focus:bg-white text-stone-900"></div>
       <div class="px-5 py-3 border-t border-stone-200 flex justify-end gap-2"><button type="button" onclick="Invoice.closeModal()" class="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold cursor-pointer">취소</button><button type="button" onclick="Invoice.saveDbUrl()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer">URL 저장 및 불러오기</button></div>`);
