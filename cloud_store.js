@@ -271,7 +271,7 @@
   const SKIP = new Set(['updatedAt', 'importedAt', 'at', 'savedAt']);
   const lab = (o) => (isObj(o) ? (o.name || o.productName || o.item || o.title || o.colB || o.vendor || '') : '');
   const idOf = (o) => (isObj(o) ? (o.id != null ? o.id : o.rowId != null ? o.rowId : o.code != null ? o.code : o.productCode != null ? o.productCode : null) : null);
-  const short = (v) => { if (v === undefined) return '(없음)'; if (v === null) return '(비움)'; if (v === '') return '(빈칸)'; if (typeof v === 'boolean') return v ? '예' : '아니오'; const t = typeof v === 'object' ? (lab(v) ? `${lab(v)} …` : JSON.stringify(v)) : String(v); return t.length > 70 ? t.slice(0, 70) + '…' : t; };
+  const short = (v) => { if (v === undefined) return '(없음)'; if (v === null) return '(비움)'; if (v === '') return '(빈칸)'; if (typeof v === 'boolean') return v ? '예' : '아니오'; const t = typeof v === 'object' ? (isObj(v) ? (Object.entries(v).filter(([k, x]) => !['id', 'rowId', 'code', 'productCode', 'name', 'productName', 'item', 'title'].includes(k) && !SKIP.has(k) && (typeof x === 'number' || (typeof x === 'string' && x && x.length < 30)) && x !== 0).slice(0, 5).map(([k, x]) => `${FIELD_KO[k] || k} ${x}`).join(' · ') || JSON.stringify(v)) : JSON.stringify(v)) : String(v); return t.length > 70 ? t.slice(0, 70) + '…' : t; };
   const maybeJson = (v) => { if (typeof v !== 'string' || !/^\s*[[{]/.test(v)) return v; try { return JSON.parse(v); } catch (e) { return v; } };
   function walkDiff(a, b, path, out) {
     if (out.length >= 300) return;
@@ -280,8 +280,8 @@
       const keyed = (arr) => arr.length > 0 && arr.every((x) => idOf(x) != null) && new Set(arr.map((x) => String(idOf(x)))).size === arr.length;
       if ((keyed(a) || !a.length) && (keyed(b) || !b.length) && (a.length || b.length)) {
         const ma = new Map(a.map((x) => [String(idOf(x)), x])), mb = new Map(b.map((x) => [String(idOf(x)), x]));
-        b.forEach((x) => { const k = String(idOf(x)), o = ma.get(k); if (!o) out.push({ path: path.concat(lab(x) || k), kind: 'add', b: x }); else walkDiff(o, x, path.concat(lab(x) || k), out); });
-        a.forEach((x) => { const k = String(idOf(x)); if (!mb.has(k)) out.push({ path: path.concat(lab(x) || k), kind: 'del', a: x }); });
+        b.forEach((x) => { const k = String(idOf(x)), o = ma.get(k); if (!o) pushWhole(path.concat(lab(x) || k), 'add', x, out, path.length); else walkDiff(o, x, path.concat(lab(x) || k), out); });
+        a.forEach((x) => { const k = String(idOf(x)); if (!mb.has(k)) pushWhole(path.concat(lab(x) || k), 'del', x, out, path.length); });
         return;
       }
       if (a.length === b.length) { a.forEach((x, i) => walkDiff(x, b[i], path.concat(lab(b[i]) || lab(x) || `${i + 1}번째`), out)); return; }
@@ -292,13 +292,19 @@
       new Set([...Object.keys(a), ...Object.keys(b)]).forEach((k) => {
         if (SKIP.has(k)) return;
         const seg = FIELD_KO[k] || k;
-        if (!(k in a)) { if (isObj(b[k]) || Array.isArray(b[k])) out.push({ path: path.concat(lab(b[k]) ? `${seg} ${lab(b[k])}` : seg), kind: 'add', b: b[k] }); else if (b[k] !== '' && b[k] !== null && b[k] !== 0 && b[k] !== false) out.push({ path: path.concat(seg), kind: 'set', a: undefined, b: b[k] }); }
-        else if (!(k in b)) out.push({ path: path.concat(seg), kind: 'del', a: a[k] });
+        if (!(k in a)) { if (isObj(b[k]) || Array.isArray(b[k])) pushWhole(path.concat(lab(b[k]) ? `${seg} ${lab(b[k])}` : seg), 'add', b[k], out, 0); else if (b[k] !== '' && b[k] !== null && b[k] !== 0 && b[k] !== false) out.push({ path: path.concat(seg), kind: 'set', a: undefined, b: b[k] }); }
+        else if (!(k in b)) pushWhole(path.concat(seg), 'del', a[k], out, 0);
         else walkDiff(a[k], b[k], path.concat(seg), out);
       });
       return;
     }
     if (JSON.stringify(a) !== JSON.stringify(b)) out.push({ path, kind: 'set', a, b });
+  }
+  // 통째로 생기거나 없어진 묶음(이름 없는 객체·목록)은 한 단계씩 풀어서 항목별로 보여 줌
+  const isBox = (v) => Array.isArray(v) || (isObj(v) && !lab(v) && Object.values(v).some((x) => x && typeof x === 'object'));
+  function pushWhole(path, kind, v, out, depth) {
+    if (isBox(v) && depth < 4) { const before = out.length; walkDiff(kind === 'add' ? (Array.isArray(v) ? [] : {}) : v, kind === 'add' ? v : (Array.isArray(v) ? [] : {}), path, out); if (out.length > before) return; }
+    out.push(kind === 'add' ? { path, kind, b: v } : { path, kind, a: v });
   }
   // 조각 이름 → 사람이 읽는 이름
   function sectionLabel(key, sample) {
@@ -310,6 +316,7 @@
   function changesOf(list) { // list: [{ key, before, after }] (JSON 글자) → [{ path:[], kind, a, b }]
     const out = [];
     (list || []).forEach((c) => {
+      if (c.key === 'k:updatedAt' || c.key === 'k:importedAt') return; // 저장 시각만 바뀐 조각
       const a = c.before == null ? undefined : JSON.parse(c.before), b = c.after == null ? undefined : JSON.parse(c.after), pre = sectionLabel(c.key, b !== undefined ? b : a);
       if (a === undefined) out.push({ path: pre, kind: 'add', b }); else if (b === undefined) out.push({ path: pre, kind: 'del', a }); else walkDiff(a, b, pre, out);
     });
@@ -334,7 +341,7 @@
   function historyHtml(domain, j) {
     if (!j.revs.length) return '<p class="text-xs text-stone-500">저장 기록이 없습니다.</p>';
     return `<div class="rounded-xl border border-stone-200 divide-y divide-stone-100 max-h-[46vh] overflow-y-auto">${j.revs.map((r) => {
-      const tops = [...new Set(r.keys.map((k) => sectionLabel(k)[0] + (/^p:[^:]+:(\d{4}-\d{2})/.test(k) ? ' ' + RegExp.$1 : '')))];
+      const tops = [...new Set(r.keys.filter((k) => k !== 'k:updatedAt' && k !== 'k:importedAt').map((k) => sectionLabel(k)[0] + (/^p:[^:]+:(\d{4}-\d{2})/.test(k) ? ' ' + RegExp.$1 : '')))];
       return `<div class="px-3 py-2"><div class="flex flex-wrap items-center gap-x-3 gap-y-1"><b class="tabular-nums text-stone-900">판 ${escH(r.rev)}</b><span class="tabular-nums text-stone-600">${escH(kst(r.at))}</span><span class="text-stone-600">${escH(r.by || '-')}</span><button type="button" data-rev="${escH(r.rev)}" class="ml-auto px-2.5 h-7 rounded-lg border border-stone-300 bg-white text-xs font-bold text-stone-700 hover:bg-stone-50 cursor-pointer">바뀐 내용 보기</button></div>
         <div class="mt-0.5 text-xs text-stone-500">바뀐 부분: ${tops.slice(0, 8).map(escH).join(' · ') || '-'}${tops.length > 8 ? ` 외 ${tops.length - 8}` : ''}${r.note ? ` · 메모: ${escH(r.note)}` : ''}</div><div data-changes="${escH(r.rev)}"></div></div>`;
     }).join('')}</div><p class="text-xs text-stone-500">최근 ${j.revs.length}판 · 지난 내용은 180일 동안 보관됩니다. 2026-11-27 Cloudflare 전환 이전 기록은 없습니다.</p>`;
