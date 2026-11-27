@@ -1,4 +1,4 @@
-// [VERSION: cloud/src/store.js v1.1 - 2026-11-27 메뉴별 전환 표시(active): 켜진 메뉴만 화면이 Cloudflare 를 읽고 씀 / v1.0 - 2026-11-27 신규: 메뉴별 자료 보관소(조각 저장 + 지난 판 보관) · 구글 DB 원본 백업]
+// [VERSION: cloud/src/store.js v1.2 - 2026-11-27 계정별 메뉴 권한(수정·보기·숨김) — 저장은 '수정' 권한만 / v1.1 - 2026-11-27 메뉴별 전환 표시(active): 켜진 메뉴만 화면이 Cloudflare 를 읽고 씀 / v1.0 - 2026-11-27 신규: 메뉴별 자료 보관소(조각 저장 + 지난 판 보관) · 구글 DB 원본 백업]
 // ============================================================================
 // 메뉴별 자료 보관소 — 구글 시트 DB(메뉴마다 JSON 한 덩어리)를 옮겨 오는 곳
 //  - 메뉴(domain)의 자료를 '조각(section)'으로 나눠 보관: 달별 기록, 품목별 레시피처럼. 바뀐 조각만 올림
@@ -30,6 +30,55 @@ const bad = (m) => new StoreError(400, m);
 const byteLen = (s) => new TextEncoder().encode(s).length;
 function domainOf(d) { if (!DOMAINS.includes(d)) throw new StoreError(404, '없는 메뉴입니다: ' + d); return d; }
 
+// ---------- 계정별 메뉴 권한 (v1.2) ----------
+//  메뉴마다 edit(수정) · view(보기) · none(숨김). 관리자(ADMIN_EMAILS)는 항상 모두 수정
+//  store_flags 의 'perms' = { def: {메뉴:단계}, users: { 이메일: {메뉴:단계} } }. 적히지 않은 것은 def, def 에도 없으면 edit (권한을 정하기 전과 같음)
+//  서버가 막는 것: 저장(수정 권한이 아니면 403). 읽기는 막지 않음 — 메뉴끼리 자료를 서로 읽어 계산하기 때문(예: 생산일지 ← 제품단가). 숨김은 화면에서 메뉴를 가리는 것
+export const MENUS = ['raw', 'recipe', 'price', 'production', 'ms_inbound', 'ms_stock', 'invoice', 'factory_log'];
+const LEVELS = ['edit', 'view', 'none'];
+const menuOfDomain = (d) => (d === 'price_compare' ? 'raw' : d);
+export const adminList = (env) => String(env.ADMIN_EMAILS || '').toLowerCase().split(',').map((x) => x.trim()).filter(Boolean);
+export const isAdmin = (env, email) => adminList(env).includes(String(email || '').toLowerCase());
+const cleanLevels = (o) => { const out = {}; MENUS.forEach((m) => { if (o && LEVELS.includes(o[m])) out[m] = o[m]; }); return out; };
+async function permsRaw(env) {
+  const r = await env.DB.prepare("SELECT value, updated_at, updated_by FROM store_flags WHERE key = 'perms'").first();
+  let v = {}; try { v = JSON.parse(r ? r.value : '{}') || {}; } catch (e) { v = {}; }
+  const users = {}; Object.entries(v.users && typeof v.users === 'object' ? v.users : {}).forEach(([e, l]) => { users[String(e).toLowerCase()] = cleanLevels(l); });
+  return { def: cleanLevels(v.def), users, updatedAt: r ? r.updated_at : '', updatedBy: r ? r.updated_by : '' };
+}
+export async function permsFor(env, email) {
+  const admin = isAdmin(env, email), levels = {};
+  if (admin) { MENUS.forEach((m) => { levels[m] = 'edit'; }); return { admin, levels }; }
+  const p = await permsRaw(env), u = p.users[String(email || '').toLowerCase()] || {};
+  MENUS.forEach((m) => { levels[m] = u[m] || p.def[m] || 'edit'; });
+  return { admin, levels };
+}
+export async function requireLevel(env, email, menu, need) { // need: 'edit' | 'view'
+  const lv = (await permsFor(env, email)).levels[menu] || 'edit';
+  if (need === 'edit' && lv !== 'edit') throw new StoreError(403, lv === 'view' ? '이 메뉴는 보기 권한만 있어 저장할 수 없습니다. 관리자에게 수정 권한을 요청해 주세요.' : '이 메뉴를 쓸 권한이 없습니다.', { forbidden: true });
+  if (need === 'view' && lv === 'none') throw new StoreError(403, '이 메뉴를 볼 권한이 없습니다.', { forbidden: true });
+}
+export async function getPerms(env, email) {
+  if (!isAdmin(env, email)) throw new StoreError(403, '관리자만 권한 설정을 볼 수 있습니다.');
+  const p = await permsRaw(env);
+  return { ok: true, menus: MENUS, levels: LEVELS, admins: adminList(env), def: p.def, users: p.users, updatedAt: p.updatedAt, updatedBy: p.updatedBy };
+}
+export async function putPerms(env, request, email) {
+  if (!isAdmin(env, email)) throw new StoreError(403, '관리자만 권한 설정을 바꿀 수 있습니다.');
+  let b; try { b = await request.json(); } catch (e) { throw bad('보낸 자료를 읽을 수 없습니다.'); }
+  const users = {}, src = b && b.users && typeof b.users === 'object' && !Array.isArray(b.users) ? b.users : {};
+  for (const [e, l] of Object.entries(src)) {
+    const em = String(e).trim().toLowerCase();
+    if (!/^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/.test(em)) throw bad('이메일 주소가 올바르지 않습니다: ' + e);
+    if (adminList(env).includes(em)) continue; // 관리자는 항상 모두 수정
+    users[em] = cleanLevels(l);
+  }
+  if (Object.keys(users).length > 200) throw bad('계정은 200개까지 넣을 수 있습니다.');
+  const value = JSON.stringify({ def: cleanLevels(b && b.def), users }), now = new Date().toISOString();
+  await env.DB.prepare("INSERT OR REPLACE INTO store_flags (key, value, updated_at, updated_by) VALUES ('perms', ?, ?, ?)").bind(value, now, email).run();
+  return getPerms(env, email);
+}
+
 export async function listDomains(env) {
   const a = await env.DB.prepare('SELECT domain, rev, updated_at, updated_by, note FROM store_domains ORDER BY domain').all();
   const b = await env.DB.prepare('SELECT domain, COUNT(*) AS sections, SUM(bytes) AS bytes FROM store_sections GROUP BY domain').all();
@@ -43,8 +92,7 @@ async function activeList(env) {
 }
 // 메뉴 전환: 켜면 그 메뉴는 화면이 Cloudflare 를 읽고 씀. 자료가 비어 있는 메뉴는 켤 수 없음
 export async function setActive(env, request, email) {
-  const admins = String(env.ADMIN_EMAILS || '').toLowerCase().split(',').map((x) => x.trim()).filter(Boolean);
-  if (!admins.includes(email)) throw new StoreError(403, '관리자만 메뉴 전환을 바꿀 수 있습니다.');
+  if (!isAdmin(env, email)) throw new StoreError(403, '관리자만 메뉴 전환을 바꿀 수 있습니다.');
   let b; try { b = await request.json(); } catch (e) { throw bad('보낸 자료를 읽을 수 없습니다.'); }
   const domain = domainOf(String((b && b.domain) || '')), on = !!(b && b.on);
   if (on) { const h = await env.DB.prepare('SELECT rev FROM store_domains WHERE domain = ?').bind(domain).first(); if (!h || !h.rev) throw bad('이 메뉴는 Cloudflare 에 자료가 없어 전환할 수 없습니다. 먼저 가져오기를 해 주세요.'); }
@@ -77,6 +125,7 @@ export async function readDomain(env, domain, url) {
 
 export async function writeDomain(env, domain, request, email) {
   domainOf(domain);
+  await requireLevel(env, email, menuOfDomain(domain), 'edit');
   let b; try { b = await request.json(); } catch (e) { throw bad('보낸 자료를 읽을 수 없습니다.'); }
   const put = b && b.put && typeof b.put === 'object' && !Array.isArray(b.put) ? b.put : {}, del = Array.isArray(b && b.del) ? b.del.map(String) : [];
   const putKeys = Object.keys(put), baseRev = Number(b && b.baseRev);

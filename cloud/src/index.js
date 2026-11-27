@@ -1,4 +1,4 @@
-// [VERSION: cloud/src/index.js v1.3 - 2026-11-27 메뉴 전환 표시(/api/store-active) / v1.2 - 2026-11-27 메뉴별 자료 보관소(/api/store)·구글 DB 원본 백업(/api/backup) 추가 / v1.1 - 2026-11-27 접속 코드 대신 Cloudflare Access 로그인(허용한 구글 계정) · 작성자/수정자 기록 · 화면 파일도 이 서버에서 제공 / v1.0 - 2026-11-27 신규: 공장 일지 API (D1 + R2)]
+// [VERSION: cloud/src/index.js v1.4 - 2026-11-27 계정별 메뉴 권한(/api/perms, /api/me 에 권한 포함, 공장 일지 저장·삭제는 수정 권한만) / v1.3 - 2026-11-27 메뉴 전환 표시(/api/store-active) / v1.2 - 2026-11-27 메뉴별 자료 보관소(/api/store)·구글 DB 원본 백업(/api/backup) 추가 / v1.1 - 2026-11-27 접속 코드 대신 Cloudflare Access 로그인(허용한 구글 계정) · 작성자/수정자 기록 · 화면 파일도 이 서버에서 제공 / v1.0 - 2026-11-27 신규: 공장 일지 API (D1 + R2)]
 // ============================================================================
 // 바로가 공장 ERP — Cloudflare Worker (DB: D1, 사진: R2, 화면: assets)
 //  - 화면 파일(index.html·*.js)과 /api/* 를 같은 주소에서 제공
@@ -7,7 +7,8 @@
 //          ACCESS_TEAM_DOMAIN·ACCESS_AUD 가 없으면 모든 요청 거부
 //  - 표(테이블)는 서버가 첫 요청 때 만듦 (따로 명령을 돌리지 않아도 됨)
 //
-//   GET    /api/me                                            로그인한 사람의 이메일
+//   GET    /api/me                                            로그인한 사람의 이메일 · 관리자 여부 · 메뉴별 권한
+//   GET    /api/perms · PUT /api/perms                        계정별 메뉴 권한 보기·바꾸기 (관리자만, cloud/src/store.js)
 //  메뉴별 자료 보관소: /api/store, /api/backup (cloud/src/store.js)
 //  공장 일지
 //   GET    /api/factory-log?from=YYYY-MM-DD&to=YYYY-MM-DD   그 기간에 걸친 일지 + 체크리스트가 남은 일지(기간 무관)
@@ -18,7 +19,7 @@
 //   DELETE /api/photos/:id                                    사진 한 장 삭제
 // ============================================================================
 import { getEmail } from './auth.js';
-import { STORE_SCHEMA, StoreError, listDomains, readDomain, writeDomain, putBackup, listBackups, setActive } from './store.js';
+import { STORE_SCHEMA, StoreError, listDomains, readDomain, writeDomain, putBackup, listBackups, setActive, permsFor, requireLevel, getPerms, putPerms } from './store.js';
 
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS factory_log (
@@ -170,9 +171,12 @@ export default {
       let email;
       try { email = await getEmail(request, env); }
       catch (e) { throw new HttpError(e.status || 401, e.message, e.status === 503 ? {} : { unauthorized: true }); }
-      if (path === '/api/me' && m === 'GET') return json({ ok: true, email, db: !!env.DB, photos: !!env.PHOTOS });
       await ensureSchema(env);
+      if (path === '/api/me' && m === 'GET') { const p = await permsFor(env, email); return json({ ok: true, email, db: !!env.DB, photos: !!env.PHOTOS, admin: p.admin, levels: p.levels }); }
+      if (path === '/api/perms' && m === 'GET') return json(await getPerms(env, email));
+      if (path === '/api/perms' && m === 'PUT') return json(await putPerms(env, request, email));
       let mm;
+      if (path.startsWith('/api/factory-log') || path.startsWith('/api/photos/')) await requireLevel(env, email, 'factory_log', m === 'GET' ? 'view' : 'edit');
       if (path === '/api/factory-log' && m === 'GET') return json(await listLogs(env, url));
       if (path === '/api/factory-log' && m === 'PUT') return json(await saveLog(env, request, email));
       if ((mm = path.match(/^\/api\/factory-log\/([A-Za-z0-9-]{1,40})$/)) && m === 'DELETE') return json(await deleteLog(env, mm[1]));
