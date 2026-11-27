@@ -21,5 +21,14 @@
     "ACCESS_TEAM_DOMAIN": "nameless-band-cc7c.cloudflareaccess.com",
     "ACCESS_AUD": "4247fc17eee4908e07be912968bd9229a54364c155f1e28d99580ae517c92b3e"
   },
+  // PR(브랜치)마다 Cloudflare가 만드는 미리보기 서버용 설정. 운영 자료를 건드리지 않도록 DB·사진 저장소를 따로 씀
+  "previews": {
+    "vars": {
+      "ACCESS_TEAM_DOMAIN": "nameless-band-cc7c.cloudflareaccess.com",
+      "ACCESS_AUD": "4247fc17eee4908e07be912968bd9229a54364c155f1e28d99580ae517c92b3e"
+    },
+    "d1_databases": [{ "binding": "DB", "database_name": "baroga-erp-db-preview" }],
+    "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "baroga-erp-photos-preview" }]
+  },
   "observability": { "enabled": true }
 }
