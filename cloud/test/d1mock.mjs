@@ -8,7 +8,7 @@ export function makeD1() {
     first: async () => { queries++; const r = db.prepare(sql).get(...args); return r ? { ...r } : null; },
     all: async () => { queries++; return { results: db.prepare(sql).all(...args).map((r) => ({ ...r })) }; },
     run: async () => { queries++; const r = db.prepare(sql).run(...args); return { success: true, meta: { changes: r.changes } }; },
-    _run: () => (/^\s*(SELECT|WITH)/i.test(sql) ? { results: db.prepare(sql).all(...args).map((r) => ({ ...r })) } : (db.prepare(sql).run(...args), { results: [] })),
+    _run: () => { if (/^\s*(SELECT|WITH|PRAGMA)/i.test(sql)) return { results: db.prepare(sql).all(...args).map((r) => ({ ...r })), meta: { changes: 0 } }; const r = db.prepare(sql).run(...args); return { results: [], success: true, meta: { changes: Number(r.changes) } }; }, // 실제 D1 처럼 문장마다 meta.changes 를 돌려줌
   });
   return {
     prepare: (sql) => stmt(sql),
