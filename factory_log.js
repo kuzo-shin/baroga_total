@@ -1,4 +1,4 @@
-// [VERSION: factory_log.js v1.3 - 2026-11-27 담당자는 직접 입력만, 일지 창 키움(일어난 일·사후 대처 칸 크게), 달력 막대 앞 색 띠 없앰 / v1.2 - 2026-11-27 접속 코드 대신 로그인(Cloudflare Access) · 새 주소에서만 동작 · 작성자/수정자 표시 / v1.1 - 2026-11-27 서버 기본 주소를 실제 만든 Worker(baroga-total)로 / v1.0 - 2026-11-27 신규: 공장 일지(달력 · 일어난 일/사후 대처 · 담당자 · 체크리스트 · 사진), DB는 Cloudflare(D1 + R2)]
+// [VERSION: factory_log.js v1.4 - 2026-11-27 이름 바꿈(미완료 일감·완료된 일감·미완료 일감 체크리스트) · 미완료 일감 체크리스트를 달력 위로 / v1.3 - 2026-11-27 담당자는 직접 입력만, 일지 창 키움(일어난 일·사후 대처 칸 크게), 달력 막대 앞 색 띠 없앰 / v1.2 - 2026-11-27 접속 코드 대신 로그인(Cloudflare Access) · 새 주소에서만 동작 · 작성자/수정자 표시 / v1.1 - 2026-11-27 서버 기본 주소를 실제 만든 Worker(baroga-total)로 / v1.0 - 2026-11-27 신규: 공장 일지(달력 · 일어난 일/사후 대처 · 담당자 · 체크리스트 · 사진), DB는 Cloudflare(D1 + R2)]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - 공장 일지 (factory_log.js)
 //  - 생산과 상관없이 공장에서 있었던 일(기계 고장·수리, 누수 등)을 달력에 기록
@@ -111,7 +111,7 @@
     return `<div class="overflow-x-auto"><div class="min-w-[760px] rounded-2xl border border-stone-200 overflow-hidden bg-white"><div class="grid grid-cols-7 bg-stone-100 border-b border-stone-200">${head}</div>${weeks.map(weekHtml).join('')}</div></div>`;
   }
   function openListHtml() {
-    if (!openLogs.length) return '<div class="py-5 text-center text-sm text-stone-400">끝나지 않은 체크리스트가 없습니다.</div>';
+    if (!openLogs.length) return '<div class="py-5 text-center text-sm text-stone-400">미완료 일감 체크리스트가 없습니다.</div>';
     return `<div class="flex flex-col gap-1.5">${openLogs.map((l) => { const left = (l.checklist || []).filter((c) => !c.done); return `<button type="button" onclick="FactoryLog.open('${esc(l.id)}')" class="w-full text-left rounded-xl border border-amber-200 bg-amber-50/60 hover:bg-amber-100/70 px-3 py-2 cursor-pointer"><div class="flex flex-wrap items-center gap-x-2 gap-y-0.5"><span class="text-xs font-bold text-stone-500 tabular-nums whitespace-nowrap">${l.start === l.end ? esc(l.start) : `${esc(l.start)} ~ ${md(l.end)}`}</span><b class="text-sm text-stone-900">${esc(l.title)}</b>${(l.assignees || []).length ? `<span class="text-xs text-stone-500">${esc(l.assignees.join(', '))}</span>` : ''}<span class="ml-auto text-xs font-extrabold text-amber-800 whitespace-nowrap">남은 일 ${left.length}개</span></div><div class="mt-1 text-xs text-stone-700">${left.map((c) => `<span class="inline-block mr-3">☐ ${esc(c.text)}</span>`).join('')}</div></button>`; }).join('')}</div>`;
   }
   let pendingRender = false;
@@ -135,20 +135,20 @@
       <div class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-4 flex flex-col gap-3">
         ${guide}
         <div class="bg-white rounded-2xl border border-stone-200 shadow-xs p-4">
+          <div class="flex items-center gap-2 mb-2.5"><h3 class="text-base font-extrabold text-stone-900">미완료 일감 체크리스트 <span class="text-xs font-bold text-stone-500">(${openLogs.length}건 · 날짜와 상관없이 모두)</span></h3></div>
+          ${loaded ? openListHtml() : '<div class="py-5 text-center text-sm text-stone-400">불러온 뒤에 보입니다.</div>'}
+        </div>
+        <div class="bg-white rounded-2xl border border-stone-200 shadow-xs p-4">
           <div class="flex flex-wrap items-center gap-2 mb-3">
             <button type="button" onclick="FactoryLog.move(-1)" title="이전 달" class="flex items-center justify-center w-9 h-9 rounded-xl bg-white border border-stone-200 hover:bg-stone-50 cursor-pointer"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
             <h3 class="text-lg font-extrabold text-stone-900 min-w-[150px] text-center tabular-nums">${y}년 ${m}월</h3>
             <button type="button" onclick="FactoryLog.move(1)" title="다음 달" class="flex items-center justify-center w-9 h-9 rounded-xl bg-white border border-stone-200 hover:bg-stone-50 cursor-pointer"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
             <button type="button" onclick="FactoryLog.goToday()" class="${BTN}">이번 달</button>
-            <span class="hidden sm:flex items-center gap-3 ml-2 text-xs text-stone-500"><span class="flex items-center gap-1"><i class="inline-block w-2.5 h-2.5 rounded-sm bg-amber-500"></i>체크리스트 남음</span><span class="flex items-center gap-1"><i class="inline-block w-2.5 h-2.5 rounded-sm bg-emerald-600"></i>모두 끝남</span><span class="flex items-center gap-1"><i class="inline-block w-2.5 h-2.5 rounded-sm bg-stone-500"></i>체크리스트 없음</span></span>
+            <span class="hidden sm:flex items-center gap-3 ml-2 text-xs text-stone-500"><span class="flex items-center gap-1"><i class="inline-block w-2.5 h-2.5 rounded-sm bg-amber-500"></i>미완료 일감</span><span class="flex items-center gap-1"><i class="inline-block w-2.5 h-2.5 rounded-sm bg-emerald-600"></i>완료된 일감</span><span class="flex items-center gap-1"><i class="inline-block w-2.5 h-2.5 rounded-sm bg-stone-500"></i>체크리스트 없음</span></span>
             <button type="button" onclick="FactoryLog.newAt()" class="${BTN_DARK} ml-auto"><i data-lucide="plus" class="w-3.5 h-3.5"></i>새 일지</button>
           </div>
           ${calendarHtml()}
           <div class="mt-2 text-xs text-stone-500">날짜 칸을 누르면 그날 일지를 새로 쓰고, 막대를 누르면 내용을 보고 고칩니다.</div>
-        </div>
-        <div class="bg-white rounded-2xl border border-stone-200 shadow-xs p-4">
-          <div class="flex items-center gap-2 mb-2.5"><h3 class="text-base font-extrabold text-stone-900">끝나지 않은 체크리스트 <span class="text-xs font-bold text-stone-500">(${openLogs.length}건 · 날짜와 상관없이 모두)</span></h3></div>
-          ${loaded ? openListHtml() : '<div class="py-5 text-center text-sm text-stone-400">불러온 뒤에 보입니다.</div>'}
         </div>
       </div>
       <div id="flModal"></div><div id="flViewer"></div>`;
