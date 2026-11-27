@@ -1,4 +1,4 @@
-// [VERSION: factory_log.js v1.4 - 2026-11-27 이름 바꿈(미완료 일감·완료된 일감·미완료 일감 체크리스트) · 미완료 일감 체크리스트를 달력 위로 / v1.3 - 2026-11-27 담당자는 직접 입력만, 일지 창 키움(일어난 일·사후 대처 칸 크게), 달력 막대 앞 색 띠 없앰 / v1.2 - 2026-11-27 접속 코드 대신 로그인(Cloudflare Access) · 새 주소에서만 동작 · 작성자/수정자 표시 / v1.1 - 2026-11-27 서버 기본 주소를 실제 만든 Worker(baroga-total)로 / v1.0 - 2026-11-27 신규: 공장 일지(달력 · 일어난 일/사후 대처 · 담당자 · 체크리스트 · 사진), DB는 Cloudflare(D1 + R2)]
+// [VERSION: factory_log.js v1.5 - 2026-11-27 달력 토·일 열을 좁게, 월~금을 넓게 / v1.4 - 2026-11-27 이름 바꿈(미완료 일감·완료된 일감·미완료 일감 체크리스트) · 미완료 일감 체크리스트를 달력 위로 / v1.3 - 2026-11-27 담당자는 직접 입력만, 일지 창 키움(일어난 일·사후 대처 칸 크게), 달력 막대 앞 색 띠 없앰 / v1.2 - 2026-11-27 접속 코드 대신 로그인(Cloudflare Access) · 새 주소에서만 동작 · 작성자/수정자 표시 / v1.1 - 2026-11-27 서버 기본 주소를 실제 만든 Worker(baroga-total)로 / v1.0 - 2026-11-27 신규: 공장 일지(달력 · 일어난 일/사후 대처 · 담당자 · 체크리스트 · 사진), DB는 Cloudflare(D1 + R2)]
 // ============================================================================
 // 바로가 공장 통합 관리 시스템 - 공장 일지 (factory_log.js)
 //  - 생산과 상관없이 공장에서 있었던 일(기계 고장·수리, 누수 등)을 달력에 기록
@@ -82,6 +82,8 @@
 
   // ---------- 달력 ----------
   const openCount = (l) => (l.checklist || []).filter((c) => !c.done).length;
+  // 달력 열 너비 (v1.5): 월~금 넓게, 토·일(업무 없음)은 좁게. 막대가 주말에 걸쳐도 이어지도록 7열은 그대로 둠
+  const COLS = 'repeat(5, minmax(0, 1fr)) minmax(56px, 0.32fr) minmax(56px, 0.32fr)';
   function tone(l) { // 막대 색: 체크리스트가 남음 = 노랑, 다 끝남 = 초록, 체크리스트 없음 = 회색
     const n = (l.checklist || []).length, o = openCount(l);
     if (n && o) return { bar: 'bg-amber-100 border-amber-500 text-amber-950 hover:bg-amber-200', dot: 'bg-amber-500' };
@@ -100,15 +102,15 @@
     }).join('');
     const days = [0, 1, 2, 3, 4, 5, 6].map((i) => {
       const d = addDays(ws, i), out = Number(d.slice(5, 7)) !== monthNo, isT = d === t, col = i === 6 ? 'text-rose-600' : i === 5 ? 'text-blue-600' : 'text-stone-700';
-      return `<button type="button" onclick="FactoryLog.newAt('${d}')" title="${md(d)} 일지 쓰기" style="grid-column:${i + 1};grid-row:1 / -1" class="group flex flex-col justify-start items-stretch text-left p-1.5 cursor-pointer ${i < 6 ? 'border-r border-stone-100' : ''} ${out ? 'bg-stone-50/70' : 'bg-white'} hover:bg-amber-50/60"><span class="flex items-start justify-between"><span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-extrabold ${isT ? 'bg-stone-900 text-white' : col} ${out && !isT ? 'opacity-40' : ''}">${Number(d.slice(8, 10))}</span><i data-lucide="plus" class="w-3.5 h-3.5 text-stone-300 opacity-0 group-hover:opacity-100"></i></span></button>`;
+      return `<button type="button" onclick="FactoryLog.newAt('${d}')" title="${md(d)} 일지 쓰기" style="grid-column:${i + 1};grid-row:1 / -1" class="group flex flex-col justify-start items-stretch text-left p-1.5 cursor-pointer ${i < 6 ? 'border-r border-stone-100' : ''} ${out ? 'bg-stone-50/70' : i >= 5 ? 'bg-stone-50/50' : 'bg-white'} hover:bg-amber-50/60"><span class="flex items-start justify-between"><span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-extrabold ${isT ? 'bg-stone-900 text-white' : col} ${out && !isT ? 'opacity-40' : ''}">${Number(d.slice(8, 10))}</span><i data-lucide="plus" class="w-3.5 h-3.5 text-stone-300 opacity-0 group-hover:opacity-100"></i></span></button>`;
     }).join('');
     const L = lanes.length;
-    return `<div class="grid grid-cols-7 border-b border-stone-200 last:border-b-0" style="grid-template-rows:32px ${L ? `repeat(${L}, 25px) ` : ''}minmax(${Math.max(10, 80 - L * 25)}px, 1fr)">${days}${bars}</div>`;
+    return `<div class="grid border-b border-stone-200 last:border-b-0" style="grid-template-columns:${COLS};grid-template-rows:32px ${L ? `repeat(${L}, 25px) ` : ''}minmax(${Math.max(10, 80 - L * 25)}px, 1fr)">${days}${bars}</div>`;
   }
   function calendarHtml() {
     const r = range(), weeks = []; for (let d = r.from; d <= r.to; d = addDays(d, 7)) weeks.push(d);
     const head = ['월', '화', '수', '목', '금', '토', '일'].map((w, i) => `<div class="py-2 text-center text-xs font-extrabold ${i === 6 ? 'text-rose-600' : i === 5 ? 'text-blue-600' : 'text-stone-600'}">${w}</div>`).join('');
-    return `<div class="overflow-x-auto"><div class="min-w-[760px] rounded-2xl border border-stone-200 overflow-hidden bg-white"><div class="grid grid-cols-7 bg-stone-100 border-b border-stone-200">${head}</div>${weeks.map(weekHtml).join('')}</div></div>`;
+    return `<div class="overflow-x-auto"><div class="min-w-[760px] rounded-2xl border border-stone-200 overflow-hidden bg-white"><div class="grid bg-stone-100 border-b border-stone-200" style="grid-template-columns:${COLS}">${head}</div>${weeks.map(weekHtml).join('')}</div></div>`;
   }
   function openListHtml() {
     if (!openLogs.length) return '<div class="py-5 text-center text-sm text-stone-400">미완료 일감 체크리스트가 없습니다.</div>';
